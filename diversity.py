@@ -1,6 +1,7 @@
 import numpy as np
 import csv
 from Levenshtein import distance
+import warnings
 
 
 def sequence_similarity(a, b):
@@ -9,7 +10,7 @@ def sequence_similarity(a, b):
     return 1 - (distance(a, b) / max_length)
 
 
-def calculate_zp(features, n_species, p, similarity_fn):
+def zp_from_similarity_fn(p, features, n_species, similarity_fn):
     z_i = np.empty(n_species, dtype=np.float64)
     zp = np.empty(n_species, dtype=np.float64)
     for i, species_i in enumerate(features):
@@ -19,27 +20,37 @@ def calculate_zp(features, n_species, p, similarity_fn):
     return zp
 
 
-def zp_from_file(filepath, p):
+def zp_from_file(p, filepath):
     with open(filepath, 'r') as f:
         zp = [np.dot(np.array(z_i, dtype=np.float64), p)
               for z_i in csv.reader(f)]
         return np.array(zp)
 
 
-def calculate_qDs(zp, p, q):
-    if q == 1:
-        return 1 / np.prod(zp ** p)
-    elif q == np.inf:
-        return 1 / np.amax(zp)
-    return np.dot(p, zp ** (q - 1)) ** (1 / (1 - q))
-
-
-def alpha_diversity(features, counts, q, similarity_fn=sequence_similarity, filepath=None):
-    n_species = len(features)
-    p = np.array(counts) / n_species
+def calculate_zp(p, features, n_species, filepath, similarity_fn):
     if filepath:
-        zp = zp_from_file(filepath, p)
+        return zp_from_file(p, filepath)
     else:
-        zp = calculate_zp(features, n_species, p, similarity_fn)
-    qDs = calculate_qDs(zp, p, q)
+        return zp_from_similarity_fn(p, features, n_species, similarity_fn)
+
+
+def power_mean(order, weights, x):
+    if order == 0:
+        return np.prod(x ** weights)
+    elif order == -np.inf:
+        return np.amax(x)
+    elif order < -100:
+        warnings.warn(
+            "q > 100.0 defaults to the analytical formula for q = inf")
+        return np.amax(x)
+    return np.dot(weights, x ** order) ** (1 / order)
+
+
+def alpha(features, counts, q, similarity_fn=sequence_similarity, filepath=None):
+    n_species = len(features)
+    weights = np.array(counts) / n_species
+    zp = calculate_zp(weights, features, n_species, filepath, similarity_fn)
+    order = 1 - q
+    x = 1 / zp
+    qDs = power_mean(order, weights, x)
     return qDs
