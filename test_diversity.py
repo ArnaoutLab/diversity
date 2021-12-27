@@ -2,6 +2,8 @@ import pytest
 import diversity
 from numpy import isclose
 from run import process_input_file
+# FIXME not implemented: used to compare dataframes (for integration test)
+from pandas.testing import assert_frame_equal
 
 
 TEST_QS = [0, 0.5, 1, 1.5, 2, 3, 4, 100, 1000]
@@ -27,21 +29,27 @@ def mock_matrix_file(tmp_path):
         "0.0,1.0,0.0",
         "0.0,0.0,1.0",
     ]
-    datafile = tmp_path / "temp.csv"
+    datafile = tmp_path / "matrix.csv"
     datafile.write_text("\n".join(mock_csv_data))
     return str(datafile)
 
 
+@pytest.fixture
+def mock_empty_matrix_file(tmp_path):
+    datafile = tmp_path / "empty_matrix.csv"
+    return str(datafile)
+
+
 def test_alpha_from_file(mock_input_file, mock_matrix_file):
-    features, counts = process_input_file(mock_input_file)
+    df = process_input_file(mock_input_file)
     for q in TEST_QS:
-        qDs = diversity.alpha(features, counts, q, filepath=mock_matrix_file)
+        qDs = diversity.alpha(df, q, z_filepath=mock_matrix_file)
         assert isclose(TEST_QDS, qDs)
 
 
-def test_alpha_from_similarity_fn(mock_input_file):
-    features, counts = process_input_file(mock_input_file)
+def test_alpha_from_similarity_fn(mock_input_file, mock_empty_matrix_file):
+    df = process_input_file(mock_input_file)
     for q in TEST_QS:
         qDs = diversity.alpha(
-            features, counts, q, similarity_fn=diversity.sequence_similarity)
+            df, q, z_filepath=mock_empty_matrix_file, similarity_fn=diversity.sequence_similarity)
         assert isclose(TEST_QDS, qDs)
