@@ -1,3 +1,4 @@
+import numpy as np
 import diversity
 import argparse
 import warnings
@@ -41,16 +42,26 @@ def main():
 
     df = process_input_file(args.filepath)
     print(df)  # FIXME delete me
-    sumcommunity_names = list(df['subcommunity'].unique()) * len(args.q)
+
+    sumcommunity_names = list(df['subcommunity'].unique())
+    sumcommunity_column = sumcommunity_names * len(args.q)
+    q_column = np.repeat(args.q, len(sumcommunity_names))
     Z_filepath = args.Z
-    alpha = [diversity.raw_alpha(df, q, z_filepath=Z_filepath)
-             for q in args.q]
-    alpha_bar = [diversity.normalized_alpha(df, q, z_filepath=Z_filepath)
-                 for q in args.q]
-    df = pd.DataFrame({'q': args.q, 'raw_alpha': alpha,
-                      'normalized_alpha': alpha_bar})
-    df = df.explode(['raw_alpha', 'normalized_alpha'], ignore_index=True)
-    df.insert(1, "subcommunity", sumcommunity_names)
+
+    fs = [diversity.raw_alpha, diversity.normalized_alpha,
+          diversity.raw_rho, diversity.normalized_rho, diversity.gamma]
+
+    measures = [[f(df, q, z_filepath=Z_filepath) for f in fs] for q in args.q]
+
+    columns = ['raw_alpha', 'normalized_alpha',
+               'raw_rho', 'normalized_rho', 'gamma']
+    df = pd.DataFrame(measures)
+    df.columns = columns
+
+    df = df.explode(columns[:-1], ignore_index=True)
+    df = df.explode(['gamma'])
+    df.insert(0, "subcommunity", sumcommunity_column)
+    df.insert(0, "q", q_column)
     print(df)  # FIXME delete me
 
 
