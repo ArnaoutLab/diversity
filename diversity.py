@@ -5,6 +5,12 @@ import csv
 from Levenshtein import distance
 
 
+class Metacommunity:
+
+    def __init__(self):
+        pass
+
+
 # FIXME Levenshtein probably shouldn't be a dependency. Instead, we should define our similarity function outside of morty
 def sequence_similarity(a, b):
     a, b, = ''.join(a), ''.join(b)
@@ -62,14 +68,23 @@ def power_mean(order, weights, x):
 
 
 # FIXME eventually remove sequence_similarity() as default similarity function
-def alpha(df, q, z_filepath, similarity_fn=sequence_similarity):
-    # FIXME extracting the features from the dataframe seems ugly, maybe features should be their own argument
+def raw_alpha(df, q, z_filepath, similarity_fn=sequence_similarity):
     features = df.iloc[:, 3:].to_numpy()
     order = 1 - q
-    # FIXME same issue here, df.iloc[:, :3] should just be it's own variable/argument
+    P = relative_abundances(df.iloc[:, :3]).to_numpy()
+    w = subcommunity_proportions(P)
+    P_bar = P / w
+    ZP = calculate_ZP(z_filepath, P, features, similarity_fn)
+    ZP_inverse = np.divide(1, ZP, out=ZP, where=ZP != 0)
+    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, ZP_inverse.T)]
+
+
+def normalized_alpha(df, q, z_filepath, similarity_fn=sequence_similarity):
+    features = df.iloc[:, 3:].to_numpy()
+    order = 1 - q
     P = relative_abundances(df.iloc[:, :3]).to_numpy()
     w = subcommunity_proportions(P)
     P_bar = P / w
     ZP_bar = calculate_ZP(z_filepath, P_bar, features, similarity_fn)
-    ZP_inverse = np.divide(1, ZP_bar, out=ZP_bar, where=ZP_bar != 0)
-    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, ZP_inverse.T)]
+    ZP_bar_inverse = np.divide(1, ZP_bar, out=ZP_bar, where=ZP_bar != 0)
+    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, ZP_bar_inverse.T)]
