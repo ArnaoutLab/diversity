@@ -5,12 +5,6 @@ import csv
 from Levenshtein import distance
 
 
-class Metacommunity:
-
-    def __init__(self):
-        pass
-
-
 # FIXME Levenshtein probably shouldn't be a dependency. Instead, we should define our similarity function outside of morty
 def sequence_similarity(a, b):
     a, b, = ''.join(a), ''.join(b)
@@ -23,10 +17,6 @@ def relative_abundances(df):
                                           columns='subcommunity', aggfunc='first', fill_value=0.0)
     total_abundance = metacommunity_counts.to_numpy().sum()
     return metacommunity_counts / total_abundance
-
-
-def subcommunity_proportions(relative_abundance):
-    return relative_abundance.sum(axis=0)
 
 
 def write_similarity_matrix(Z_filepath, features, similarity_fn):
@@ -72,19 +62,57 @@ def raw_alpha(df, q, z_filepath, similarity_fn=sequence_similarity):
     features = df.iloc[:, 3:].to_numpy()
     order = 1 - q
     P = relative_abundances(df.iloc[:, :3]).to_numpy()
-    w = subcommunity_proportions(P)
+    w = P.sum(axis=0)
     P_bar = P / w
     ZP = calculate_ZP(z_filepath, P, features, similarity_fn)
-    ZP_inverse = np.divide(1, ZP, out=ZP, where=ZP != 0)
-    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, ZP_inverse.T)]
+    inverse_ZP = np.divide(1, ZP, out=ZP, where=ZP != 0)
+    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, inverse_ZP.T)]
 
 
 def normalized_alpha(df, q, z_filepath, similarity_fn=sequence_similarity):
     features = df.iloc[:, 3:].to_numpy()
     order = 1 - q
     P = relative_abundances(df.iloc[:, :3]).to_numpy()
-    w = subcommunity_proportions(P)
+    w = P.sum(axis=0)
     P_bar = P / w
     ZP_bar = calculate_ZP(z_filepath, P_bar, features, similarity_fn)
-    ZP_bar_inverse = np.divide(1, ZP_bar, out=ZP_bar, where=ZP_bar != 0)
-    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, ZP_bar_inverse.T)]
+    inverse_ZP_bar = np.divide(1, ZP_bar, out=ZP_bar, where=ZP_bar != 0)
+    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, inverse_ZP_bar.T)]
+
+
+def raw_rho(df, q, z_filepath, similarity_fn=sequence_similarity):
+    features = df.iloc[:, 3:].to_numpy()
+    order = 1 - q
+    P = relative_abundances(df.iloc[:, :3]).to_numpy()
+    p = P.sum(axis=1).reshape((-1, 1))
+    w = P.sum(axis=0)
+    P_bar = P / w
+    Zp = calculate_ZP(z_filepath, p, features, similarity_fn)
+    ZP = calculate_ZP(z_filepath, P, features, similarity_fn)
+    Zp_over_ZP = np.divide(Zp, ZP, out=ZP, where=ZP != 0)
+    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, Zp_over_ZP.T)]
+
+
+def normalized_rho(df, q, z_filepath, similarity_fn=sequence_similarity):
+    features = df.iloc[:, 3:].to_numpy()
+    order = 1 - q
+    P = relative_abundances(df.iloc[:, :3]).to_numpy()
+    p = P.sum(axis=1).reshape((-1, 1))
+    w = P.sum(axis=0)
+    P_bar = P / w
+    Zp = calculate_ZP(z_filepath, p, features, similarity_fn)
+    ZP_bar = calculate_ZP(z_filepath, P_bar, features, similarity_fn)
+    Zp_over_ZP_bar = np.divide(Zp, ZP_bar, out=ZP_bar, where=ZP_bar != 0)
+    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, Zp_over_ZP_bar.T)]
+
+
+def gamma(df, q, z_filepath, similarity_fn=sequence_similarity):
+    features = df.iloc[:, 3:].to_numpy()
+    order = 1 - q
+    P = relative_abundances(df.iloc[:, :3]).to_numpy()
+    p = P.sum(axis=1).reshape((-1, 1))
+    w = P.sum(axis=0)
+    P_bar = P / w
+    Zp = calculate_ZP(z_filepath, p, features, similarity_fn)
+    inverse_Zp = 1 / Zp
+    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, inverse_Zp.T)]
