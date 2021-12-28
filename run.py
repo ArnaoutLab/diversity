@@ -21,7 +21,7 @@ def main():
     parser.add_argument(
         "filepath",
         type=str,
-        help="A list of csv file(s) where the first two columns of the file(s) are the species name and its count and all following columns are features of that species that will be used to calculate similarity between species")
+        help="A csv file where the first 3 columns of the file are the species name, its count, and subcommunity name, and all following columns are features of that species that will be used to calculate similarity between species")
     parser.add_argument(
         "Z",
         type=str,
@@ -43,10 +43,13 @@ def main():
     print(df)  # FIXME delete me
     sumcommunity_names = list(df['subcommunity'].unique()) * len(args.q)
     Z_filepath = args.Z
-    alpha = [diversity.alpha(df, q, z_filepath=Z_filepath)
+    alpha = [diversity.raw_alpha(df, q, z_filepath=Z_filepath)
              for q in args.q]
-    df = pd.DataFrame({'q': args.q, 'measure': alpha})
-    df = df.explode(['measure'], ignore_index=True)
+    alpha_bar = [diversity.normalized_alpha(df, q, z_filepath=Z_filepath)
+                 for q in args.q]
+    df = pd.DataFrame({'q': args.q, 'raw_alpha': alpha,
+                      'normalized_alpha': alpha_bar})
+    df = df.explode(['raw_alpha', 'normalized_alpha'], ignore_index=True)
     df.insert(1, "subcommunity", sumcommunity_names)
     print(df)  # FIXME delete me
 
