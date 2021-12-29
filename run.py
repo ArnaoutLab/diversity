@@ -3,10 +3,9 @@ import diversity
 import argparse
 import warnings
 import pandas as pd
-from pathlib import Path
 
 
-# FIXME doesnt require pandas dependency, could be done using only numpy (would have to remove header)
+# FIXME not sure where this function should go
 def process_input_file(filepath):
     df = pd.read_csv(filepath, header=None)
     column_names = ['species', 'count', 'subcommunity']
@@ -46,22 +45,21 @@ def main():
     sumcommunity_names = list(df['subcommunity'].unique())
     sumcommunity_column = sumcommunity_names * len(args.q)
     q_column = np.repeat(args.q, len(sumcommunity_names))
-    Z_filepath = args.Z
-
-    fs = [diversity.raw_alpha, diversity.normalized_alpha,
-          diversity.raw_rho, diversity.normalized_rho, diversity.gamma]
-
-    measures = [[f(df, q, z_filepath=Z_filepath) for f in fs] for q in args.q]
-
+    z_filepath = args.Z
+    meta = diversity.Metacommunity(df, z_filepath=z_filepath)
+    fs = [meta.raw_alpha, meta.normalized_alpha,
+          meta.raw_rho, meta.normalized_rho, meta.gamma]
+    measures = [[f(q) for q in args.q] for f in fs]
     columns = ['raw_alpha', 'normalized_alpha',
                'raw_rho', 'normalized_rho', 'gamma']
-    df = pd.DataFrame(measures)
+    df = pd.DataFrame(measures).T
     df.columns = columns
-
     df = df.explode(columns[:-1], ignore_index=True)
     df = df.explode(['gamma'])
     df.insert(0, "subcommunity", sumcommunity_column)
     df.insert(0, "q", q_column)
+    df.insert(4, 'raw_beta', 1 / df['raw_rho'])
+    df.insert(5, 'normalized_beta', 1 / df['normalized_rho'])
     print(df)  # FIXME delete me
 
 
