@@ -7,10 +7,11 @@ from Levenshtein import distance
 
 class Metacommunity:
 
-    def __init__(self, df, z_filepath):
+    def __init__(self, df, q, z_filepath):
         # Input
         self.counts = df.iloc[:, :3]
         self.features = df.iloc[:, 3:].to_numpy()
+        self.q = np.array(q)
         self.z_filepath = Path(z_filepath)
         self.similarity_fn = sequence_similarity
         # Diversity components
@@ -51,8 +52,8 @@ class Metacommunity:
             self.write_similarity_matrix()
         return self.zp_from_file(P)
 
-    def measure(self, q, numerator, denominator):
-        order = 1 - q
+    def measure(self, numerator, denominator):
+        order = 1 - self.q
         x = safe_divide(numerator, denominator)
         measures = []
         for p, x in zip(self.P_bar.T, x.T):
@@ -62,20 +63,20 @@ class Metacommunity:
             measures.append(power_mean(order, p, x))
         return measures
 
-    def raw_alpha(self, q):
-        return self.measure(q, 1, self.ZP)
+    def raw_alpha(self):
+        return self.measure(1, self.ZP)
 
-    def normalized_alpha(self, q):
-        return self.measure(q, 1, self.ZP_bar)
+    def normalized_alpha(self):
+        return self.measure(1, self.ZP_bar)
 
-    def raw_rho(self, q):
-        return self.measure(q, self.Zp, self.ZP)
+    def raw_rho(self):
+        return self.measure(self.Zp, self.ZP)
 
-    def normalized_rho(self, q):
-        return self.measure(q, self.Zp, self.ZP_bar)
+    def normalized_rho(self):
+        return self.measure(self.Zp, self.ZP_bar)
 
-    def gamma(self, q):
-        return self.measure(q, 1, self.Zp)
+    def gamma(self):
+        return self.measure(1, self.Zp)
 
 
 def sequence_similarity(a, b):
@@ -84,12 +85,16 @@ def sequence_similarity(a, b):
     return 1 - (distance(a, b) / max_length)
 
 
-def power_mean(order, weights, x):
-    if order == 0:
-        return np.prod(x ** weights)
-    elif order < -100 or order == -np.inf:
-        return np.amax(x)
-    return np.sum((x ** order) * weights, axis=0) ** (1 / order)
+def power_mean(orders, weights, x):
+    means = []
+    for order in orders:
+        if order == 0:
+            means.append(np.prod(x ** weights))
+        elif order < -100 or order == -np.inf:
+            means.append(np.amax(x))
+        else:
+            means.append(np.sum((x ** order) * weights, axis=0) ** (1 / order))
+    return means
 
 
 def safe_divide(numerator, denominator):
