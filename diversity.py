@@ -1,21 +1,21 @@
 from pathlib import Path
 import numpy as np
-import pandas as pd
 import csv
 from Levenshtein import distance
 
 
 class Metacommunity:
 
-    def __init__(self, df, q, z_filepath):
+    # FIXME need to check if features are passed, and if not, need to enforce z_filepath to reference similarity matrix
+    def __init__(self, counts, q, z_filepath, features=None):
         # Input
-        self.counts = df.iloc[:, :3]
-        self.features = df.iloc[:, 3:].to_numpy()
+        self.counts = counts
+        self.features = features
         self.q = np.array(q)
         self.z_filepath = Path(z_filepath)
         self.similarity_fn = sequence_similarity
         # Diversity components
-        self.P = self.relative_abundances().to_numpy()
+        self.P = self.relative_abundances()
         self.p = self.P.sum(axis=1).reshape((-1, 1))
         self.w = self.P.sum(axis=0)
         self.P_bar = self.P / self.w
@@ -40,9 +40,12 @@ class Metacommunity:
         self.normalized_R = self.metacommunity_measure(self.normalized_rho)
 
     def relative_abundances(self):
-        metacommunity_counts = pd.pivot_table(self.counts, values='count', index='species',
-                                              columns='subcommunity', aggfunc='first', fill_value=0.0)
-        total_abundance = metacommunity_counts.to_numpy().sum()
+        rows, row_pos = np.unique(self.counts[:, 0], return_inverse=True)
+        cols, col_pos = np.unique(self.counts[:, 2], return_inverse=True)
+        metacommunity_counts = np.zeros(
+            (len(rows), len(cols)), dtype=np.float64)
+        metacommunity_counts[row_pos, col_pos] = self.counts[:, 1]
+        total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
 
     def write_similarity_matrix(self):
@@ -80,8 +83,8 @@ class Metacommunity:
         return np.array(measures)
 
     def metacommunity_measure(self, subcommunity_measure):
-        return [power_means(self.q, self.w, measure_q)[0]
-                for measure_q in subcommunity_measure]
+        orders = 1 - self.q
+        return [power_mean(order, self.w, measure) for order, measure in zip(orders, subcommunity_measure.T)]
 
     def calculate_raw_alpha(self):
         return self.subcommunity_measure(1, self.ZP)
