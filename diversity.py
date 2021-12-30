@@ -22,6 +22,22 @@ class Metacommunity:
         self.Zp = self.calculate_zp(self.p)
         self.ZP = self.calculate_zp(self.P)
         self.ZP_bar = self.calculate_zp(self.P_bar)
+        # Subcommunity diversity measures
+        self.raw_alpha = self.calculate_raw_alpha()
+        self.raw_rho = self.calculate_raw_rho()
+        self.raw_beta = 1 / self.raw_rho
+        self.gamma = self.calculate_gamma()
+        self.normalized_alpha = self.calculate_normalized_alpha()
+        self.normalized_rho = self.calculate_normalized_rho()
+        self.normalized_beta = 1 / self.normalized_rho
+        # Metacommunity diversity measures
+        self.A = self.metacommunity_measure(self.raw_alpha)
+        self.R = self.metacommunity_measure(self.raw_rho)
+        self.B = self.metacommunity_measure(self.raw_beta)
+        self.G = self.metacommunity_measure(self.gamma)
+        self.normalized_B = self.metacommunity_measure(self.normalized_beta)
+        self.normalized_A = self.metacommunity_measure(self.normalized_alpha)
+        self.normalized_R = self.metacommunity_measure(self.normalized_rho)
 
     def relative_abundances(self):
         metacommunity_counts = pd.pivot_table(self.counts, values='count', index='species',
@@ -52,7 +68,7 @@ class Metacommunity:
             self.write_similarity_matrix()
         return self.zp_from_file(P)
 
-    def measure(self, numerator, denominator):
+    def subcommunity_measure(self, numerator, denominator):
         order = 1 - self.q
         x = safe_divide(numerator, denominator)
         measures = []
@@ -60,23 +76,27 @@ class Metacommunity:
             indices = np.where(p != 0)
             p = p[indices]
             x = x[indices]
-            measures.append(power_mean(order, p, x))
-        return measures
+            measures.append(power_means(order, p, x))
+        return np.array(measures)
 
-    def raw_alpha(self):
-        return self.measure(1, self.ZP)
+    def metacommunity_measure(self, subcommunity_measure):
+        return [power_means(self.q, self.w, measure_q)[0]
+                for measure_q in subcommunity_measure]
 
-    def normalized_alpha(self):
-        return self.measure(1, self.ZP_bar)
+    def calculate_raw_alpha(self):
+        return self.subcommunity_measure(1, self.ZP)
 
-    def raw_rho(self):
-        return self.measure(self.Zp, self.ZP)
+    def calculate_normalized_alpha(self):
+        return self.subcommunity_measure(1, self.ZP_bar)
 
-    def normalized_rho(self):
-        return self.measure(self.Zp, self.ZP_bar)
+    def calculate_raw_rho(self):
+        return self.subcommunity_measure(self.Zp, self.ZP)
 
-    def gamma(self):
-        return self.measure(1, self.Zp)
+    def calculate_normalized_rho(self):
+        return self.subcommunity_measure(self.Zp, self.ZP_bar)
+
+    def calculate_gamma(self):
+        return self.subcommunity_measure(1, self.Zp)
 
 
 def sequence_similarity(a, b):
@@ -85,16 +105,16 @@ def sequence_similarity(a, b):
     return 1 - (distance(a, b) / max_length)
 
 
-def power_mean(orders, weights, x):
-    means = []
-    for order in orders:
-        if order == 0:
-            means.append(np.prod(x ** weights))
-        elif order < -100 or order == -np.inf:
-            means.append(np.amax(x))
-        else:
-            means.append(np.sum((x ** order) * weights, axis=0) ** (1 / order))
-    return means
+def power_means(orders, weights, x):
+    return [power_mean(order, weights, x) for order in orders]
+
+
+def power_mean(order, weights, x):
+    if order == 0:
+        return np.prod(x ** weights)
+    elif order < -100:
+        return np.amax(x)
+    return np.sum((x ** order) * weights, axis=0) ** (1 / order)
 
 
 def safe_divide(numerator, denominator):
