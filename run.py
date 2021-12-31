@@ -1,47 +1,54 @@
-import numpy as np
-import diversity
-import argparse
-import warnings
+from argparse import ArgumentParser
+from logging import captureWarnings
+from pathlib import Path
+from platform import python_version
+from sys import argv
+from warnings import warn
 
+from numpy import (
+    genfromtxt,
+    repeat,
+    )
+from pandas import (
+    DataFrame,
+    read_csv,
+    )
 
+from Chubacabra.diversity import Metacommunity
+from Chubacabra.log import (
+    LOG_HANDLER,
+    LOGGER)
+from Chubacabra.parameters import configure_arguments
+
+# Ensure warnings are handled properly.
+captureWarnings(True)
+getLogger('py.warnings').addHandler(LOG_HANDLER)
+
+########################################################################
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "filepath",
-        type=str,
-        help="A csv file where the first 3 columns of the file are the species name, its count, and subcommunity name, and all following columns are features of that species that will be used to calculate similarity between species")
-    parser.add_argument(
-        "Z",
-        type=str,
-        help="The filepath to a csv file containing a symmetric similarity matrix. If the file does not exist, one will be created with the user defined similarity function")
-    parser.add_argument(
-        "-q",
-        nargs='+',
-        type=float,
-        help="A list of q's where each q >= 0")
-
+    # Parse and validate arguments
+    parser = configure_arguments()
     args = parser.parse_args()
 
-    # validate arguments
-    if any([q > 100 for q in args.q]):
-        warnings.warn(
-            "q > 100.0 defaults to the analytical formula for q = inf", stacklevel=2)
+    LOGGER.setLevel(args.log_level)
+    LOGGER.info(' '.join([f'python{python_version()}', *argv]))
+    LOGGER.debug(f'args: {args}')
 
-    data = np.genfromtxt(args.filepath, delimiter=',', dtype=object)
-    print(data)  # FIXME delete me
-
+    # FIXME equal species are listed multiple times (once for each
+    # subcommunity they are members of, which is deceiving 
+    data = genfromtxt(args.filepath, delimiter=',', dtype=object)
+    LOGGER.debug(f'data: {data}')
     counts = data[:, :3]
     features = data[:, 3:]
-
-    meta = diversity.Metacommunity(counts, args.q, args.Z, features=features)
+    meta = Metacommunity(counts, args.q, args.Z, features=features)
 
     print('\n')
 
-    print(meta.alpha)
+    print(meta.raw_alpha)
     print(meta.normalized_alpha)
-    print(meta.rho)
+    print(meta.raw_rho)
     print(meta.normalized_rho)
-    print(meta.beta)
+    print(meta.raw_beta)
     print(meta.normalized_beta)
     print(meta.gamma)
 
@@ -55,6 +62,8 @@ def main():
     print(meta.normalized_B)
     print(meta.G)
 
+    LOGGER.info('Done!')
 
+########################################################################
 if __name__ == "__main__":
     main()
