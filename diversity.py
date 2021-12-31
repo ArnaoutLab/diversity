@@ -6,7 +6,6 @@ from Levenshtein import distance
 
 class Metacommunity:
 
-    # FIXME need to check if features are passed, and if not, need to enforce z_filepath to reference similarity matrix
     def __init__(self, counts, q, z_filepath, features=None):
         # Input
         self.counts = counts
@@ -23,17 +22,17 @@ class Metacommunity:
         self.ZP = self.calculate_zp(self.P)
         self.ZP_bar = self.calculate_zp(self.P_bar)
         # Subcommunity diversity measures
-        self.raw_alpha = self.calculate_raw_alpha()
-        self.raw_rho = self.calculate_raw_rho()
-        self.raw_beta = 1 / self.raw_rho
-        self.gamma = self.calculate_gamma()
-        self.normalized_alpha = self.calculate_normalized_alpha()
-        self.normalized_rho = self.calculate_normalized_rho()
+        self.alpha = self.subcommunity_measure(1, self.ZP)
+        self.rho = self.subcommunity_measure(self.Zp, self.ZP)
+        self.beta = 1 / self.rho
+        self.gamma = self.subcommunity_measure(1, self.Zp)
+        self.normalized_alpha = self.subcommunity_measure(1, self.ZP_bar)
+        self.normalized_rho = self.subcommunity_measure(self.Zp, self.ZP_bar)
         self.normalized_beta = 1 / self.normalized_rho
         # Metacommunity diversity measures
-        self.A = self.metacommunity_measure(self.raw_alpha)
-        self.R = self.metacommunity_measure(self.raw_rho)
-        self.B = self.metacommunity_measure(self.raw_beta)
+        self.A = self.metacommunity_measure(self.alpha)
+        self.R = self.metacommunity_measure(self.rho)
+        self.B = self.metacommunity_measure(self.beta)
         self.G = self.metacommunity_measure(self.gamma)
         self.normalized_B = self.metacommunity_measure(self.normalized_beta)
         self.normalized_A = self.metacommunity_measure(self.normalized_alpha)
@@ -67,7 +66,7 @@ class Metacommunity:
         return ZP
 
     def calculate_zp(self, P):
-        if not Path(self.z_filepath).is_file():
+        if not self.z_filepath.is_file():
             self.write_similarity_matrix()
         return self.zp_from_file(P)
 
@@ -86,20 +85,9 @@ class Metacommunity:
         orders = 1 - self.q
         return [power_mean(order, self.w, measure) for order, measure in zip(orders, subcommunity_measure.T)]
 
-    def calculate_raw_alpha(self):
-        return self.subcommunity_measure(1, self.ZP)
-
-    def calculate_normalized_alpha(self):
-        return self.subcommunity_measure(1, self.ZP_bar)
-
-    def calculate_raw_rho(self):
-        return self.subcommunity_measure(self.Zp, self.ZP)
-
-    def calculate_normalized_rho(self):
-        return self.subcommunity_measure(self.Zp, self.ZP_bar)
-
-    def calculate_gamma(self):
-        return self.subcommunity_measure(1, self.Zp)
+    # FIXME implement me!
+    def format_results(self):
+        pass
 
 
 def sequence_similarity(a, b):
@@ -116,7 +104,7 @@ def power_mean(order, weights, x):
     if order == 0:
         return np.prod(x ** weights)
     elif order < -100:
-        return np.amax(x)
+        return np.amin(x)
     return np.sum((x ** order) * weights, axis=0) ** (1 / order)
 
 

@@ -29,17 +29,19 @@ def main():
 
     data = np.genfromtxt(args.filepath, delimiter=',', dtype=object)
     print(data)  # FIXME delete me
+
     counts = data[:, :3]
     features = data[:, 3:]
+
     meta = diversity.Metacommunity(counts, args.q, args.Z, features=features)
 
     print('\n')
 
-    print(meta.raw_alpha)
+    print(meta.alpha)
     print(meta.normalized_alpha)
-    print(meta.raw_rho)
+    print(meta.rho)
     print(meta.normalized_rho)
-    print(meta.raw_beta)
+    print(meta.beta)
     print(meta.normalized_beta)
     print(meta.gamma)
 
