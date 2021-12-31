@@ -1,118 +1,214 @@
+"""Module for calculating diversity measures.
+
+Classes
+-------
+Metacommunity
+    Represents a metacommunity and computes diversity measures.
+
+Functions
+---------
+power_mean
+    Calculates weighted power means.
+safe_divide
+    Divides 2 numpy.arrays avoiding 0-division.
+sequence_similarity
+    Calculates a similarity measure between two sequences of characters.
+"""
+from csv import reader, writer
 from pathlib import Path
-import numpy as np
-import pandas as pd
-import csv
 from Levenshtein import distance
+from numpy import amax, amin, dot, array, empty, unique, where, prod, zeros, sum as numpy_sum, divide, float64, inf
+
+########################################################################
 
 
-# FIXME Levenshtein probably shouldn't be a dependency. Instead, we should define our similarity function outside of morty
+class Metacommunity:
+    """Class for metacommunities and calculation their diversity.
+
+    Attributes
+    ----------
+    counts: numpy.ndarray
+    features: numpy.ndarray
+    q: numpy.ndarray
+    z_filepath: pathlib.Path
+    similarity_fn: callable
+    """
+    # FIXME need to check if features are passed, and if not, need to enforce z_filepath to reference similarity matrix
+    # FIXME Rename q -> suggestions: large_species_bias, viewpoint, inverse_order, order
+
+    def __init__(self, counts, q, z_filepath, features=None):
+        # Input
+        self.counts = counts
+        self.features = features
+        self.q = array(q)
+        self.z_filepath = Path(z_filepath)
+        # FIXME no custom similarity function?
+        self.similarity_fn = sequence_similarity
+        # Diversity components
+        self.P = self.relative_abundances()
+        self.p = self.P.sum(axis=1).reshape((-1, 1))
+        self.w = self.P.sum(axis=0)
+        self.P_bar = self.P / self.w
+        self.Zp = self.calculate_zp(self.p)
+        self.ZP = self.calculate_zp(self.P)
+        self.ZP_bar = self.calculate_zp(self.P_bar)
+        # Subcommunity diversity measures
+        self.alpha = self.subcommunity_measure(1, self.ZP)
+        self.rho = self.subcommunity_measure(self.Zp, self.ZP)
+        self.beta = 1 / self.rho
+        self.gamma = self.subcommunity_measure(1, self.Zp)
+        self.normalized_alpha = self.subcommunity_measure(1, self.ZP_bar)
+        self.normalized_rho = self.subcommunity_measure(self.Zp, self.ZP_bar)
+        self.normalized_beta = 1 / self.normalized_rho
+        # Metacommunity diversity measures
+        self.A = self.metacommunity_measure(self.alpha)
+        self.R = self.metacommunity_measure(self.rho)
+        self.B = self.metacommunity_measure(self.beta)
+        self.G = self.metacommunity_measure(self.gamma)
+        self.normalized_B = self.metacommunity_measure(self.normalized_beta)
+        self.normalized_A = self.metacommunity_measure(self.normalized_alpha)
+        self.normalized_R = self.metacommunity_measure(self.normalized_rho)
+
+    def relative_abundances(self):
+        rows, row_pos = unique(self.counts[:, 0], return_inverse=True)
+        cols, col_pos = unique(self.counts[:, 2], return_inverse=True)
+        metacommunity_counts = zeros(
+            (len(rows), len(cols)), dtype=float64)
+        metacommunity_counts[row_pos, col_pos] = self.counts[:, 1]
+        total_abundance = metacommunity_counts.sum()
+        return metacommunity_counts / total_abundance
+
+    def write_similarity_matrix(self):
+        n_species = self.features.shape[0]
+        z_i = empty(n_species, dtype=float64)
+        with open(self.z_filepath, 'w') as f:
+            csv_writer = writer(f)
+            for species_i in self.features:
+                for j, species_j in enumerate(self.features):
+                    z_i[j] = self.similarity_fn(species_i, species_j)
+                csv_writer.writerow(z_i)
+
+    def zp_from_file(self, P):
+        ZP = empty(P.shape, dtype=float64)
+        with open(self.z_filepath, 'r') as f:
+            for i, z_i in enumerate(reader(f)):
+                z_i = array(z_i, dtype=float64)
+                ZP[i, :] = dot(z_i, P)
+        return ZP
+
+    def calculate_zp(self, P):
+        if not self.z_filepath.is_file():
+            self.write_similarity_matrix()
+        return self.zp_from_file(P)
+
+    def subcommunity_measure(self, numerator, denominator):
+        order = 1 - self.q
+        x = safe_divide(numerator, denominator)
+        measures = []
+        for p, x in zip(self.P_bar.T, x.T):
+            indices = where(p != 0)
+            p = p[indices]
+            x = x[indices]
+            measures.append(power_means(order, p, x))
+        return array(measures)
+
+    def metacommunity_measure(self, subcommunity_measure):
+        orders = 1 - self.q
+        return [power_mean(order, self.w, measure) for order, measure in zip(orders, subcommunity_measure.T)]
+
+    # FIXME implement me!
+    def format_results(self):
+        pass
+
+########################################################################
+
+
 def sequence_similarity(a, b):
+    """Calculates a Levenshtein distance derived similarity measure.
+
+    Parameters
+    ----------
+    a: Iterable
+        Sequence of characters comprising the first argument of the
+        similarity function.
+    b: Iterable
+        Sequence of characters comprising the second argument of the
+        similarity function.
+
+    Result
+    ------
+    1 - (Levenshtein distance between concatenations of a and b divided
+    by length of the longer of the two sequences).
+    """
     a, b, = ''.join(a), ''.join(b)
-    max_length = np.amax([len(a), len(b)])
+    max_length = amax([len(a), len(b)])
     return 1 - (distance(a, b) / max_length)
 
-
-def relative_abundances(df):
-    metacommunity_counts = pd.pivot_table(df, values='count', index='species',
-                                          columns='subcommunity', aggfunc='first', fill_value=0.0)
-    total_abundance = metacommunity_counts.to_numpy().sum()
-    return metacommunity_counts / total_abundance
+########################################################################
 
 
-def write_similarity_matrix(Z_filepath, features, similarity_fn):
-    n_species = features.shape[0]
-    z_i = np.empty(n_species, dtype=np.float64)
-    with open(Z_filepath, 'w') as f:
-        writer = csv.writer(f)
-        for i, species_i in enumerate(features):
-            for j, species_j in enumerate(features):
-                z_i[j] = similarity_fn(species_i, species_j)
-            writer.writerow(z_i)
+def power_mean(order, weights, items):
+    """Calculates a weighted power mean.
 
+    Parameters
+    ----------
+    order: numeric
+        Exponent for the power mean.
+    weights: numpy.ndarray
+        The weights corresponding to items.
+    items: numpy.ndarray
+        The elements for which the weighted power mean is computed.
 
-def ZP_from_file(Z_filepath, P):
-    ZP = np.empty(P.shape, dtype=np.float64)
-    with open(Z_filepath, 'r') as f:
-        for i, z_i in enumerate(csv.reader(f)):
-            z_i = np.array(z_i, dtype=np.float64)
-            ZP[i, :] = np.dot(z_i, P)
-    return ZP
-
-
-def calculate_ZP(Z_filepath, P, features, similarity_fn):
-    if not Path(Z_filepath).is_file():
-        write_similarity_matrix(Z_filepath, features, similarity_fn)
-    return ZP_from_file(Z_filepath, P)
-
-
-# FIXME the cases for q = 1 and q = infinity may be specific to the diversity measure, in which case each measure function would need its own set of conditionals
-def power_mean(order, weights, x):
-    indices = np.where(weights != 0)
-    weights = weights[indices]
-    x = x[indices]
+    Returns
+    -------
+    The power mean of items with exponent order, weighted by weights.
+    When order is less than -100, it is treated as the special case
+    where order is -infinity.
+    """
     if order == 0:
-        return np.prod(x ** weights)
-    elif order < -100 or order == -np.inf:
-        return np.amax(x)
-    return np.sum((x ** order) * weights, axis=0) ** (1 / order)
+        return prod(items ** weights)
+    elif order < -100 or order == -inf:
+        return amin(items)
+    return numpy_sum((items ** order) * weights, axis=0) ** (1 / order)
+
+########################################################################
 
 
-# FIXME eventually remove sequence_similarity() as default similarity function
-def raw_alpha(df, q, z_filepath, similarity_fn=sequence_similarity):
-    features = df.iloc[:, 3:].to_numpy()
-    order = 1 - q
-    P = relative_abundances(df.iloc[:, :3]).to_numpy()
-    w = P.sum(axis=0)
-    P_bar = P / w
-    ZP = calculate_ZP(z_filepath, P, features, similarity_fn)
-    inverse_ZP = np.divide(1, ZP, out=ZP, where=ZP != 0)
-    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, inverse_ZP.T)]
+def power_means(orders, weights, x):
+    """Calculates power means for multiple exponents.
+
+    Parameters
+    ----------
+    orders: iterable
+        The exponents for which to calculate power means.
+    weights, items
+        See Chubacabra.diversity.power_mean.
+
+    Returns
+    -------
+    list of return values of Chubacabra.diversity.power_mean for the
+    different exponents.
+    """
+    return [power_mean(order, weights, x) for order in orders]
+
+########################################################################
 
 
-def normalized_alpha(df, q, z_filepath, similarity_fn=sequence_similarity):
-    features = df.iloc[:, 3:].to_numpy()
-    order = 1 - q
-    P = relative_abundances(df.iloc[:, :3]).to_numpy()
-    w = P.sum(axis=0)
-    P_bar = P / w
-    ZP_bar = calculate_ZP(z_filepath, P_bar, features, similarity_fn)
-    inverse_ZP_bar = np.divide(1, ZP_bar, out=ZP_bar, where=ZP_bar != 0)
-    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, inverse_ZP_bar.T)]
+def safe_divide(numerator, denominator):
+    """Divides two numpy.ndarray instances, avoiding 0-divisions.
 
+    Parameters
+    ----------
+    numerator: numpy.ndarray
+        Dividend array.
+    denominator: numpy.ndarray
+        Divisor array.
 
-def raw_rho(df, q, z_filepath, similarity_fn=sequence_similarity):
-    features = df.iloc[:, 3:].to_numpy()
-    order = 1 - q
-    P = relative_abundances(df.iloc[:, :3]).to_numpy()
-    p = P.sum(axis=1).reshape((-1, 1))
-    w = P.sum(axis=0)
-    P_bar = P / w
-    Zp = calculate_ZP(z_filepath, p, features, similarity_fn)
-    ZP = calculate_ZP(z_filepath, P, features, similarity_fn)
-    Zp_over_ZP = np.divide(Zp, ZP, out=ZP, where=ZP != 0)
-    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, Zp_over_ZP.T)]
-
-
-def normalized_rho(df, q, z_filepath, similarity_fn=sequence_similarity):
-    features = df.iloc[:, 3:].to_numpy()
-    order = 1 - q
-    P = relative_abundances(df.iloc[:, :3]).to_numpy()
-    p = P.sum(axis=1).reshape((-1, 1))
-    w = P.sum(axis=0)
-    P_bar = P / w
-    Zp = calculate_ZP(z_filepath, p, features, similarity_fn)
-    ZP_bar = calculate_ZP(z_filepath, P_bar, features, similarity_fn)
-    Zp_over_ZP_bar = np.divide(Zp, ZP_bar, out=ZP_bar, where=ZP_bar != 0)
-    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, Zp_over_ZP_bar.T)]
-
-
-def gamma(df, q, z_filepath, similarity_fn=sequence_similarity):
-    features = df.iloc[:, 3:].to_numpy()
-    order = 1 - q
-    P = relative_abundances(df.iloc[:, :3]).to_numpy()
-    p = P.sum(axis=1).reshape((-1, 1))
-    w = P.sum(axis=0)
-    P_bar = P / w
-    Zp = calculate_ZP(z_filepath, p, features, similarity_fn)
-    inverse_Zp = 1 / Zp
-    return [power_mean(order, p, zp) for p, zp in zip(P_bar.T, inverse_Zp.T)]
+    Returns
+    -------
+    numpy.ndarray of element-wise quotients of numerator elements
+    divided by denominator elements where denominator elements are
+    non-zero and 0s where denominator elements are zero.
+    """
+    out = zeros(denominator.shape)
+    return divide(numerator, denominator, out=out, where=denominator != 0)
