@@ -14,19 +14,14 @@ safe_divide
 sequence_similarity
     Calculates a similarity measure between two sequences of characters.
 """
-import csv
+from csv import reader, writer
 from pathlib import Path
-
 from Levenshtein import distance
-from numpy import (
-    amax,
-    divide,
-    prod,
-    sum as numpy_sum,
-    zeros,
-    )
+from numpy import amax, amin, dot, array, empty, unique, where, prod, zeros, sum as numpy_sum, divide, float64, inf
 
 ########################################################################
+
+
 class Metacommunity:
     """Class for metacommunities and calculation their diversity.
 
@@ -40,13 +35,15 @@ class Metacommunity:
     """
     # FIXME need to check if features are passed, and if not, need to enforce z_filepath to reference similarity matrix
     # FIXME Rename q -> suggestions: large_species_bias, viewpoint, inverse_order, order
+
     def __init__(self, counts, q, z_filepath, features=None):
         # Input
         self.counts = counts
         self.features = features
-        self.q = np.array(q)
+        self.q = array(q)
         self.z_filepath = Path(z_filepath)
-        self.similarity_fn = sequence_similarity # FIXME no custom similarity function?
+        # FIXME no custom similarity function?
+        self.similarity_fn = sequence_similarity
         # Diversity components
         self.P = self.relative_abundances()
         self.p = self.P.sum(axis=1).reshape((-1, 1))
@@ -73,30 +70,30 @@ class Metacommunity:
         self.normalized_R = self.metacommunity_measure(self.normalized_rho)
 
     def relative_abundances(self):
-        rows, row_pos = np.unique(self.counts[:, 0], return_inverse=True)
-        cols, col_pos = np.unique(self.counts[:, 2], return_inverse=True)
-        metacommunity_counts = np.zeros(
-            (len(rows), len(cols)), dtype=np.float64)
+        rows, row_pos = unique(self.counts[:, 0], return_inverse=True)
+        cols, col_pos = unique(self.counts[:, 2], return_inverse=True)
+        metacommunity_counts = zeros(
+            (len(rows), len(cols)), dtype=float64)
         metacommunity_counts[row_pos, col_pos] = self.counts[:, 1]
         total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
 
     def write_similarity_matrix(self):
         n_species = self.features.shape[0]
-        z_i = np.empty(n_species, dtype=np.float64)
+        z_i = empty(n_species, dtype=float64)
         with open(self.z_filepath, 'w') as f:
-            writer = csv.writer(f)
+            csv_writer = writer(f)
             for species_i in self.features:
                 for j, species_j in enumerate(self.features):
                     z_i[j] = self.similarity_fn(species_i, species_j)
-                writer.writerow(z_i)
+                csv_writer.writerow(z_i)
 
     def zp_from_file(self, P):
-        ZP = np.empty(P.shape, dtype=np.float64)
+        ZP = empty(P.shape, dtype=float64)
         with open(self.z_filepath, 'r') as f:
-            for i, z_i in enumerate(csv.reader(f)):
-                z_i = np.array(z_i, dtype=np.float64)
-                ZP[i, :] = np.dot(z_i, P)
+            for i, z_i in enumerate(reader(f)):
+                z_i = array(z_i, dtype=float64)
+                ZP[i, :] = dot(z_i, P)
         return ZP
 
     def calculate_zp(self, P):
@@ -109,12 +106,12 @@ class Metacommunity:
         x = safe_divide(numerator, denominator)
         measures = []
         for p, x in zip(self.P_bar.T, x.T):
-            indices = np.where(p != 0)
+            indices = where(p != 0)
             p = p[indices]
             x = x[indices]
             measures.append(power_means(order, p, x))
-        return np.array(measures)
-    
+        return array(measures)
+
     def metacommunity_measure(self, subcommunity_measure):
         orders = 1 - self.q
         return [power_mean(order, self.w, measure) for order, measure in zip(orders, subcommunity_measure.T)]
@@ -124,6 +121,8 @@ class Metacommunity:
         pass
 
 ########################################################################
+
+
 def sequence_similarity(a, b):
     """Calculates a Levenshtein distance derived similarity measure.
 
@@ -146,6 +145,8 @@ def sequence_similarity(a, b):
     return 1 - (distance(a, b) / max_length)
 
 ########################################################################
+
+
 def power_mean(order, weights, items):
     """Calculates a weighted power mean.
 
@@ -166,11 +167,13 @@ def power_mean(order, weights, items):
     """
     if order == 0:
         return prod(items ** weights)
-    elif order < -100 or order == -np.inf:
-        return amax(items)
+    elif order < -100 or order == -inf:
+        return amin(items)
     return numpy_sum((items ** order) * weights, axis=0) ** (1 / order)
 
 ########################################################################
+
+
 def power_means(orders, weights, x):
     """Calculates power means for multiple exponents.
 
@@ -189,6 +192,8 @@ def power_means(orders, weights, x):
     return [power_mean(order, weights, x) for order in orders]
 
 ########################################################################
+
+
 def safe_divide(numerator, denominator):
     """Divides two numpy.ndarray instances, avoiding 0-divisions.
 
