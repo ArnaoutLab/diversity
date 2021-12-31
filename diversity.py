@@ -119,7 +119,12 @@ class Metacommunity:
         orders = 1 - self.q
         return [power_mean(order, self.w, measure) for order, measure in zip(orders, subcommunity_measure.T)]
 
+    def calculate_ZP(self):
+        
+
     def calculate_raw_alpha(self):
+        if self.ZP is None:
+            # calculate it
         return self.subcommunity_measure(1, self.ZP)
 
     def calculate_normalized_alpha(self):
