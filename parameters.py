@@ -2,14 +2,14 @@
 
 Classes
 -------
-ArgumentWarning:
+ArgumentWarning
     Warning category for problematic arguments.
-ValidateQ:
+ValidateQ
     Validator for -q parameter.
 
 Functions
 ---------
-configure_arguments:
+configure_arguments
     Creates argument parser.
 """
 from argparse import Action
