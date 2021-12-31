@@ -1,2 +1,2 @@
-# diversity-with-similarity
-Alpha and beta diversity with species similarity
+# Metacommunity
+Calculations of similarity-sensitve alpha, beta, and gamma diversity measures
