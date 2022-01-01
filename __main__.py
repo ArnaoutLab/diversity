@@ -1,11 +1,11 @@
-from logging import captureWarnings, getLogger
-from platform import python_version
-from sys import argv
-from numpy import genfromtxt
-
-from diversity import Metacommunity
-from log import LOG_HANDLER, LOGGER
 from parameters import configure_arguments
+from log import LOG_HANDLER, LOGGER
+from diversity import Metacommunity
+from numpy import genfromtxt
+from sys import argv
+from platform import python_version
+from logging import captureWarnings, getLogger
+
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
@@ -33,11 +33,11 @@ def main():
 
     print('\n')
 
-    print(meta.raw_alpha)
+    print(meta.alpha)
     print(meta.normalized_alpha)
-    print(meta.raw_rho)
+    print(meta.rho)
     print(meta.normalized_rho)
-    print(meta.raw_beta)
+    print(meta.beta)
     print(meta.normalized_beta)
     print(meta.gamma)
 

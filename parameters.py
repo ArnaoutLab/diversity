@@ -12,7 +12,7 @@ Functions
 configure_arguments
     Creates argument parser.
 """
-from argparse import Action
+from argparse import Action, ArgumentParser
 from warnings import warn
 
 ########################################################################

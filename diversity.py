@@ -16,67 +16,49 @@ sequence_similarity
 """
 from csv import reader, writer
 from pathlib import Path
-from Levenshtein import distance
-from numpy import amax, amin, dot, array, empty, unique, where, prod, zeros, sum as numpy_sum, divide, float64, inf
+from numpy import (amin, dot, array, empty, unique, where,
+                   prod, zeros, sum as numpy_sum, divide, float64, inf)
 
 ########################################################################
 
 
-class Metacommunity:
-    """Class for metacommunities and calculation their diversity.
+class Abundance:
 
-    Attributes
-    ----------
-    counts: numpy.ndarray
-    features: numpy.ndarray
-    q: numpy.ndarray
-    z_filepath: pathlib.Path
-    similarity_fn: callable
-    """
-    # FIXME need to check if features are passed, and if not, need to enforce z_filepath to reference similarity matrix
-    # FIXME Rename q -> suggestions: large_species_bias, viewpoint, inverse_order, order
+    def __init__(self, counts):
+        self.P = self.subcommunities_relative_abundances(counts)
+        self.p = self.metacommunity_relative_abundances()
+        self.w = self.subcommunty_proportions()
+        self.P_bar = self.normalized_subcommunities_relative_abundances()
 
-    def __init__(self, counts, q, z_filepath, features=None):
-        # Input
-        self.counts = counts
-        self.features = features
-        self.q = array(q)
-        self.z_filepath = Path(z_filepath)
-        # FIXME no custom similarity function?
-        self.similarity_fn = sequence_similarity
-        # Diversity components
-        self.P = self.relative_abundances()
-        self.p = self.P.sum(axis=1).reshape((-1, 1))
-        self.w = self.P.sum(axis=0)
-        self.P_bar = self.P / self.w
-        self.Zp = self.calculate_zp(self.p)
-        self.ZP = self.calculate_zp(self.P)
-        self.ZP_bar = self.calculate_zp(self.P_bar)
-        # Subcommunity diversity measures
-        self.alpha = self.subcommunity_measure(1, self.ZP)
-        self.rho = self.subcommunity_measure(self.Zp, self.ZP)
-        self.beta = 1 / self.rho
-        self.gamma = self.subcommunity_measure(1, self.Zp)
-        self.normalized_alpha = self.subcommunity_measure(1, self.ZP_bar)
-        self.normalized_rho = self.subcommunity_measure(self.Zp, self.ZP_bar)
-        self.normalized_beta = 1 / self.normalized_rho
-        # Metacommunity diversity measures
-        self.A = self.metacommunity_measure(self.alpha)
-        self.R = self.metacommunity_measure(self.rho)
-        self.B = self.metacommunity_measure(self.beta)
-        self.G = self.metacommunity_measure(self.gamma)
-        self.normalized_B = self.metacommunity_measure(self.normalized_beta)
-        self.normalized_A = self.metacommunity_measure(self.normalized_alpha)
-        self.normalized_R = self.metacommunity_measure(self.normalized_rho)
-
-    def relative_abundances(self):
-        rows, row_pos = unique(self.counts[:, 0], return_inverse=True)
-        cols, col_pos = unique(self.counts[:, 2], return_inverse=True)
+    def subcommunities_relative_abundances(self, counts):
+        rows, row_pos = unique(counts[:, 0], return_inverse=True)
+        cols, col_pos = unique(counts[:, 2], return_inverse=True)
         metacommunity_counts = zeros(
             (len(rows), len(cols)), dtype=float64)
-        metacommunity_counts[row_pos, col_pos] = self.counts[:, 1]
+        metacommunity_counts[row_pos, col_pos] = counts[:, 1]
         total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
+
+    def metacommunity_relative_abundances(self):
+        return self.P.sum(axis=1, keepdims=True)
+
+    def subcommunty_proportions(self):
+        return self.P.sum(axis=0)
+
+    def normalized_subcommunities_relative_abundances(self):
+        return self.P / self.w
+
+
+class Similarity:
+
+    def __init__(self, abundances, z_filepath, similarity_fn=None, features=None):
+        self.abundances = abundances
+        self.z_filepath = Path(z_filepath)
+        self.similarity_fn = similarity_fn
+        self.features = features
+        self.Zp = self.calculate_zp(self.abundances.p)
+        self.ZP = self.calculate_zp(self.abundances.P)
+        self.ZP_bar = self.calculate_zp(self.abundances.P_bar)
 
     def write_similarity_matrix(self):
         n_species = self.features.shape[0]
@@ -101,48 +83,107 @@ class Metacommunity:
             self.write_similarity_matrix()
         return self.zp_from_file(P)
 
+
+class Metacommunity:
+    """Class for metacommunities and calculation their diversity.
+
+    Attributes
+    ----------
+    counts: numpy.ndarray
+    features: numpy.ndarray
+    q: numpy.ndarray
+    z_filepath: pathlib.Path
+    similarity_fn: callable
+    """
+    # FIXME need to check if features are passed, and if not, need to enforce z_filepath to reference similarity matrix
+    # FIXME Rename q -> suggestions: large_species_bias, viewpoint, inverse_order, order
+
+    def __init__(self, counts, q, z_filepath, similarity_fn=None, features=None):
+        # Input
+        self.counts = counts
+        self.q = array(q)
+        # Diversity components
+        self.abundance = Abundance(self.counts)
+        self.similarity = Similarity(
+            self.abundance, z_filepath, similarity_fn, features)
+        # Subcommunity diversity measures
+        self.alpha = self.calculate_alpha()
+        self.rho = self.calculate_rho()
+        self.beta = self.calculate_beta()
+        self.gamma = self.calculate_gamma()
+        self.normalized_alpha = self.calculate_normalized_alpha()
+        self.normalized_rho = self.calculate_normalized_rho()
+        self.normalized_beta = self.calculate_normalized_beta()
+        # Metacommunity diversity measures
+        self.A = self.calculate_A()
+        self.R = self.calculate_R()
+        self.B = self.calculate_B()
+        self.G = self.calculate_G()
+        self.normalized_A = self.calculate_normalized_A()
+        self.normalized_R = self.calculate_normalized_R()
+        self.normalized_B = self.calculate_normalized_B()
+
+    def calculate_alpha(self):
+        return self.subcommunity_measure(1, self.similarity.ZP)
+
+    def calculate_rho(self):
+        return self.subcommunity_measure(self.similarity.Zp, self.similarity.ZP)
+
+    def calculate_beta(self):
+        return 1 / self.rho
+
+    def calculate_gamma(self):
+        return self.subcommunity_measure(1, self.similarity.Zp)
+
+    def calculate_normalized_alpha(self):
+        return self.subcommunity_measure(1, self.similarity.ZP_bar)
+
+    def calculate_normalized_rho(self):
+        return self.subcommunity_measure(self.similarity.Zp, self.similarity.ZP_bar)
+
+    def calculate_normalized_beta(self):
+        return 1 / self.normalized_rho
+
+    def calculate_A(self):
+        return self.metacommunity_measure(self.alpha)
+
+    def calculate_R(self):
+        return self.metacommunity_measure(self.rho)
+
+    def calculate_B(self):
+        return self.metacommunity_measure(self.beta)
+
+    def calculate_G(self):
+        return self.metacommunity_measure(self.gamma)
+
+    def calculate_normalized_A(self):
+        return self.metacommunity_measure(self.normalized_alpha)
+
+    def calculate_normalized_R(self):
+        return self.metacommunity_measure(self.normalized_rho)
+
+    def calculate_normalized_B(self):
+        return self.metacommunity_measure(self.normalized_beta)
+
     def subcommunity_measure(self, numerator, denominator):
         order = 1 - self.q
         x = safe_divide(numerator, denominator)
         measures = []
-        for p, x in zip(self.P_bar.T, x.T):
+        for p, x in zip(self.abundance.P_bar.T, x.T):
             indices = where(p != 0)
             p = p[indices]
             x = x[indices]
             measures.append(power_means(order, p, x))
         return array(measures)
 
-    def metacommunity_measure(self, subcommunity_measure):
+    def metacommunity_measure(self, subcommunity_measures):
         orders = 1 - self.q
-        return [power_mean(order, self.w, measure) for order, measure in zip(orders, subcommunity_measure.T)]
+        return [power_mean(order, self.abundance.w, measure) for order, measure in zip(orders, subcommunity_measures.T)]
 
     # FIXME implement me!
     def format_results(self):
         pass
 
-########################################################################
-
-
-def sequence_similarity(a, b):
-    """Calculates a Levenshtein distance derived similarity measure.
-
-    Parameters
-    ----------
-    a: Iterable
-        Sequence of characters comprising the first argument of the
-        similarity function.
-    b: Iterable
-        Sequence of characters comprising the second argument of the
-        similarity function.
-
-    Result
-    ------
-    1 - (Levenshtein distance between concatenations of a and b divided
-    by length of the longer of the two sequences).
-    """
-    a, b, = ''.join(a), ''.join(b)
-    max_length = amax([len(a), len(b)])
-    return 1 - (distance(a, b) / max_length)
 
 ########################################################################
 
@@ -182,11 +223,11 @@ def power_means(orders, weights, x):
     orders: iterable
         The exponents for which to calculate power means.
     weights, items
-        See Chubacabra.diversity.power_mean.
+        See metacommunity.diversity.power_mean.
 
     Returns
     -------
-    list of return values of Chubacabra.diversity.power_mean for the
+    list of return values of metacommunity.diversity.power_mean for the
     different exponents.
     """
     return [power_mean(order, weights, x) for order in orders]
