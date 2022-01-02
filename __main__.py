@@ -1,11 +1,11 @@
-from logging import captureWarnings, getLogger
-from platform import python_version
-from sys import argv
-from numpy import genfromtxt
-
-from diversity import Metacommunity
-from log import LOG_HANDLER, LOGGER
 from parameters import configure_arguments
+from log import LOG_HANDLER, LOGGER
+from diversity import Metacommunity
+from numpy import genfromtxt
+from sys import argv
+from platform import python_version
+from logging import captureWarnings, getLogger
+
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
@@ -29,27 +29,28 @@ def main():
     LOGGER.debug(f'data: {data}')
     counts = data[:, :3]
     features = data[:, 3:]
-    meta = Metacommunity(counts, args.q, args.Z, features=features)
+    viewpoint = args.q[0]
+    meta = Metacommunity(counts, viewpoint, args.Z, features=features)
 
     print('\n')
 
-    print(meta.raw_alpha)
-    print(meta.normalized_alpha)
-    print(meta.raw_rho)
-    print(meta.normalized_rho)
-    print(meta.raw_beta)
-    print(meta.normalized_beta)
+    print(meta.alpha)
+    print(meta.rho)
+    print(meta.beta)
     print(meta.gamma)
+    print(meta.normalized_alpha)
+    print(meta.normalized_rho)
+    print(meta.normalized_beta)
 
     print('\n')
 
     print(meta.A)
-    print(meta.normalized_A)
     print(meta.R)
-    print(meta.normalized_R)
     print(meta.B)
-    print(meta.normalized_B)
     print(meta.G)
+    print(meta.normalized_A)
+    print(meta.normalized_R)
+    print(meta.normalized_B)
 
     LOGGER.info('Done!')
 
