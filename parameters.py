@@ -16,13 +16,18 @@ from argparse import Action, ArgumentParser
 from warnings import warn
 
 ########################################################################
+
+
 class ArgumentWarning(Warning):
     """Used for warnings related to problematic argument choices."""
     pass
 
 ########################################################################
+
+
 class ValidateQ(Action):
     """Validator for -q parameter."""
+
     def __call__(self, parser, args, values, option_string=None):
         """Validates -q parameter.
 
@@ -35,6 +40,8 @@ class ValidateQ(Action):
         setattr(args, self.dest, values)
 
 ########################################################################
+
+
 def configure_arguments():
     """Creates argument parser.
 
@@ -61,7 +68,7 @@ def configure_arguments():
         "-q",
         nargs='+',
         type=float,
-        help="A list of q's where each q >= 0.",
+        help="A list of viewpoint parameters.",
         action=ValidateQ)
     parser.add_argument(
         "Z",

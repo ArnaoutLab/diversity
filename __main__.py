@@ -29,27 +29,28 @@ def main():
     LOGGER.debug(f'data: {data}')
     counts = data[:, :3]
     features = data[:, 3:]
-    meta = Metacommunity(counts, args.q, args.Z, features=features)
+    viewpoint = args.q[0]
+    meta = Metacommunity(counts, viewpoint, args.Z, features=features)
 
     print('\n')
 
     print(meta.alpha)
-    print(meta.normalized_alpha)
     print(meta.rho)
-    print(meta.normalized_rho)
     print(meta.beta)
-    print(meta.normalized_beta)
     print(meta.gamma)
+    print(meta.normalized_alpha)
+    print(meta.normalized_rho)
+    print(meta.normalized_beta)
 
     print('\n')
 
     print(meta.A)
-    print(meta.normalized_A)
     print(meta.R)
-    print(meta.normalized_R)
     print(meta.B)
-    print(meta.normalized_B)
     print(meta.G)
+    print(meta.normalized_A)
+    print(meta.normalized_R)
+    print(meta.normalized_B)
 
     LOGGER.info('Done!')
 
