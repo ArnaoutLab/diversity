@@ -19,6 +19,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Callable
+from pandas import DataFrame
 from numpy import (amin, dot, array, empty, unique, isclose,
                    prod, zeros, sum as numpy_sum, broadcast_to, power,
                    multiply, divide, float64, inf)
@@ -75,19 +76,20 @@ class Abundance:
 class Similarity:
 
     abundance: Abundance
-    z_filepath: str
+    Z: array = None
+    z_filepath: str = None
     similarity_fn: Callable = None
     features: array = None
 
-    @ cached_property
+    @cached_property
     def Zp(self):
         return self.calculate_zp(self.abundance.p)
 
-    @ cached_property
+    @cached_property
     def ZP(self):
         return self.calculate_zp(self.abundance.P)
 
-    @ cached_property
+    @cached_property
     def normalized_ZP(self):
         return self.calculate_zp(self.abundance.normalized_P)
 
@@ -109,7 +111,12 @@ class Similarity:
                 ZP[i, :] = dot(z_i, P)
         return ZP
 
+    def zp_from_array(self, P):
+        return dot(self.Z, P)
+
     def calculate_zp(self, P):
+        if self.Z is not None:
+            return self.zp_from_array(P)
         if not self.z_filepath.is_file():
             self.write_similarity_matrix()
         return self.zp_from_file(P)
@@ -132,19 +139,26 @@ class Metacommunity:
 
     counts: array
     _viewpoint: float
-    z_filepath: str
+    Z: array = None
+    z_filepath: str = None
     similarity_fn: Callable = None
     features: array = None
     abundance: Abundance = field(init=False)
     similarity: Similarity = field(init=False)
 
     def __post_init__(self):
-        self.z_filepath = Path(self.z_filepath)
         self.abundance = Abundance(self.counts)
+        if self.z_filepath:
+            self.z_filepath = Path(self.z_filepath)
         self.similarity = Similarity(
-            self.abundance, self.z_filepath, self.similarity_fn, self.features)
+            self.abundance,
+            Z=self.Z,
+            z_filepath=self.z_filepath,
+            similarity_fn=self.similarity_fn,
+            features=self.features)
 
     # FIXME validate new viewpoint
+
     def set_viewpoint(self, viewpoint):
         self._viewpoint = viewpoint
 
@@ -242,4 +256,4 @@ class Metacommunity:
 
     # FIXME implement me!
     def format_results(self):
-        pass
+        pass  # DataFrame() maybe?
