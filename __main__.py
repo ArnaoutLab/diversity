@@ -6,6 +6,7 @@ from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger
 
+from pandas import read_csv
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
@@ -23,14 +24,24 @@ def main():
     LOGGER.info(' '.join([f'python{python_version()}', *argv]))
     LOGGER.debug(f'args: {args}')
 
-    # FIXME equal species are listed multiple times (once for each
-    # subcommunity they are members of, which is deceiving
-    data = genfromtxt(args.filepath, delimiter=',', dtype=object)
+    species_to_id = {}
+    subcommunity_to_id = {}
+
+    register_species = partial(register, registry=species_to_id)
+    register_subcommunity = partial(register, registry=subcommunity_to_id)
+
+    data = read_csv(args.filepath, comment='#',
+                    converters={0: register_species, 2: register_subcommunity})
     LOGGER.debug(f'data: {data}')
-    counts = data[:, :3]
-    features = data[:, 3:]
+    counts = data.iloc[:,:3].to_numpy()
+    unique_species_correspondence = UniqueRowsCorrespondence(counts, 0)
+    unique_species = unique_species_correspondence.unique_keys
+    unique_species_rows = unique_species_correspondence.unique_row_index
+    features = data.iloc[:,3:][unique_species_rows]
     viewpoint = args.q[0]
-    meta = Metacommunity(counts, viewpoint, args.Z, features=features)
+    meta = Metacommunity(counts, unique_species_correspondence,
+                         unique_species, viewpoint, args.Z,
+                         features=features)
 
     print('\n')
 
