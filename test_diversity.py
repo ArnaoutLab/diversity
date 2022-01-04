@@ -1,7 +1,6 @@
 import pytest
 import diversity
 from numpy import isclose
-from run import process_input_file
 # FIXME not implemented: used to compare dataframes (for integration test)
 from pandas.testing import assert_frame_equal
 
@@ -40,11 +39,14 @@ def mock_empty_matrix_file(tmp_path):
     return str(datafile)
 
 
+# FIXME process_input_file is no longer define, function is broken
 def test_alpha_from_file(mock_input_file, mock_matrix_file):
     df = process_input_file(mock_input_file)
     for q in TEST_QS:
         qDs = diversity.alpha(df, q, z_filepath=mock_matrix_file)
         assert isclose(TEST_QDS, qDs)
+
+# FIXME process_input_file is no longer define, function is broken
 
 
 def test_alpha_from_similarity_fn(mock_input_file, mock_empty_matrix_file):

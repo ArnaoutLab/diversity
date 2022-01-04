@@ -7,7 +7,7 @@ Abundance:
     Species abundances in metacommunity.
 
 Similarity:
-    Species similarities weighed by relative abundance.
+    Species similarities weighted by relative abundance.
 
 Metacommunity
     Represents a metacommunity made up of subcommunities and computes
@@ -24,7 +24,8 @@ from numpy import (amin, dot, array, empty, unique, isclose,
                    multiply, divide, float64, inf)
 from pandas import DataFrame
 
-from Chubacabra.utilities import InvalidArgumentError
+from utilities import InvalidArgumentError, UniqueRowsCorrespondence, power_mean
+
 
 @dataclass
 class Abundance:
@@ -47,24 +48,10 @@ class Abundance:
     """
 
     counts: array
-    unique_species_correspondence: UniqueRowsCorrespondence
 
-    @cached_property
-    def unique_correspondence(self):
-        """Obtains correspondence between unique species counts rows.
-
-        Returns
-        -------
-        A triple with coordinates:
-        0 - A numpy.ndarray of unique species in object's counts
-            attribute.
-        1 - A dict mapping species to their positions in the unique
-            species ordering.
-        2 - A numpy.ndarray of the same length as object's counts
-            attribute containing positions of species in corresponding
-            rows.
-        """
-        return get_unique_correspondence(self.counts[:,0])
+    def __post_init__(self):
+        self.unique_species_correspondence = UniqueRowsCorrespondence(
+            self.counts)
 
     @cached_property
     def metacommunity_abundance(self):
@@ -91,11 +78,14 @@ class Abundance:
         in the subcommunity relative to the total metacommunity size.
         The row ordering is established by the species_to_row attribute.
         """
-        unique_species, _, row_pos = self.unique_correspondence
-        unique_communities, col_pos = unique(self.counts[:, 2], return_inverse=True)
+        unique_species = self.unique_species_correspondence.unique_keys
+        row_pos = self.unique_species_correspondence.row_to_unique_pos
+        unique_communities, col_pos = unique(
+            self.counts[:, 2], return_inverse=True)
         metacommunity_counts = zeros(
             (len(unique_species), len(unique_communities)), dtype=float64)
-        metacommunity_counts[row_pos, col_pos] = self.counts[:, 1] # assumes unique species-subcommunity combinations in self.counts
+        # assumes unique species-subcommunity combinations in self.counts
+        metacommunity_counts[row_pos, col_pos] = self.counts[:, 1]
         total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
 
@@ -128,7 +118,7 @@ class Abundance:
 
 @dataclass
 class Similarity:
-    """Species similarities weighed by meta- and subcommunity abundance.
+    """Species similarities weighted by meta- and subcommunity abundance.
 
     Attributes
     ----------
@@ -177,30 +167,30 @@ class Similarity:
     def metacommunity_similarity(self):
         """Calculates weighted sums of similarities to each species.
 
-        Same as calculate_weighed_similarities, except that object's
+        Same as calculate_weighted_similarities, except that object's
         abundance.metacommunity_abundance attribute is used for weights.
         """
-        return self.calculate_weighed_similarities(
+        return self.calculate_weighted_similarities(
             self.abundance.metacommunity_abundance)
 
     @cached_property
     def subcommunity_similarity(self):
         """Calculates weighted sums of similarities to each species.
-        Same as calculate_weighed_similarities, except that object's
+        Same as calculate_weighted_similarities, except that object's
         abundance.subcommunity_abundance attribute is used for weights.
         """
-        return self.calculate_weighed_similarities(
+        return self.calculate_weighted_similarities(
             self.abundance.subcommunity_abundance)
 
     @cached_property
     def normalized_subcommunity_similarity(self):
         """Calculates weighted sums of similarities to each species.
 
-        Same as calculate_weighed_similarities, except that object's
+        Same as calculate_weighted_similarities, except that object's
         abundance.normalized_subcommunity_abundance attribute is used
         for weights.
         """
-        return self.calculate_weighed_similarities(
+        return self.calculate_weighted_similarities(
             self.abundance.normalized_subcommunity_abundance)
 
     def write_similarity_matrix(self):
@@ -210,7 +200,7 @@ class Similarity:
         similarities_filepath attribute. Any existing contents are
         overwritten.
         """
-        row_i = empty(species.shape[0], dtype=float64)
+        row_i = empty(self.species.shape[0], dtype=float64)
         with open(self.similarities_filepath, 'w') as file:
             csv_writer = writer(file)
             csv_writer.writerow(self.species)
@@ -219,30 +209,30 @@ class Similarity:
                     row_i[j] = self.similarity_function(features_i, features_j)
                 csv_writer.writerow(row_i)
 
-    def weighed_similarities_from_file(self, relative_abundances):
+    def weighted_similarities_from_file(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
-        Same as calculate_weighed_similarities, except that similarities
+        Same as calculate_weighted_similarities, except that similarities
         are read from similarities file referred to by object's
         similarities_filepath attribute.
         """
-        weighed_similarities = empty(relative_abundances.shape, dtype=float64)
+        weighted_similarities = empty(relative_abundances.shape, dtype=float64)
         with open(self.similarities_filepath, 'r') as file:
             for i, row in enumerate(reader(file)):
                 similarities_row = array(row, dtype=float64)
-                weighed_similarities[i, :] = dot(similarities_row,
-                                                 relative_abundances)
-        return weighed_similarities
+                weighted_similarities[i, :] = dot(similarities_row,
+                                                  relative_abundances)
+        return weighted_similarities
 
-    def weighed_similarities_from_array(self, relative_abundances):
+    def weighted_similarities_from_array(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
-        Same as calculate_weighed_similarities, except that the object's
+        Same as calculate_weighted_similarities, except that the object's
         similarities attribute is used.
         """
         return dot(self.similarities, relative_abundances)
 
-    def calculate_weighed_similarities(self, relative_abundances):
+    def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
         Attempts to read similarities from the file at object's
@@ -263,14 +253,15 @@ class Similarity:
         A 2-d numpy.ndarray of shape (n_species, n_communities), where
         rows correspond to unique species, columns correspond to
         (meta-/sub-) communities and each element is a sum of
-        similarities to one species weighed by the similarities stored
+        similarities to one species weighted by the similarities stored
         in the similarities file.
         """
         if self.similarities is not None:
-            return self.weighed_similarities_from_array(relative_abundances)
+            return self.weighted_similarities_from_array(relative_abundances)
         if not self.similarities_filepath.is_file():
             self.write_similarity_matrix()
-        return self.weighed_similarities_from_file(relative_abundances)
+        return self.weighted_similarities_from_file(relative_abundances)
+
 
 @dataclass
 class Metacommunity:
@@ -289,18 +280,17 @@ class Metacommunity:
 
     counts: array
     _viewpoint: float
+    similarities_filepath: str = None
     similarities: array = None
-    similarities_filepath: str
     similarity_function: Callable = None
     features: array = None
     abundance: Abundance = field(init=False)
     similarity: Similarity = field(init=False)
 
     def __post_init__(self):
-        self.similarities_filepath = Path(self.similarities_filepath)
         self.abundance = Abundance(self.counts)
-        if self.z_filepath:
-            self.z_filepath = Path(self.z_filepath)
+        if self.similarities_filepath:
+            self.similarities_filepath = Path(self.similarities_filepath)
         self.similarity = Similarity(
             self.abundance,
             similarities=self.similarities,
@@ -308,103 +298,90 @@ class Metacommunity:
             similarity_function=self.similarity_function,
             features=self.features)
 
-    # FIXME validate new viewpoint
-
+    # FIXME validate new viewpoints
     def set_viewpoint(self, viewpoint):
         self._viewpoint = viewpoint
 
-    @property
+    @ property
     def alpha(self):
-        return self.subcommunity_measure(1, self.similarity.ZP)
+        return self.subcommunity_measure(self._viewpoint, 1, self.similarity.subcommunity_similarity)
 
-    @property
+    @ property
     def rho(self):
-        return self.subcommunity_measure(self.similarity.Zp, self.similarity.ZP)
+        return self.subcommunity_measure(self._viewpoint, self.similarity.metacommunity_similarity, self.similarity.subcommunity_similarity)
 
-    @property
+    @ property
     def beta(self):
         return 1 / self.rho
 
-    @property
+    @ property
     def gamma(self):
-        return self.subcommunity_measure(1, self.similarity.Zp)
+        return self.subcommunity_measure(self._viewpoint, 1, self.similarity.metacommunity_similarity)
 
-    @property
+    @ property
     def normalized_alpha(self):
-        return self.subcommunity_measure(1, self.similarity.normalized_ZP)
+        return self.subcommunity_measure(self._viewpoint, 1, self.similarity.normalized_subcommunity_similarity)
 
-    @property
+    @ property
     def normalized_rho(self):
-        return self.subcommunity_measure(self.similarity.Zp, self.similarity.normalized_ZP)
+        return self.subcommunity_measure(self._viewpoint, self.similarity.metacommunity_similarity, self.similarity.normalized_subcommunity_similarity)
 
-    @property
+    @ property
     def normalized_beta(self):
         return 1 / self.normalized_rho
 
-    @property
+    @ property
     def A(self):
-        return self.metacommunity_measure(self.alpha)
+        return self.metacommunity_measure(self._viewpoint, self.alpha)
 
-    @property
+    @ property
     def R(self):
-        return self.metacommunity_measure(self.rho)
+        return self.metacommunity_measure(self._viewpoint, self.rho)
 
-    @property
+    @ property
     def B(self):
-        return self.metacommunity_measure(self.beta)
+        return self.metacommunity_measure(self._viewpoint, self.beta)
 
-    @property
+    @ property
     def G(self):
-        return self.metacommunity_measure(self.gamma)
+        return self.metacommunity_measure(self._viewpoint, self.gamma)
 
-    @property
+    @ property
     def normalized_A(self):
-        return self.metacommunity_measure(self.normalized_alpha)
+        return self.metacommunity_measure(self._viewpoint, self.normalized_alpha)
 
-    @property
+    @ property
     def normalized_R(self):
-        return self.metacommunity_measure(self.normalized_rho)
+        return self.metacommunity_measure(self._viewpoint, self.normalized_rho)
 
-    @property
+    @ property
     def normalized_B(self):
-        return self.metacommunity_measure(self.normalized_beta)
+        return self.metacommunity_measure(self._viewpoint, self.normalized_beta)
 
-    def subcommunity_measure(self, numerator, denominator):
+    def subcommunity_measure(self, viewpoint, numerator, denominator):
         similarities = divide(numerator, denominator, out=zeros(
             denominator.shape), where=denominator != 0)
-        return self.power_mean(self.abundance.normalized_P, similarities)
+        return power_mean(viewpoint, self.abundance.normalized_subcommunity_abundance, similarities)
 
-    def metacommunity_measure(self, subcommunity_measure):
-        return self.power_mean(self.abundance.w, subcommunity_measure)
+    def metacommunity_measure(self, viewpoint, subcommunity_measure):
+        return power_mean(viewpoint, self.abundance.subcommunity_normalizing_constants, subcommunity_measure)
 
-    def power_mean(self, weights, items):
-        """Calculates a weighted power mean.
+    def properties(self):
+        class_items = self.__class__.__dict__.items()
+        return dict((k, getattr(self, k)) for k, v in class_items if isinstance(v, property))
 
-        Parameters
-        ----------
-        weights: numpy.ndarray
-            The weights corresponding to items.
-        items: numpy.ndarray
-            The elements for which the weighted power mean is computed.
+    def subcommunities_to_dataframe(self):
+        measures = list(self.properties().values())[:7]
+        measure_names = list(self.properties().keys())[:7]
+        measure_df = DataFrame(dict(zip(measure_names, measures)))
+        measure_df.insert(0, 'viewpoint', self._viewpoint)
+        # measure_df.insert(0, 'subcommunty', subcommunity_names) # FIXME
+        return measure_df
 
-        Returns
-        -------
-        The power mean of items with exponent order, weighted by weights.
-        When order is close to 1 or less than -100, analytical formulas
-        for the limits at 1 and -infinity are used respectively.
-        """
-        order = 1 - self._viewpoint
-        mask = weights != 0
-        if isclose(order, 0):
-            return prod(power(items, weights, where=mask), axis=0, where=mask)
-        elif order < -100:
-            items = broadcast_to(items, weights.shape)
-            return amin(items, axis=0, where=mask, initial=inf)
-        items_power = power(items, order, where=mask)
-        items_product = multiply(items_power, weights, where=mask)
-        items_sum = numpy_sum(items_product, axis=0, where=mask)
-        return power(items_sum, 1 / order)
-
-    # FIXME implement me!
-    def format_results(self):
-        pass  # DataFrame() maybe?
+    def metacommunity_to_dataframe(self):
+        measures = list(self.properties().values())[7:]
+        measure_names = list(self.properties().keys())[7:]
+        measure_df = DataFrame(dict(zip(measure_names, measures)), index=[0])
+        measure_df.insert(0, 'viewpoint', self._viewpoint)
+        # measure_df.insert(0, 'subcommunty', subcommunity_names) # FIXME
+        return measure_df

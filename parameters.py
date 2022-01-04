@@ -1,4 +1,4 @@
-"""Module for Chubacabra's argument parser configuration.
+"""Module for Metacommunity's argument parser configuration.
 
 Classes
 -------
@@ -48,7 +48,7 @@ def configure_arguments():
     Returns
     -------
     argparse.ArgumentParser configured to handle command-line arguments
-    for Chubacabra.
+    for Metacommunity.
     """
     parser = ArgumentParser()
     parser.add_argument(

@@ -1,12 +1,14 @@
-from parameters import configure_arguments
-from log import LOG_HANDLER, LOGGER
-from diversity import Metacommunity
-from numpy import genfromtxt
+from functools import partial
 from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger
 
 from pandas import read_csv
+
+from diversity import Metacommunity
+from utilities import UniqueRowsCorrespondence, register
+from parameters import configure_arguments
+from log import LOG_HANDLER, LOGGER
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
@@ -32,36 +34,18 @@ def main():
 
     data = read_csv(args.filepath, comment='#',
                     converters={0: register_species, 2: register_subcommunity})
+
     LOGGER.debug(f'data: {data}')
-    counts = data.iloc[:,:3].to_numpy()
-    unique_species_correspondence = UniqueRowsCorrespondence(counts, 0)
-    unique_species = unique_species_correspondence.unique_keys
-    unique_species_rows = unique_species_correspondence.unique_row_index
-    features = data.iloc[:,3:][unique_species_rows]
+    counts = data.to_numpy()
+    features = 'FIXME'  # FIXME read features in separately
     viewpoint = args.q[0]
-    meta = Metacommunity(counts, unique_species_correspondence,
-                         unique_species, viewpoint, args.Z,
-                         features=features)
+    meta = Metacommunity(counts, viewpoint, args.Z)
 
     print('\n')
-
-    print(meta.alpha)
-    print(meta.rho)
-    print(meta.beta)
-    print(meta.gamma)
-    print(meta.normalized_alpha)
-    print(meta.normalized_rho)
-    print(meta.normalized_beta)
-
+    print(meta.subcommunities_to_dataframe())
     print('\n')
-
-    print(meta.A)
-    print(meta.R)
-    print(meta.B)
-    print(meta.G)
-    print(meta.normalized_A)
-    print(meta.normalized_R)
-    print(meta.normalized_B)
+    print(meta.metacommunity_to_dataframe())
+    print('\n')
 
     LOGGER.info('Done!')
 
