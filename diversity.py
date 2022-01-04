@@ -1,126 +1,276 @@
-"""Module for calculating metacommunity and subcommunity diversity measures.
+"""Module for metacommunity and subcommunity diversity measures.
 
 Classes
 -------
 
-Abundance
-    Represents the relative abundances or the metacommunity and its subcommunities
+Abundance:
+    Species abundances in metacommunity.
 
-
-Similarity
-    Represents the similarities between species weighted by their relative abundances
+Similarity:
+    Species similarities weighed by relative abundance.
 
 Metacommunity
-    Represents a metacommunity made up of subcommunities and computes metacommunity
-    subcommunity diversity measures.
+    Represents a metacommunity made up of subcommunities and computes
+    metacommunity subcommunity diversity measures.
 """
 from csv import reader, writer
-from pathlib import Path
 from dataclasses import dataclass, field
 from functools import cached_property
+from pathlib import Path
 from typing import Callable
-from pandas import DataFrame
+
 from numpy import (amin, dot, array, empty, unique, isclose,
                    prod, zeros, sum as numpy_sum, broadcast_to, power,
                    multiply, divide, float64, inf)
+from pandas import DataFrame
 
-########################################################################
-
+from Chubacabra.utilities import InvalidArgumentError
 
 @dataclass
 class Abundance:
+    """Relative abundances of species in a metacommunity.
+
+    A community consists of a set of species, each of which may appear
+    any (non-negative) number of times. A metacommunity consists of one
+    or more subcommunities and can be represented by the number of
+    appearances of each species in each of the subcommunities.
+
+    Attributes
+    ----------
+    counts: array
+        A 2-d structured numpy.array with species names in the first
+        column, number of appearances in the second column and
+        subcommunity names in the third column.
+    unique_species_correspondence: UniqueRowsCorrespondence
+        Correspondence between rows in counts data with a unique
+        ordering of the unique species listed in its first column.
+    """
 
     counts: array
+    unique_species_correspondence: UniqueRowsCorrespondence
 
     @cached_property
-    def p(self):
-        """
-        Calculates the relative abundance of each species in the metacommunity
-        """
-        return self.P.sum(axis=1, keepdims=True)
-
-    @cached_property
-    def P(self):
-        """Calculates the relative abundance of each species in each subcommunity.
+    def unique_correspondence(self):
+        """Obtains correspondence between unique species counts rows.
 
         Returns
         -------
-        A 2D numpy.ndarray where rows are unique species and columns are subcommunities
-        and each element is a species count in a subcommunity
+        A triple with coordinates:
+        0 - A numpy.ndarray of unique species in object's counts
+            attribute.
+        1 - A dict mapping species to their positions in the unique
+            species ordering.
+        2 - A numpy.ndarray of the same length as object's counts
+            attribute containing positions of species in corresponding
+            rows.
         """
-        rows, row_pos = unique(self.counts[:, 0], return_inverse=True)
-        cols, col_pos = unique(self.counts[:, 2], return_inverse=True)
+        return get_unique_correspondence(self.counts[:,0])
+
+    @cached_property
+    def metacommunity_abundance(self):
+        """Calculates the relative abundances in metacommunity.
+
+        Returns
+        -------
+        A numpy.ndarray of shape (n_species, 1), where rows correspond
+        to unique species and each row contains the relative abundance
+        of the species in the metacommunity. The row ordering is
+        established by the species_to_row attribute.
+        """
+        return self.subcommunity_abundance.sum(axis=1, keepdims=True)
+
+    @cached_property
+    def subcommunity_abundance(self):
+        """Calculates the relative abundances in subcommunities.
+
+        Returns
+        -------
+        A numpy.ndarray of shape (n_species, n_subcommunities), where
+        rows correspond to unique species, columns correspond to
+        subcommunities and each element is the abundance of the species
+        in the subcommunity relative to the total metacommunity size.
+        The row ordering is established by the species_to_row attribute.
+        """
+        unique_species, _, row_pos = self.unique_correspondence
+        unique_communities, col_pos = unique(self.counts[:, 2], return_inverse=True)
         metacommunity_counts = zeros(
-            (len(rows), len(cols)), dtype=float64)
-        metacommunity_counts[row_pos, col_pos] = self.counts[:, 1]
+            (len(unique_species), len(unique_communities)), dtype=float64)
+        metacommunity_counts[row_pos, col_pos] = self.counts[:, 1] # assumes unique species-subcommunity combinations in self.counts
         total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
 
     @cached_property
-    def w(self):
+    def subcommunity_normalizing_constants(self):
+        """Calculates subcommunity normalizing constants.
+
+        Returns
+        -------
+        A numpy.ndarray of shape (n_subcommunities,), with the fraction
+        of each subcommunity's size of the metacommunity.
         """
-        Calculates each subcommunity's relative abundance as a proportion of the 
-        total metacommunity's relative abundance
-        """
-        return self.P.sum(axis=0)
+        return self.subcommunity_abundance.sum(axis=0)
 
     @cached_property
-    def normalized_P(self):
+    def normalized_subcommunity_abundance(self):
+        """Calculates normalized relative abundances in subcommunities.
+
+        Returns
+        -------
+        A numpy.ndarray of shape (n_species, n_subcommunities), where
+        rows correspond to unique species, columns correspond to
+        subcommunities and each element is the abundance of the species
+        in the subcommunity relative to the subcommunity size. The row
+        ordering is established by the species_to_row attribute.
         """
-        Calculates normalized subcommunity relative abundances
-        """
-        return self.P / self.w
+        return (self.subcommunity_abundance
+                / self.subcommunity_normalizing_constants)
 
 
 @dataclass
 class Similarity:
+    """Species similarities weighed by meta- and subcommunity abundance.
+
+    Attributes
+    ----------
+    abundance: Abundance
+        Relative species abundances in metacommunity and its
+        subcommunities.
+    similarities_filepath: str
+        Path to file containing species similarity matrix. If it doesn't
+        exist, the write_similarity_matrix method generates one. File
+        must have a header listing the species names according to the
+        column ordering of the matrix. Column and row ordering must be
+        the same.
+    similarity_function: Callable
+        Similarity function used to generate similarity matrix file.
+    features: numpy.ndarray
+        A 2d numpy.ndarray where rows are species and columns correspond
+        to features. The order of features corresponds to the species
+        argument.
+    species: numpy.ndarray
+        A 1d numpy.nds array of unique species corresponding to the rows
+        in features.
+    """
 
     abundance: Abundance
-    Z: array = None
-    z_filepath: str = None
-    similarity_fn: Callable = None
+    similarities: array = None
+    similarities_filepath: str = None
+    similarity_function: Callable = None
     features: array = None
+    species: array = None
+
+    def __post_init__(self):
+        """Validates attributes."""
+        # FIXME require 2-d features? (single column would be squeezed into 1-d array in __main__)
+        if self.features is not None:
+            if self.species is None:
+                raise InvalidArgumentError(
+                    'If features argument is provided, then species must be'
+                    ' provided to establish the row and column ordering.')
+            elif (len(self.species.shape) != 1
+                    or self.features.shape[0] != self.species.shape[0]):
+                raise InvalidArgumentError(
+                    'Invalid species array shape. Expected 1-d array of'
+                    ' length equal to number of rows in features')
 
     @cached_property
-    def Zp(self):
-        return self.calculate_zp(self.abundance.p)
+    def metacommunity_similarity(self):
+        """Calculates weighted sums of similarities to each species.
+
+        Same as calculate_weighed_similarities, except that object's
+        abundance.metacommunity_abundance attribute is used for weights.
+        """
+        return self.calculate_weighed_similarities(
+            self.abundance.metacommunity_abundance)
 
     @cached_property
-    def ZP(self):
-        return self.calculate_zp(self.abundance.P)
+    def subcommunity_similarity(self):
+        """Calculates weighted sums of similarities to each species.
+        Same as calculate_weighed_similarities, except that object's
+        abundance.subcommunity_abundance attribute is used for weights.
+        """
+        return self.calculate_weighed_similarities(
+            self.abundance.subcommunity_abundance)
 
     @cached_property
-    def normalized_ZP(self):
-        return self.calculate_zp(self.abundance.normalized_P)
+    def normalized_subcommunity_similarity(self):
+        """Calculates weighted sums of similarities to each species.
+
+        Same as calculate_weighed_similarities, except that object's
+        abundance.normalized_subcommunity_abundance attribute is used
+        for weights.
+        """
+        return self.calculate_weighed_similarities(
+            self.abundance.normalized_subcommunity_abundance)
 
     def write_similarity_matrix(self):
-        n_species = self.features.shape[0]
-        z_i = empty(n_species, dtype=float64)
-        with open(self.z_filepath, 'w') as f:
-            csv_writer = writer(f)
-            for species_i in self.features:
-                for j, species_j in enumerate(self.features):
-                    z_i[j] = self.similarity_fn(species_i, species_j)
-                csv_writer.writerow(z_i)
+        """Writes species similarity matrix into file.
 
-    def zp_from_file(self, P):
-        ZP = empty(P.shape, dtype=float64)
-        with open(self.z_filepath, 'r') as f:
-            for i, z_i in enumerate(reader(f)):
-                z_i = array(z_i, dtype=float64)
-                ZP[i, :] = dot(z_i, P)
-        return ZP
+        The matrix is written into file referred to by object's
+        similarities_filepath attribute. Any existing contents are
+        overwritten.
+        """
+        row_i = empty(species.shape[0], dtype=float64)
+        with open(self.similarities_filepath, 'w') as file:
+            csv_writer = writer(file)
+            csv_writer.writerow(self.species)
+            for features_i in self.features:
+                for j, features_j in enumerate(self.features):
+                    row_i[j] = self.similarity_function(features_i, features_j)
+                csv_writer.writerow(row_i)
 
-    def zp_from_array(self, P):
-        return dot(self.Z, P)
+    def weighed_similarities_from_file(self, relative_abundances):
+        """Calculates weighted sums of similarities to each species.
 
-    def calculate_zp(self, P):
-        if self.Z is not None:
-            return self.zp_from_array(P)
-        if not self.z_filepath.is_file():
+        Same as calculate_weighed_similarities, except that similarities
+        are read from similarities file referred to by object's
+        similarities_filepath attribute.
+        """
+        weighed_similarities = empty(relative_abundances.shape, dtype=float64)
+        with open(self.similarities_filepath, 'r') as file:
+            for i, row in enumerate(reader(file)):
+                similarities_row = array(row, dtype=float64)
+                weighed_similarities[i, :] = dot(similarities_row,
+                                                 relative_abundances)
+        return weighed_similarities
+
+    def weighed_similarities_from_array(self, relative_abundances):
+        """Calculates weighted sums of similarities to each species.
+
+        Same as calculate_weighed_similarities, except that the object's
+        similarities attribute is used.
+        """
+        return dot(self.similarities, relative_abundances)
+
+    def calculate_weighed_similarities(self, relative_abundances):
+        """Calculates weighted sums of similarities to each species.
+
+        Attempts to read similarities from the file at object's
+        similarities_filepath attribute, if it exists. If it doesn't
+        exist, a file is generated using the object's
+        similarity_function attribute.
+
+        Parameters
+        ----------
+        relative_abundances: numpy.ndarray
+            Array of shape (n_species, n_communities), where rows
+            correspond to unique species, columns correspond to
+            (meta-/sub-)communities and each element is the relative
+            abundance of a species in a (meta-/sub-)community.
+
+        Returns
+        -------
+        A 2-d numpy.ndarray of shape (n_species, n_communities), where
+        rows correspond to unique species, columns correspond to
+        (meta-/sub-) communities and each element is a sum of
+        similarities to one species weighed by the similarities stored
+        in the similarities file.
+        """
+        if self.similarities is not None:
+            return self.weighed_similarities_from_array(relative_abundances)
+        if not self.similarities_filepath.is_file():
             self.write_similarity_matrix()
-        return self.zp_from_file(P)
-
+        return self.weighed_similarities_from_file(relative_abundances)
 
 @dataclass
 class Metacommunity:
@@ -130,8 +280,8 @@ class Metacommunity:
     ----------
     counts: numpy.ndarray
     _viewpoint: float
-    z_filepath: str
-    similarity_fn: Callable
+    similarities_filepath: str
+    similarity_function: Callable
     features: np.ndarray
     abundance: Abundance
     similarity: Similarity
@@ -139,22 +289,23 @@ class Metacommunity:
 
     counts: array
     _viewpoint: float
-    Z: array = None
-    z_filepath: str = None
-    similarity_fn: Callable = None
+    similarities: array = None
+    similarities_filepath: str
+    similarity_function: Callable = None
     features: array = None
     abundance: Abundance = field(init=False)
     similarity: Similarity = field(init=False)
 
     def __post_init__(self):
+        self.similarities_filepath = Path(self.similarities_filepath)
         self.abundance = Abundance(self.counts)
         if self.z_filepath:
             self.z_filepath = Path(self.z_filepath)
         self.similarity = Similarity(
             self.abundance,
-            Z=self.Z,
-            z_filepath=self.z_filepath,
-            similarity_fn=self.similarity_fn,
+            similarities=self.similarities,
+            similarities_filepath=self.similarities_filepath,
+            similarity_function=self.similarity_function,
             features=self.features)
 
     # FIXME validate new viewpoint
