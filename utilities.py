@@ -1,15 +1,31 @@
 """Miscellaneous helper module for the Metacommunity package.
 
-Functions
----------
-unique_mapping
+Classes
+-------
+UniqueRowsCorrespondence
     Corresponds items in non-unique sequence to a uniqued ordered
     sequence of those items.
+
+Functions
+---------
+power_mean
+    Calculates weighted power mean.
+cached_property_depends_on
+    Decorator for property caching return value dependent on arguments.
+register
+    Registers an unregistered item, if needed and returns its registered
+    value.
+
+Exceptions
+----------
+MetacommunityError
+    Base class for all custom Chubacabra exceptions.
+InvalidArgumentError
+    Raised when invalid argument is passed to a function.
 """
-from functools import cache
-from operator import attrgetter
-from dataclasses import dataclass
 from functools import cache, cached_property
+from dataclasses import dataclass
+from operator import attrgetter
 
 from numpy import (array, empty, unique, isclose, prod, broadcast_to,
                    amin, sum as numpy_sum, multiply, inf, power, int64)
@@ -61,7 +77,7 @@ class UniqueRowsCorrespondence:
         -------
         A 1-d numpy.ndarray of unique keys in key column.
         """
-        return self.data[:, self.key_column_pos][self.unique_row_index]
+        return self.data[self.unique_row_index, self.key_column_pos]
 
     @cached_property
     def key_to_unique_pos(self):
@@ -85,8 +101,8 @@ class UniqueRowsCorrespondence:
         rows in object's data atribute.
         """
         positions = empty(self.data.shape[0], dtype=int64)
-        for key in self.data[:, self.key_column_pos]:
-            positions[key] = self.key_to_unique_pos[key]
+        for data_pos, key in enumerate(self.data[:, self.key_column_pos]):
+            positions[data_pos] = self.key_to_unique_pos[key]
         return positions
 
 
@@ -120,13 +136,15 @@ def power_mean(order, weights, items):
 
 
 def cached_property_depends_on(*args):
-    """Transforms a method of a class into a property whose value is 
+    """Transforms method into property cached as long as args are same.
+
+    Method of a class is transformed into a property whose value is 
     computed and cached. If any of the attributes in args are modified
     the value of the property is recomputed and the cache is updated.
 
     Parameters
     ----------
-    args
+    args: tuple
         Attributes of the class whose method is being decorated
     """
     attrs = attrgetter(*args)
@@ -156,7 +174,7 @@ def register(item, registry):
     Returns
     -------
     The value of item in registry. If item is not a key of registry,
-    then the current size of registry becomes its key in an attempy to
+    then the current size of registry becomes its key in an attempt to
     maintain a registry of unique integers assigned to different items.
     """
     if item not in registry:
