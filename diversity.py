@@ -22,7 +22,8 @@ from typing import Callable, List
 from numpy import dot, array, empty, unique, zeros, divide, float64
 from pandas import DataFrame
 
-from utilities import InvalidArgumentError, UniqueRowsCorrespondence, power_mean
+from Chubacabra.utilities import (FrozenDict, InvalidArgumentError,
+                                  power_mean, register)
 
 
 @dataclass
@@ -37,19 +38,28 @@ class Abundance:
     Attributes
     ----------
     counts: array
-        A 2-d structured numpy.array with species names in the first
-        column, number of appearances in the second column and
-        subcommunity names in the third column.
-    unique_species_correspondence: UniqueRowsCorrespondence
-        Correspondence between rows in counts data with a unique
-        ordering of the unique species listed in its first column.
+        A 2-d structured numpy.array with species identifiers in the
+        first column, number of appearances in the second column and
+        subcommunity names in the third column. Species identifiers must
+        range between 0 and n_species - 1. Each species identifier is
+        the position of the species' row in relative abundances computed
+        by the objects. Each combination of species and subcommunity
+        must appear no more than once.
+    # unique_species_correspondence: UniqueRowsCorrespondence
+    #     Correspondence between rows in counts data with a unique
+    #     ordering of the unique species listed in its first column.
+    # species_to_idx: FrozenDict
+    #     Maps species names uniquely to integers between 0 and
+    #     n_species - 1. 
     """
 
     counts: array
+    # species_to_idx: FrozenDict
 
-    def __post_init__(self):
-        self.unique_species_correspondence = UniqueRowsCorrespondence(
-            self.counts)
+    # def __post_init__(self):
+    #     self.unique_species_correspondence = UniqueRowsCorrespondence(
+    #         self.counts)
+    #     self.species_to_num = 
 
     @cached_property
     def metacommunity_abundance(self):
@@ -76,14 +86,14 @@ class Abundance:
         in the subcommunity relative to the total metacommunity size.
         The row ordering is established by the species_to_row attribute.
         """
-        unique_species = self.unique_species_correspondence.unique_keys
-        row_pos = self.unique_species_correspondence.row_to_unique_pos
+        species_column = self.counts[:, 0]
+        n_unique_species = len(set(species_column)) # self.species_to_idx[species] for species in counts.row_to_unique_pos
         unique_communities, col_pos = unique(
             self.counts[:, 2], return_inverse=True)
         metacommunity_counts = zeros(
-            (len(unique_species), len(unique_communities)), dtype=float64)
+            (n_unique_species, len(unique_communities)), dtype=float64)
         # assumes unique species-subcommunity combinations in self.counts
-        metacommunity_counts[row_pos, col_pos] = self.counts[:, 1]
+        metacommunity_counts[species_column, col_pos] = self.counts[:, 1]
         total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
 
@@ -123,6 +133,9 @@ class Similarity:
     abundance: Abundance
         Relative species abundances in metacommunity and its
         subcommunities.
+    species_to_id: FrozenDict
+        Maps species names to their id in the counts attribute of
+        abundance.
     similarities_filepath: str
         Path to file containing species similarity matrix. If it doesn't
         exist, the write_similarity_matrix method generates one. File
@@ -141,6 +154,7 @@ class Similarity:
     """
 
     abundance: Abundance
+    species_to_id: FrozenDict
     similarities: array = None
     similarities_filepath: str = None
     similarity_function: Callable = None
@@ -217,12 +231,11 @@ class Similarity:
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
         with open(self.similarities_filepath, 'r') as file:
             header = next(reader(file))
-            unique_pos_keys = self.abundance.unique_species_correspondence.key_to_unique_pos
-            indices = [unique_pos_keys[key] for key in header]
+            index_permutation = [self.species_to_id[field] for field in header]
             for i, row in enumerate(reader(file)):
                 similarities_row = array(row, dtype=float64)
-                weighted_similarities[i, :] = dot(similarities_row[indices],
-                                                  relative_abundances)
+                weighted_similarities[i, :] = dot(
+                    similarities_row[index_permutation], relative_abundances)
         return weighted_similarities
 
     def weighted_similarities_from_array(self, relative_abundances):
@@ -288,11 +301,21 @@ class Metacommunity:
     similarity: Similarity = field(init=False)
 
     def __post_init__(self):
+        species_to_id_ = {}
+        counts_ = self.counts
+        counts_[0] = [register(species, species_to_id_)
+                      for species in self.counts[0]]
+        counts_[2] = self.counts.factorize()[0]
+        self.counts = counts_
         self.abundance = Abundance(self.counts)
+
+        species_to_id = FrozenDict(species_to_id_)
+
         if self.similarities_filepath:
             self.similarities_filepath = Path(self.similarities_filepath)
         self.similarity = Similarity(
             self.abundance,
+            species_to_id,
             similarities=self.similarities,
             similarities_filepath=self.similarities_filepath,
             similarity_function=self.similarity_function,

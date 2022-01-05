@@ -6,6 +6,8 @@ unique_mapping
     Corresponds items in non-unique sequence to a uniqued ordered
     sequence of those items.
 """
+from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import cached_property
 
@@ -23,69 +25,94 @@ class InvalidArgumentError(MetacommunityError):
     pass
 
 
-@dataclass
-class UniqueRowsCorrespondence:
-    """Corresponds data array rows to order of a uniqued key column.
+# @dataclass
+# class UniqueRowsCorrespondence:
+#     """Corresponds data array rows to order of a uniqued key column.
 
-    Attributes    
-    ----------
-    data: numpy.ndarray
-        The data for which to establish a correspondence.
-    key_column_pos: int
-        Index of column in data attribute for the keys according to
-        which the data rows are uniqued.
-    """
+#     Attributes    
+#     ----------
+#     data: numpy.ndarray
+#         The data for which to establish a correspondence.
+#     key_column_pos: int
+#         Index of column in data attribute for the keys according to
+#         which the data rows are uniqued.
+#     """
 
-    data: array
-    key_column_pos: int = 0
+#     data: array
+#     key_column_pos: int = 0
 
-    @cached_property
-    def unique_row_index(self):
-        """Extracts index of rows corresponding to uniqued column.
+#     @cached_property
+#     def unique_row_index(self):
+#         """Extracts index of rows corresponding to uniqued column.
 
-        Returns
-        -------
-        A 1-d numpy.ndarray of indices which are the positions of the unique
-        items in the key column.
+#         Returns
+#         -------
+#         A 1-d numpy.ndarray of indices which are the positions of the unique
+#         items in the key column.
+#         """
+#         _, index = unique(self.data[:, self.key_column_pos], return_index=True)
+#         return index
+
+#     @cached_property
+#     def unique_keys(self):
+#         """Obtains uniqued values in key column.
+
+#         Returns
+#         -------
+#         A 1-d numpy.ndarray of unique keys in key column.
+#         """
+#         return self.data[:, self.key_column_pos][self.unique_row_index]
+
+#     @cached_property
+#     def key_to_unique_pos(self):
+#         """Maps values in key column to positions in uniqued order.
+
+#         Returns
+#         -------
+#         A dict with values of key column as keys and their position in
+#         their uniqued ordering as values.
+#         """
+#         return dict((key, pos) for pos, key in enumerate(self.unique_keys))
+
+#     @cached_property
+#     def row_to_unique_pos(self):
+#         """Maps row positions to positions in uniqued order.
+
+#         Returns
+#         -------
+#         A 1-d numpy.array of the same length as object's data attribute
+#         containing the positions in uniqued ordering of corresponding
+#         rows in object's data atribute.
+#         """
+#         positions = empty(self.data.shape[0], dtype=int64)
+#         for key in self.data[:, self.key_column_pos]:
+#             positions[key] = self.key_to_unique_pos[key]
+#         return positions
+class FrozenDict(Mapping):
+    """An immutable dict-like class."""
+
+    def __init__(self, mapping):
+        """Initializes object with same keys and values as mapping.
+
+        Parameters
+        ----------
+        mapping: dict
+            The key-value pairs to initialize the object with.
         """
-        _, index = unique(self.data[:, self.key_column_pos], return_index=True)
-        return index
+        self.__mapping = deepcopy(mapping)
 
-    @cached_property
-    def unique_keys(self):
-        """Obtains uniqued values in key column.
+    def __getitem__(self, key):
+        return self.__mapping[key]
 
-        Returns
-        -------
-        A 1-d numpy.ndarray of unique keys in key column.
-        """
-        return self.data[:, self.key_column_pos][self.unique_row_index]
+    def __iter__(self):
+        return iter(self.__mapping)
 
-    @cached_property
-    def key_to_unique_pos(self):
-        """Maps values in key column to positions in uniqued order.
+    def __len__(self):
+        return len(self.__mapping)
 
-        Returns
-        -------
-        A dict with values of key column as keys and their position in
-        their uniqued ordering as values.
-        """
-        return dict((key, pos) for pos, key in enumerate(self.unique_keys))
+    def __repr__(self):
+        return repr(self.__mapping)
 
-    @cached_property
-    def row_to_unique_pos(self):
-        """Maps row positions to positions in uniqued order.
-
-        Returns
-        -------
-        A 1-d numpy.array of the same length as object's data attribute
-        containing the positions in uniqued ordering of corresponding
-        rows in object's data atribute.
-        """
-        positions = empty(self.data.shape[0], dtype=int64)
-        for key in self.data[:, self.key_column_pos]:
-            positions[key] = self.key_to_unique_pos[key]
-        return positions
 
 
 def power_mean(order, weights, items):
