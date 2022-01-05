@@ -6,10 +6,8 @@ unique_mapping
     Corresponds items in non-unique sequence to a uniqued ordered
     sequence of those items.
 """
-from functools import cache
-from operator import attrgetter
 from dataclasses import dataclass
-from functools import cache, cached_property
+from functools import cached_property
 
 from numpy import (array, empty, unique, isclose, prod, broadcast_to,
                    amin, sum as numpy_sum, multiply, inf, power, int64)

@@ -39,7 +39,7 @@ def main():
     counts = data.to_numpy()
     features = 'FIXME'  # FIXME read features in separately
     viewpoint = args.q[0]
-    meta = Metacommunity(counts, viewpoint, args.Z)
+    meta = Metacommunity(counts, args.Z)
 
     print('\n')
     print(meta.subcommunities_to_dataframe(viewpoint))

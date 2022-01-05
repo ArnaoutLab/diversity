@@ -277,7 +277,6 @@ class Metacommunity:
     """
 
     counts: array
-    viewpoint: List[float]
     similarities_filepath: str = None
     similarities: array = None
     similarity_function: Callable = None
@@ -366,6 +365,7 @@ class Metacommunity:
 
     def subcommunities_to_dataframe(self, viewpoint):
         return DataFrame({
+            'viewpoint': viewpoint,
             'alpha': self.alpha(viewpoint),
             'rho': self.rho(viewpoint),
             'beta': self.beta(viewpoint),
@@ -377,6 +377,7 @@ class Metacommunity:
 
     def metacommunity_to_dataframe(self, viewpoint):
         return DataFrame({
+            'viewpoint': viewpoint,
             'A': self.A(viewpoint),
             'R': self.R(viewpoint),
             'B': self.B(viewpoint),
