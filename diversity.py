@@ -366,22 +366,24 @@ class Metacommunity:
     def metacommunity_measure(self, viewpoint, subcommunity_measure):
         return power_mean(viewpoint, self.abundance.subcommunity_normalizing_constants, subcommunity_measure)
 
-    def properties(self):
-        class_items = self.__class__.__dict__.items()
-        return dict((k, getattr(self, k)) for k, v in class_items if isinstance(v, property))
-
     def subcommunities_to_dataframe(self):
-        measures = list(self.properties().values())[:7]
-        measure_names = list(self.properties().keys())[:7]
-        measure_df = DataFrame(dict(zip(measure_names, measures)))
-        measure_df.insert(0, 'viewpoint', self._viewpoint)
-        # measure_df.insert(0, 'subcommunty', subcommunity_names) # FIXME
-        return measure_df
+        return DataFrame({
+            'alpha': self.alpha,
+            'rho': self.rho,
+            'beta': self.beta,
+            'gamma': self.gamma,
+            'normalized_alpha': self.normalized_alpha,
+            'normalized_rho': self.normalized_rho,
+            'normalised_beta': self.normalized_beta
+        })
 
     def metacommunity_to_dataframe(self):
-        measures = list(self.properties().values())[7:]
-        measure_names = list(self.properties().keys())[7:]
-        measure_df = DataFrame(dict(zip(measure_names, measures)), index=[0])
-        measure_df.insert(0, 'viewpoint', self._viewpoint)
-        # measure_df.insert(0, 'subcommunty', subcommunity_names) # FIXME
-        return measure_df
+        return DataFrame({
+            'A': self.A,
+            'R': self.R,
+            'B': self.B,
+            'G': self.G,
+            'normalized_A': self.normalized_A,
+            'normalized_R': self.normalized_R,
+            'normalized_B': self.normalized_B
+        }, index=[0])
