@@ -357,11 +357,11 @@ class Metacommunity:
     def subcommunity_measure(self, viewpoint, numerator, denominator):
         similarities = divide(numerator, denominator, out=zeros(
             denominator.shape), where=denominator != 0)
-        return power_mean(viewpoint, self.abundance.normalized_subcommunity_abundance, similarities)
+        return power_mean(1 - viewpoint, self.abundance.normalized_subcommunity_abundance, similarities)
 
     def metacommunity_measure(self, viewpoint, subcommunity_function):
         subcommunity_measure = subcommunity_function(viewpoint)
-        return power_mean(viewpoint, self.abundance.subcommunity_normalizing_constants, subcommunity_measure)
+        return power_mean(1 - viewpoint, self.abundance.subcommunity_normalizing_constants, subcommunity_measure)
 
     def subcommunities_to_dataframe(self, viewpoint):
         return DataFrame({

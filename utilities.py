@@ -104,7 +104,6 @@ def power_mean(order, weights, items):
     When order is close to 1 or less than -100, analytical formulas
     for the limits at 1 and -infinity are used respectively.
     """
-    order = 1 - order
     mask = weights != 0
     if isclose(order, 0):
         return prod(power(items, weights, where=mask), axis=0, where=mask)
