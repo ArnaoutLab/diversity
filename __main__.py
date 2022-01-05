@@ -36,7 +36,9 @@ def main():
                     converters={0: register_species, 2: register_subcommunity})
 
     LOGGER.debug(f'data: {data}')
+
     counts = data.to_numpy()
+
     features = 'FIXME'  # FIXME read features in separately
     viewpoint = args.q[0]
     meta = Metacommunity(counts, args.Z)

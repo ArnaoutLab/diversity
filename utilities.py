@@ -108,7 +108,6 @@ def power_mean(order, weights, items):
     if isclose(order, 0):
         return prod(power(items, weights, where=mask), axis=0, where=mask)
     elif order < -100:
-        items = broadcast_to(items, weights.shape)
         return amin(items, axis=0, where=mask, initial=inf)
     items_power = power(items, order, where=mask)
     items_product = multiply(items_power, weights, where=mask)

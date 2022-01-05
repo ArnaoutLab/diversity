@@ -216,9 +216,12 @@ class Similarity:
         """
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
         with open(self.similarities_filepath, 'r') as file:
+            header = next(reader(file))
+            unique_pos_keys = self.abundance.unique_species_correspondence.key_to_unique_pos
+            indices = [unique_pos_keys[key] for key in header]
             for i, row in enumerate(reader(file)):
                 similarities_row = array(row, dtype=float64)
-                weighted_similarities[i, :] = dot(similarities_row,
+                weighted_similarities[i, :] = dot(similarities_row[indices],
                                                   relative_abundances)
         return weighted_similarities
 
