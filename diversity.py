@@ -15,14 +15,14 @@ Metacommunity
 """
 from csv import reader, writer
 from dataclasses import dataclass, field
-from functools import cached_property
+from functools import cache, cached_property
 from pathlib import Path
-from typing import Callable
+from typing import Callable, List
 
 from numpy import dot, array, empty, unique, zeros, divide, float64
 from pandas import DataFrame
 
-from utilities import InvalidArgumentError, UniqueRowsCorrespondence, cached_property_depends_on, power_mean
+from utilities import InvalidArgumentError, UniqueRowsCorrespondence, power_mean
 
 
 @dataclass
@@ -277,7 +277,7 @@ class Metacommunity:
     """
 
     counts: array
-    viewpoint: float
+    viewpoint: List[float]
     similarities_filepath: str = None
     similarities: array = None
     similarity_function: Callable = None
@@ -299,92 +299,89 @@ class Metacommunity:
     def __hash__(self):
         return hash(repr(self))
 
-    # FIXME validate new viewpoints
-    def set_viewpoint(self, viewpoint):
-        self.viewpoint = viewpoint
+    @cache
+    def alpha(self, viewpoint):
+        return self.subcommunity_measure(viewpoint, 1, self.similarity.subcommunity_similarity)
 
-    @cached_property_depends_on('viewpoint')
-    def alpha(self):
-        return self.subcommunity_measure(self.viewpoint, 1, self.similarity.subcommunity_similarity)
+    @cache
+    def rho(self, viewpoint):
+        return self.subcommunity_measure(viewpoint, self.similarity.metacommunity_similarity, self.similarity.subcommunity_similarity)
 
-    @cached_property_depends_on('viewpoint')
-    def rho(self):
-        return self.subcommunity_measure(self.viewpoint, self.similarity.metacommunity_similarity, self.similarity.subcommunity_similarity)
+    @cache
+    def beta(self, viewpoint):
+        return 1 / self.rho(viewpoint)
 
-    @cached_property_depends_on('viewpoint')
-    def beta(self):
-        return 1 / self.rho
+    @cache
+    def gamma(self, viewpoint):
+        return self.subcommunity_measure(viewpoint, 1, self.similarity.metacommunity_similarity)
 
-    @cached_property_depends_on('viewpoint')
-    def gamma(self):
-        return self.subcommunity_measure(self.viewpoint, 1, self.similarity.metacommunity_similarity)
+    @cache
+    def normalized_alpha(self, viewpoint):
+        return self.subcommunity_measure(viewpoint, 1, self.similarity.normalized_subcommunity_similarity)
 
-    @cached_property_depends_on('viewpoint')
-    def normalized_alpha(self):
-        return self.subcommunity_measure(self.viewpoint, 1, self.similarity.normalized_subcommunity_similarity)
+    @cache
+    def normalized_rho(self, viewpoint):
+        return self.subcommunity_measure(viewpoint, self.similarity.metacommunity_similarity, self.similarity.normalized_subcommunity_similarity)
 
-    @cached_property_depends_on('viewpoint')
-    def normalized_rho(self):
-        return self.subcommunity_measure(self.viewpoint, self.similarity.metacommunity_similarity, self.similarity.normalized_subcommunity_similarity)
+    @cache
+    def normalized_beta(self, viewpoint):
+        return 1 / self.normalized_rho(viewpoint)
 
-    @cached_property_depends_on('viewpoint')
-    def normalized_beta(self):
-        return 1 / self.normalized_rho
+    @cache
+    def A(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.alpha)
 
-    @cached_property_depends_on('viewpoint')
-    def A(self):
-        return self.metacommunity_measure(self.viewpoint, self.alpha)
+    @cache
+    def R(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.rho)
 
-    @cached_property_depends_on('viewpoint')
-    def R(self):
-        return self.metacommunity_measure(self.viewpoint, self.rho)
+    @cache
+    def B(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.beta)
 
-    @cached_property_depends_on('viewpoint')
-    def B(self):
-        return self.metacommunity_measure(self.viewpoint, self.beta)
+    @cache
+    def G(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.gamma)
 
-    @cached_property_depends_on('viewpoint')
-    def G(self):
-        return self.metacommunity_measure(self.viewpoint, self.gamma)
+    @cache
+    def normalized_A(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.normalized_alpha)
 
-    @cached_property_depends_on('viewpoint')
-    def normalized_A(self):
-        return self.metacommunity_measure(self.viewpoint, self.normalized_alpha)
+    @cache
+    def normalized_R(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.normalized_rho)
 
-    @cached_property_depends_on('viewpoint')
-    def normalized_R(self):
-        return self.metacommunity_measure(self.viewpoint, self.normalized_rho)
-
-    @cached_property_depends_on('viewpoint')
-    def normalized_B(self):
-        return self.metacommunity_measure(self.viewpoint, self.normalized_beta)
+    @cache
+    def normalized_B(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.normalized_beta)
 
     def subcommunity_measure(self, viewpoint, numerator, denominator):
         similarities = divide(numerator, denominator, out=zeros(
             denominator.shape), where=denominator != 0)
         return power_mean(viewpoint, self.abundance.normalized_subcommunity_abundance, similarities)
 
-    def metacommunity_measure(self, viewpoint, subcommunity_measure):
+    def metacommunity_measure(self, viewpoint, subcommunity_function):
+        subcommunity_measure = subcommunity_function(viewpoint)
         return power_mean(viewpoint, self.abundance.subcommunity_normalizing_constants, subcommunity_measure)
 
-    def subcommunities_to_dataframe(self):
+    def subcommunities_to_dataframe(self, viewpoint):
         return DataFrame({
-            'alpha': self.alpha,
-            'rho': self.rho,
-            'beta': self.beta,
-            'gamma': self.gamma,
-            'normalized_alpha': self.normalized_alpha,
-            'normalized_rho': self.normalized_rho,
-            'normalised_beta': self.normalized_beta
+            'alpha': self.alpha(viewpoint),
+            'rho': self.rho(viewpoint),
+            'beta': self.beta(viewpoint),
+            'gamma': self.gamma(viewpoint),
+            'normalized_alpha': self.normalized_alpha(viewpoint),
+            'normalized_rho': self.normalized_rho(viewpoint),
+            'normalised_beta': self.normalized_beta(viewpoint)
         })
 
-    def metacommunity_to_dataframe(self):
+    def metacommunity_to_dataframe(self, viewpoint):
         return DataFrame({
-            'A': self.A,
-            'R': self.R,
-            'B': self.B,
-            'G': self.G,
-            'normalized_A': self.normalized_A,
-            'normalized_R': self.normalized_R,
-            'normalized_B': self.normalized_B
+            'A': self.A(viewpoint),
+            'R': self.R(viewpoint),
+            'B': self.B(viewpoint),
+            'G': self.G(viewpoint),
+            'normalized_A': self.normalized_A(viewpoint),
+            'normalized_R': self.normalized_R(viewpoint),
+            'normalized_B': self.normalized_B(viewpoint)
         }, index=[0])

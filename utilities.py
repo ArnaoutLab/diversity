@@ -119,27 +119,6 @@ def power_mean(order, weights, items):
     return power(items_sum, 1 / order)
 
 
-def cached_property_depends_on(*args):
-    """Transforms a method of a class into a property whose value is 
-    computed and cached. If any of the attributes in args are modified
-    the value of the property is recomputed and the cache is updated.
-
-    Parameters
-    ----------
-    args
-        Attributes of the class whose method is being decorated
-    """
-    attrs = attrgetter(*args)
-
-    def decorator(func):
-        _cache = cache((lambda self, _: func(self)))
-
-        def _with_tracked(self):
-            return _cache(self, attrs(self))
-        return property(_with_tracked, doc=func.__doc__)
-    return decorator
-
-
 def register(item, registry):
     """Returns value for item in registry, creating one if necessary.
 
@@ -156,7 +135,7 @@ def register(item, registry):
     Returns
     -------
     The value of item in registry. If item is not a key of registry,
-    then the current size of registry becomes its key in an attempy to
+    then the current size of registry becomes its key in an attempt to
     maintain a registry of unique integers assigned to different items.
     """
     if item not in registry:

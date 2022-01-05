@@ -42,9 +42,9 @@ def main():
     meta = Metacommunity(counts, viewpoint, args.Z)
 
     print('\n')
-    print(meta.subcommunities_to_dataframe())
+    print(meta.subcommunities_to_dataframe(viewpoint))
     print('\n')
-    print(meta.metacommunity_to_dataframe())
+    print(meta.metacommunity_to_dataframe(viewpoint))
     print('\n')
 
     LOGGER.info('Done!')
