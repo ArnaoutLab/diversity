@@ -6,7 +6,6 @@ from logging import captureWarnings, getLogger
 from pandas import read_csv
 
 from diversity import Metacommunity
-from utilities import UniqueRowsCorrespondence, register
 from parameters import configure_arguments
 from log import LOG_HANDLER, LOGGER
 
@@ -26,22 +25,13 @@ def main():
     LOGGER.info(' '.join([f'python{python_version()}', *argv]))
     LOGGER.debug(f'args: {args}')
 
-    # species_to_id = {}
-    # subcommunity_to_id = {}
+    species_counts = read_csv(args.filepath, comment='#').to_numpy()
 
-    # register_species = partial(register, registry=species_to_id)
-    # register_subcommunity = partial(register, registry=subcommunity_to_id)
-
-    data = read_csv(args.filepath, comment='#')
-                    # converters={0: register_species, 2: register_subcommunity})
-
-    LOGGER.debug(f'data: {data}')
-
-    # counts = data.to_numpy()
+    LOGGER.debug(f'data: {species_counts}')
 
     features = 'FIXME'  # FIXME read features in separately
     viewpoint = args.q[0]
-    meta = Metacommunity(counts, args.Z)
+    meta = Metacommunity(species_counts, args.Z)
 
     print('\n')
     print(meta.subcommunities_to_dataframe(viewpoint))

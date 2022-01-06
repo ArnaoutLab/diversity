@@ -17,13 +17,13 @@ from csv import reader, writer
 from dataclasses import dataclass, field
 from functools import cache, cached_property
 from pathlib import Path
-from typing import Callable, List
+from typing import Callable
 
 from numpy import dot, array, empty, unique, zeros, divide, float64
 from pandas import DataFrame
 
-from Chubacabra.utilities import (FrozenDict, InvalidArgumentError,
-                                  power_mean, register)
+from utilities import (FrozenDict, InvalidArgumentError,
+                       power_mean, register, factorize)
 
 
 @dataclass
@@ -45,21 +45,9 @@ class Abundance:
         the position of the species' row in relative abundances computed
         by the objects. Each combination of species and subcommunity
         must appear no more than once.
-    # unique_species_correspondence: UniqueRowsCorrespondence
-    #     Correspondence between rows in counts data with a unique
-    #     ordering of the unique species listed in its first column.
-    # species_to_idx: FrozenDict
-    #     Maps species names uniquely to integers between 0 and
-    #     n_species - 1. 
     """
 
     counts: array
-    # species_to_idx: FrozenDict
-
-    # def __post_init__(self):
-    #     self.unique_species_correspondence = UniqueRowsCorrespondence(
-    #         self.counts)
-    #     self.species_to_num = 
 
     @cached_property
     def metacommunity_abundance(self):
@@ -86,13 +74,14 @@ class Abundance:
         in the subcommunity relative to the total metacommunity size.
         The row ordering is established by the species_to_row attribute.
         """
-        species_column = self.counts[:, 0]
-        n_unique_species = len(set(species_column)) # self.species_to_idx[species] for species in counts.row_to_unique_pos
+        species_column = self.counts[:, 0].astype(int)
+        # FIXME this is already calculated in factorize; clean this up
+        n_unique_species = len(set(species_column))
         unique_communities, col_pos = unique(
             self.counts[:, 2], return_inverse=True)
         metacommunity_counts = zeros(
             (n_unique_species, len(unique_communities)), dtype=float64)
-        # assumes unique species-subcommunity combinations in self.counts
+        # FIXME assumes unique species-subcommunity combinations in self.counts, do a check for this and warn/error if not unique
         metacommunity_counts[species_column, col_pos] = self.counts[:, 1]
         total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
@@ -133,9 +122,6 @@ class Similarity:
     abundance: Abundance
         Relative species abundances in metacommunity and its
         subcommunities.
-    species_to_id: FrozenDict
-        Maps species names to their id in the counts attribute of
-        abundance.
     similarities_filepath: str
         Path to file containing species similarity matrix. If it doesn't
         exist, the write_similarity_matrix method generates one. File
@@ -151,15 +137,17 @@ class Similarity:
     species: numpy.ndarray
         A 1d numpy.nds array of unique species corresponding to the rows
         in features.
+    species_to_idx: FrozenDict
+        Maps species names uniquely to integers between 0 and n_species - 1. 
     """
 
     abundance: Abundance
-    species_to_id: FrozenDict
     similarities: array = None
     similarities_filepath: str = None
     similarity_function: Callable = None
     features: array = None
-    species: array = None
+    species: array = None  # FIXME self.abundance should probably have unique species
+    species_to_id: FrozenDict = field(init=False)
 
     def __post_init__(self):
         """Validates attributes."""
@@ -174,6 +162,21 @@ class Similarity:
                 raise InvalidArgumentError(
                     'Invalid species array shape. Expected 1-d array of'
                     ' length equal to number of rows in features')
+        self.species_to_id = self.create_species_id_map()
+
+    # FIXME why does this set self.abundance.counts[:, 0]
+    def create_species_id_map(self):
+        """Maps species names to their id in the counts attribute.
+
+        Returns
+        -------
+        A FrozenDict where keys FIXME
+        """
+        species_to_id_ = {}
+        self.abundance.counts[:, 0] = [int(register(species, species_to_id_))
+                                       for species in self.abundance.counts[:, 0]]
+        self.abundance.counts[:, 2] = factorize(self.abundance.counts[:, 2])
+        return FrozenDict(species_to_id_)
 
     @cached_property
     def metacommunity_similarity(self):
@@ -231,7 +234,8 @@ class Similarity:
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
         with open(self.similarities_filepath, 'r') as file:
             header = next(reader(file))
-            index_permutation = [self.species_to_id[field] for field in header]
+            index_permutation = [
+                self.species_to_id[field] for field in header]
             for i, row in enumerate(reader(file)):
                 similarities_row = array(row, dtype=float64)
                 weighted_similarities[i, :] = dot(
@@ -301,21 +305,11 @@ class Metacommunity:
     similarity: Similarity = field(init=False)
 
     def __post_init__(self):
-        species_to_id_ = {}
-        counts_ = self.counts
-        counts_[0] = [register(species, species_to_id_)
-                      for species in self.counts[0]]
-        counts_[2] = self.counts.factorize()[0]
-        self.counts = counts_
         self.abundance = Abundance(self.counts)
-
-        species_to_id = FrozenDict(species_to_id_)
-
         if self.similarities_filepath:
             self.similarities_filepath = Path(self.similarities_filepath)
         self.similarity = Similarity(
             self.abundance,
-            species_to_id,
             similarities=self.similarities,
             similarities_filepath=self.similarities_filepath,
             similarity_function=self.similarity_function,
@@ -324,59 +318,59 @@ class Metacommunity:
     def __hash__(self):
         return hash(repr(self))
 
-    @cache
+    @ cache
     def alpha(self, viewpoint):
         return self.subcommunity_measure(viewpoint, 1, self.similarity.subcommunity_similarity)
 
-    @cache
+    @ cache
     def rho(self, viewpoint):
         return self.subcommunity_measure(viewpoint, self.similarity.metacommunity_similarity, self.similarity.subcommunity_similarity)
 
-    @cache
+    @ cache
     def beta(self, viewpoint):
         return 1 / self.rho(viewpoint)
 
-    @cache
+    @ cache
     def gamma(self, viewpoint):
         return self.subcommunity_measure(viewpoint, 1, self.similarity.metacommunity_similarity)
 
-    @cache
+    @ cache
     def normalized_alpha(self, viewpoint):
         return self.subcommunity_measure(viewpoint, 1, self.similarity.normalized_subcommunity_similarity)
 
-    @cache
+    @ cache
     def normalized_rho(self, viewpoint):
         return self.subcommunity_measure(viewpoint, self.similarity.metacommunity_similarity, self.similarity.normalized_subcommunity_similarity)
 
-    @cache
+    @ cache
     def normalized_beta(self, viewpoint):
         return 1 / self.normalized_rho(viewpoint)
 
-    @cache
+    @ cache
     def A(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.alpha)
 
-    @cache
+    @ cache
     def R(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.rho)
 
-    @cache
+    @ cache
     def B(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.beta)
 
-    @cache
+    @ cache
     def G(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.gamma)
 
-    @cache
+    @ cache
     def normalized_A(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.normalized_alpha)
 
-    @cache
+    @ cache
     def normalized_R(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.normalized_rho)
 
-    @cache
+    @ cache
     def normalized_B(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.normalized_beta)
 
