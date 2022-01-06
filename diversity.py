@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Callable
 
 from pandas import DataFrame
-from numpy import dot, array, empty, lexsort, zeros, divide, float64
+from numpy import dot, array, empty, lexsort, zeros, argsort, divide, float64
 
 from utilities import InvalidArgumentError, pivot_table, power_mean, reorder_rows
 
@@ -46,8 +46,7 @@ class Abundance:
     """
 
     counts: array
-    species_order: list
-    species_names: array = field(init=False)
+    species_simiarlity_order: list
     subcommunity_names: array = field(init=False)
 
     def __post_init__(self):
@@ -82,14 +81,14 @@ class Abundance:
         The row ordering is established by the species_to_row attribute.
         """
         # FIXME This function still assumes columns in the input file are ordered: subcommunity, species, count
-        metacommunity_counts, self.species_names, self.subcommunity_names = pivot_table(
+        metacommunity_counts, self.subcommunity_names = pivot_table(
             self.counts, columns_index=0, indices_index=1, values_index=2)
         metacommunity_counts = reorder_rows(
-            metacommunity_counts, self.species_order)
+            metacommunity_counts, self.species_simiarlity_order)
         total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
 
-    @cached_property
+    @ cached_property
     def subcommunity_normalizing_constants(self):
         """Calculates subcommunity normalizing constants.
 
@@ -100,7 +99,7 @@ class Abundance:
         """
         return self.subcommunity_abundance.sum(axis=0)
 
-    @cached_property
+    @ cached_property
     def normalized_subcommunity_abundance(self):
         """Calculates normalized relative abundances in subcommunities.
 
@@ -116,7 +115,7 @@ class Abundance:
                 / self.subcommunity_normalizing_constants)
 
 
-@dataclass
+@ dataclass
 class Similarity:
     """Species similarities weighted by meta- and subcommunity abundance.
 
@@ -159,37 +158,31 @@ class Similarity:
                 raise InvalidArgumentError(
                     'If features argument is provided, then species must be'
                     ' provided to establish the similarity matrix row and column ordering.')
-            elif self.features.shape[0] != self.species_order.shape[0]:
+            elif self.features.shape[0] != len(self.species_order):
                 raise InvalidArgumentError(
                     'Invalid species array shape. Expected 1-d array of'
                     ' length equal to number of rows in features')
 
     @ cached_property
     def metacommunity_similarity(self):
-        """Calculates weighted sums of similarities to each species.
-
-        Same as calculate_weighted_similarities, except that object's
-        abundance.metacommunity_abundance attribute is used for weights.
+        """Calculates the sums of similarities weighted by the metacommunity
+        abundance of each species.
         """
         return self.calculate_weighted_similarities(
             self.abundance.metacommunity_abundance)
 
     @ cached_property
     def subcommunity_similarity(self):
-        """Calculates weighted sums of similarities to each species.
-        Same as calculate_weighted_similarities, except that object's
-        abundance.subcommunity_abundance attribute is used for weights.
+        """Calculates the sums of similarities weighted by the subcommunity
+        abundance of each species.
         """
         return self.calculate_weighted_similarities(
             self.abundance.subcommunity_abundance)
 
     @ cached_property
     def normalized_subcommunity_similarity(self):
-        """Calculates weighted sums of similarities to each species.
-
-        Same as calculate_weighted_similarities, except that object's
-        abundance.normalized_subcommunity_abundance attribute is used
-        for weights.
+        """Calculates the sums of similarities weighted by the normalized
+        subcommunity abundance of each species.
         """
         return self.calculate_weighted_similarities(
             self.abundance.normalized_subcommunity_abundance)
@@ -218,19 +211,21 @@ class Similarity:
         similarities_filepath attribute.
         """
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
+        # species_order = self.abundance.species_simiarlity_order
         with open(self.similarities_filepath, 'r') as file:
-            next(reader(file))  # skip header
+            header = next(reader(file))  # skip header
+            order = argsort(header)
             for i, row in enumerate(reader(file)):
                 similarities_row = array(row, dtype=float64)
                 weighted_similarities[i, :] = dot(similarities_row,
-                                                  relative_abundances)
+                                                  relative_abundances[order, :])
         return weighted_similarities
 
     def weighted_similarities_from_array(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
         Same as calculate_weighted_similarities, except that the object's
-        similarities attribute is used.
+        similarity_matrix attribute is used.
         """
         return dot(self.similarity_matrix, relative_abundances)
 
@@ -306,13 +301,14 @@ class Metacommunity:
             features=self.features,
             species_order=self.species_order)
 
+    # FIXME repr is potientially large for datalasses, right? could be slow
     def __hash__(self):
         return hash(repr(self))
 
     def get_species_order(self):
         if self.similarities_filepath:
             with open(self.similarities_filepath, 'r') as file:
-                return next(reader(file))
+                return argsort(next(reader(file)))
 
     @ cache
     def alpha(self, viewpoint):

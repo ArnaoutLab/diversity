@@ -6,8 +6,8 @@ unique_mapping
     Corresponds items in non-unique sequence to a uniqued ordered
     sequence of those items.
 """
-from numpy import (isclose, prod, amin, sum, unique, zeros,
-                   empty_like, arange, float64, multiply, inf, power)
+from numpy import (isclose, matmul, prod, amin, sum, unique, zeros,
+                   empty_like, arange, float64, multiply, dot, inf, power)
 
 
 class MetacommunityError(Exception):
@@ -25,7 +25,7 @@ def pivot_table(data, columns_index, indices_index, values_index):
     cols, col_indices = unique(data[:, columns_index], return_inverse=True)
     table = zeros((len(rows), len(cols)), dtype=float64)
     table[row_indices, col_indices] = data[:, values_index]
-    return table, rows, cols
+    return table, cols
 
 
 def reorder_rows(data, new_order):
