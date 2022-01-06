@@ -6,11 +6,8 @@ unique_mapping
     Corresponds items in non-unique sequence to a uniqued ordered
     sequence of those items.
 """
-from dataclasses import dataclass
-from functools import cached_property
-
-from numpy import (array, empty, unique, isclose, prod, broadcast_to,
-                   amin, sum as numpy_sum, multiply, inf, power, int64)
+from numpy import (isclose, prod, amin, sum, unique, zeros,
+                   empty_like, arange, float64, multiply, inf, power)
 
 
 class MetacommunityError(Exception):
@@ -23,69 +20,19 @@ class InvalidArgumentError(MetacommunityError):
     pass
 
 
-@dataclass
-class UniqueRowsCorrespondence:
-    """Corresponds data array rows to order of a uniqued key column.
+def pivot_table(data, columns_index, indices_index, values_index):
+    rows, row_indices = unique(data[:, indices_index], return_inverse=True)
+    cols, col_indices = unique(data[:, columns_index], return_inverse=True)
+    table = zeros((len(rows), len(cols)), dtype=float64)
+    table[row_indices, col_indices] = data[:, values_index]
+    return table, rows, cols
 
-    Attributes    
-    ----------
-    data: numpy.ndarray
-        The data for which to establish a correspondence.
-    key_column_pos: int
-        Index of column in data attribute for the keys according to
-        which the data rows are uniqued.
-    """
 
-    data: array
-    key_column_pos: int = 0
-
-    @cached_property
-    def unique_row_index(self):
-        """Extracts index of rows corresponding to uniqued column.
-
-        Returns
-        -------
-        A 1-d numpy.ndarray of indices which are the positions of the unique
-        items in the key column.
-        """
-        _, index = unique(self.data[:, self.key_column_pos], return_index=True)
-        return index
-
-    @cached_property
-    def unique_keys(self):
-        """Obtains uniqued values in key column.
-
-        Returns
-        -------
-        A 1-d numpy.ndarray of unique keys in key column.
-        """
-        return self.data[:, self.key_column_pos][self.unique_row_index]
-
-    @cached_property
-    def key_to_unique_pos(self):
-        """Maps values in key column to positions in uniqued order.
-
-        Returns
-        -------
-        A dict with values of key column as keys and their position in
-        their uniqued ordering as values.
-        """
-        return dict((key, pos) for pos, key in enumerate(self.unique_keys))
-
-    @cached_property
-    def row_to_unique_pos(self):
-        """Maps row positions to positions in uniqued order.
-
-        Returns
-        -------
-        A 1-d numpy.array of the same length as object's data attribute
-        containing the positions in uniqued ordering of corresponding
-        rows in object's data atribute.
-        """
-        positions = empty(self.data.shape[0], dtype=int64)
-        for key in self.data[:, self.key_column_pos]:
-            positions[key] = self.key_to_unique_pos[key]
-        return positions
+def reorder_rows(data, new_order):
+    _, header_indices = unique(new_order, return_index=True)
+    idx = empty_like(header_indices)
+    idx[header_indices] = arange(len(header_indices))
+    return data[idx, :]
 
 
 def power_mean(order, weights, items):
@@ -111,7 +58,7 @@ def power_mean(order, weights, items):
         return amin(items, axis=0, where=mask, initial=inf)
     items_power = power(items, order, where=mask)
     items_product = multiply(items_power, weights, where=mask)
-    items_sum = numpy_sum(items_product, axis=0, where=mask)
+    items_sum = sum(items_product, axis=0, where=mask)
     return power(items_sum, 1 / order)
 
 
