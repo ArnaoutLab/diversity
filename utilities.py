@@ -6,8 +6,9 @@ unique_mapping
     Corresponds items in non-unique sequence to a uniqued ordered
     sequence of those items.
 """
-from numpy import (isclose, matmul, prod, amin, sum, unique, zeros,
-                   empty_like, arange, float64, multiply, dot, inf, power)
+from numpy import isclose, prod, zeros, amin, unique, arange, empty_like, sum as numpy_sum, multiply, inf, power, float64
+from copy import deepcopy
+from collections.abc import Mapping
 
 
 class MetacommunityError(Exception):
@@ -28,11 +29,47 @@ def pivot_table(data, columns_index, indices_index, values_index):
     return table, cols
 
 
+# FIXME Currently not used
 def reorder_rows(data, new_order):
     _, header_indices = unique(new_order, return_index=True)
     idx = empty_like(header_indices)
     idx[header_indices] = arange(len(header_indices))
     return data[idx, :]
+
+
+class FrozenDict(Mapping):
+    """An immutable dict-like class."""
+
+    def __init__(self, mapping):
+        """Initializes object with same keys and values as mapping.
+
+        Parameters
+        ----------
+        mapping: dict
+            The key-value pairs to initialize the object with.
+        """
+        self.__mapping = deepcopy(mapping)
+
+    def __getitem__(self, key):
+        return self.__mapping[key]
+
+    def __iter__(self):
+        return iter(self.__mapping)
+
+    def __len__(self):
+        return len(self.__mapping)
+
+    def __repr__(self):
+        return repr(self.__mapping)
+
+
+def factorize(arr):
+    """
+    FIXME
+    """
+    names, _ = unique(arr, return_inverse=True)
+    name_map = dict(zip(names, range(len(names))))
+    return [name_map[i] for i in arr]
 
 
 def power_mean(order, weights, items):
@@ -58,7 +95,7 @@ def power_mean(order, weights, items):
         return amin(items, axis=0, where=mask, initial=inf)
     items_power = power(items, order, where=mask)
     items_product = multiply(items_power, weights, where=mask)
-    items_sum = sum(items_product, axis=0, where=mask)
+    items_sum = numpy_sum(items_product, axis=0, where=mask)
     return power(items_sum, 1 / order)
 
 

@@ -22,7 +22,7 @@ from typing import Callable
 from pandas import DataFrame
 from numpy import dot, array, empty, lexsort, zeros, argsort, divide, float64
 
-from utilities import InvalidArgumentError, pivot_table, power_mean, reorder_rows
+from utilities import InvalidArgumentError, FrozenDict, pivot_table, power_mean, register, factorize
 
 
 @dataclass
@@ -37,23 +37,39 @@ class Abundance:
     Attributes
     ----------
     counts: array
-        A 2-d structured numpy.array with species names in the first
-        column, number of appearances in the second column and
-        subcommunity names in the third column.
-    unique_species_correspondence: UniqueRowsCorrespondence
-        Correspondence between rows in counts data with a unique
-        ordering of the unique species listed in its first column.
+        A 2-d structured numpy.array with species identifiers in the
+        first column, number of appearances in the second column and
+        subcommunity names in the third column. Species identifiers must
+        range between 0 and n_species - 1. Each species identifier is
+        the position of the species' row in relative abundances computed
+        by the objects. Each combination of species and subcommunity
+        must appear no more than once.
     """
 
     counts: array
     species_simiarlity_order: list
+    species_to_id: array = field(init=False)
     subcommunity_names: array = field(init=False)
 
     def __post_init__(self):
+        self.species_to_id = self.create_species_id_map()
         # These properties are used for every diversity measure, so they should be calculated on initialization
         self.subcommunity_abundance
         self.subcommunity_normalizing_constants
         self.normalized_subcommunity_abundance
+
+    def create_species_id_map(self):
+        """Maps species names to their id in the counts attribute.
+
+        Returns
+        -------
+        A FrozenDict where keys FIXME
+        """
+        species_to_id_ = {}
+        self.counts[:, 1] = [register(species, species_to_id_)
+                             for species in self.counts[:, 1]]
+        self.counts[:, 0] = factorize(self.counts[:, 0])
+        return FrozenDict(species_to_id_)
 
     @cached_property
     def metacommunity_abundance(self):
@@ -80,15 +96,14 @@ class Abundance:
         in the subcommunity relative to the total metacommunity size.
         The row ordering is established by the species_to_row attribute.
         """
+
         # FIXME This function still assumes columns in the input file are ordered: subcommunity, species, count
         metacommunity_counts, self.subcommunity_names = pivot_table(
             self.counts, columns_index=0, indices_index=1, values_index=2)
-        metacommunity_counts = reorder_rows(
-            metacommunity_counts, self.species_simiarlity_order)
         total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
 
-    @ cached_property
+    @cached_property
     def subcommunity_normalizing_constants(self):
         """Calculates subcommunity normalizing constants.
 
@@ -99,7 +114,7 @@ class Abundance:
         """
         return self.subcommunity_abundance.sum(axis=0)
 
-    @ cached_property
+    @cached_property
     def normalized_subcommunity_abundance(self):
         """Calculates normalized relative abundances in subcommunities.
 
@@ -139,6 +154,8 @@ class Similarity:
     species: numpy.ndarray
         A 1d numpy.nds array of unique species corresponding to the rows
         in features.
+    species_to_idx: FrozenDict
+        Maps species names uniquely to integers between 0 and n_species - 1. 
     """
 
     abundance: Abundance
@@ -213,12 +230,13 @@ class Similarity:
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
         # species_order = self.abundance.species_simiarlity_order
         with open(self.similarities_filepath, 'r') as file:
-            header = next(reader(file))  # skip header
-            order = argsort(header)
+            header = next(reader(file))
+            index_permutation = [
+                self.abundance.species_to_id[field] for field in header]
             for i, row in enumerate(reader(file)):
                 similarities_row = array(row, dtype=float64)
-                weighted_similarities[i, :] = dot(similarities_row,
-                                                  relative_abundances[order, :])
+                weighted_similarities[i, :] = dot(
+                    similarities_row[index_permutation], relative_abundances)
         return weighted_similarities
 
     def weighted_similarities_from_array(self, relative_abundances):
