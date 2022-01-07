@@ -303,6 +303,10 @@ class Metacommunity:
     species_order: list = None
 
     def __post_init__(self):
+        if isinstance(self.counts, DataFrame):
+            self.counts = self.counts.to_numpy()
+        if isinstance(self.similarity_matrix, DataFrame):
+            self.similarity_matrix = self.similarity_matrix.to_numpy()
         if self.similarities_filepath:
             self.similarities_filepath = Path(self.similarities_filepath)
         self.similarity = Similarity(

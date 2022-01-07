@@ -24,7 +24,7 @@ def main():
     LOGGER.info(' '.join([f'python{python_version()}', *argv]))
     LOGGER.debug(f'args: {args}')
 
-    species_counts = read_csv(args.input_file).to_numpy()
+    species_counts = read_csv(args.input_file)
 
     LOGGER.debug(f'data: {species_counts}')
 
