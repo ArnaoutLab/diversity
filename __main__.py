@@ -2,7 +2,7 @@ from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger
 
-from pandas import read_csv
+from pandas import read_csv, concat
 
 from diversity import Metacommunity
 from parameters import configure_arguments
@@ -24,20 +24,24 @@ def main():
     LOGGER.info(' '.join([f'python{python_version()}', *argv]))
     LOGGER.debug(f'args: {args}')
 
-    species_counts = read_csv(args.filepath).to_numpy()
+    species_counts = read_csv(args.input_file).to_numpy()
 
     LOGGER.debug(f'data: {species_counts}')
 
     features = 'FIXME'  # FIXME read features in separately
-    viewpoint = args.viewpoint[0]
+    viewpoint = args.viewpoint
 
-    meta = Metacommunity(species_counts, args.similarities)
+    meta = Metacommunity(species_counts, args.similarity_matrix_file)
 
-    print('\n')
-    print(meta.subcommunities_to_dataframe(viewpoint))
-    print('\n')
-    print(meta.metacommunity_to_dataframe(viewpoint))
-    print('\n')
+    subcommunity_views = concat([meta.subcommunities_to_dataframe(view)
+                                 for view in viewpoint])
+    metacommunity_views = concat([meta.metacommunity_to_dataframe(view)
+                                  for view in viewpoint])
+    metacommunity_views.columns = subcommunity_views.columns
+    community_views = concat(
+        [subcommunity_views, metacommunity_views])
+    community_views.to_csv(args.output_file, sep='\t',
+                           float_format='%.2f', index=False)
 
     LOGGER.info('Done!')
 

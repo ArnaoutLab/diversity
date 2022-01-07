@@ -386,7 +386,7 @@ class Metacommunity:
 
     def subcommunities_to_dataframe(self, viewpoint):
         return DataFrame({
-            'subcommunity': self.similarity.abundance.subcommunity_names,
+            'community': self.similarity.abundance.subcommunity_names,
             'viewpoint': viewpoint,
             'alpha': self.alpha(viewpoint),
             'rho': self.rho(viewpoint),
@@ -399,6 +399,7 @@ class Metacommunity:
 
     def metacommunity_to_dataframe(self, viewpoint):
         return DataFrame({
+            'community': 'metacommunity',
             'viewpoint': viewpoint,
             'A': self.A(viewpoint),
             'R': self.R(viewpoint),
@@ -407,4 +408,4 @@ class Metacommunity:
             'normalized_A': self.normalized_A(viewpoint),
             'normalized_R': self.normalized_R(viewpoint),
             'normalized_B': self.normalized_B(viewpoint)
-        }, index=['Metacommunity'])
+        }, index=[0])
