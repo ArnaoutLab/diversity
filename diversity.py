@@ -20,9 +20,9 @@ from pathlib import Path
 from typing import Callable
 
 from pandas import DataFrame
-from numpy import dot, array, empty, zeros, argsort, divide, float64
+from numpy import dot, array, empty, zeros, unique, broadcast_to, divide, float64
 
-from utilities import InvalidArgumentError, pivot_table, power_mean
+from utilities import InvalidArgumentError, power_mean
 
 
 @dataclass(repr=False)
@@ -48,7 +48,6 @@ class Abundance:
 
     counts: array
     species_order: array
-    # FIXME what is this doing here?
     subcommunity_names: array = field(init=False)
 
     def __post_init__(self):
@@ -56,6 +55,18 @@ class Abundance:
         self.subcommunity_abundance
         self.subcommunity_normalizing_constants
         self.normalized_subcommunity_abundance
+
+    # FIXME This function still assumes columns in the input file are ordered: subcommunity, species, count
+    def pivot_table(self):
+        species_to_pos = {species: pos for pos,
+                          species in enumerate(self.species_order)}
+        row_indices = array([species_to_pos[species]
+                            for species in self.counts[:, 1]])
+        cols, col_indices = unique(
+            self.counts[:, 0], return_inverse=True)
+        table = zeros((len(species_to_pos), len(cols)), dtype=float64)
+        table[row_indices, col_indices] = self.counts[:, 2]
+        return table, cols
 
     @cached_property
     def subcommunity_abundance(self):
@@ -69,11 +80,7 @@ class Abundance:
         in the subcommunity relative to the total metacommunity size.
         The row ordering is established by the species_to_row attribute.
         """
-
-        # FIXME This function still assumes columns in the input file are ordered: subcommunity, species, count
-        metacommunity_counts, self.subcommunity_names = pivot_table(
-            self.counts, columns_index=0, indices_index=1, values_index=2)
-        metacommunity_counts = metacommunity_counts[self.species_order]
+        metacommunity_counts, self.subcommunity_names = self.pivot_table()
         total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
 
@@ -161,7 +168,7 @@ class Similarity:
     def get_species_order(self):
         if self.similarities_filepath:
             with open(self.similarities_filepath, 'r') as file:
-                return argsort(next(reader(file)))
+                return next(reader(file))
 
     def validate_features(self):
         if self.features is not None or self.similarity_matrix is not None:
@@ -312,7 +319,6 @@ class Metacommunity:
 
     @cache
     def alpha(self, viewpoint):
-        print(repr(self))
         return self.subcommunity_measure(viewpoint, 1, self.similarity.subcommunity_similarity)
 
     @cache
@@ -325,7 +331,9 @@ class Metacommunity:
 
     @cache
     def gamma(self, viewpoint):
-        return self.subcommunity_measure(viewpoint, 1, self.similarity.metacommunity_similarity)
+        denominator = broadcast_to(self.similarity.metacommunity_similarity,
+                                   self.similarity.abundance.normalized_subcommunity_abundance.shape)
+        return self.subcommunity_measure(viewpoint, 1, denominator)
 
     @cache
     def normalized_alpha(self, viewpoint):

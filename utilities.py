@@ -6,7 +6,7 @@ unique_mapping
     Corresponds items in non-unique sequence to a uniqued ordered
     sequence of those items.
 """
-from numpy import isclose, prod, zeros, amin, unique, arange, empty_like, sum as numpy_sum, multiply, inf, power, float64
+from numpy import isclose, prod, amin, sum as numpy_sum, multiply, inf, power
 
 
 class MetacommunityError(Exception):
@@ -17,14 +17,6 @@ class MetacommunityError(Exception):
 class InvalidArgumentError(MetacommunityError):
     """Raised when a function receives an invalid argument."""
     pass
-
-
-def pivot_table(data, columns_index, indices_index, values_index):
-    rows, row_indices = unique(data[:, indices_index], return_inverse=True)
-    cols, col_indices = unique(data[:, columns_index], return_inverse=True)
-    table = zeros((len(rows), len(cols)), dtype=float64)
-    table[row_indices, col_indices] = data[:, values_index]
-    return table, cols
 
 
 def power_mean(order, weights, items):
