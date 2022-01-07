@@ -4,9 +4,9 @@ from logging import captureWarnings, getLogger
 
 from pandas import read_csv, concat
 
-from diversity import Metacommunity
-from parameters import configure_arguments
-from log import LOG_HANDLER, LOGGER
+from metacommunity.diversity import Metacommunity
+from metacommunity.parameters import configure_arguments
+from metacommunity.log import LOG_HANDLER, LOGGER
 
 # Ensure warnings are handled properly.
 captureWarnings(True)

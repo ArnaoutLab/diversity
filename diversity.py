@@ -22,7 +22,7 @@ from typing import Callable
 from pandas import DataFrame
 from numpy import dot, array, empty, zeros, unique, broadcast_to, divide, float64
 
-from utilities import InvalidArgumentError, power_mean
+from metacommunity.utilities import InvalidArgumentError, power_mean
 
 
 @dataclass(repr=False)
