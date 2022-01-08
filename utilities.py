@@ -1,4 +1,4 @@
-"""Miscellaneous helper module for the Metacommunity package.
+"""Miscellaneous helper module for the metacommunity package.
 
 Functions
 ---------
@@ -8,15 +8,25 @@ power_mean
 Exceptions
 ----------
 MetacommunityError
-    Base class for all custom Chubacabra exceptions.
+    Base class for all custom metacommunity exceptions.
 InvalidArgumentError
     Raised when invalid argument is passed to a function.
 """
-from numpy import isclose, prod, amin, amax, sum as numpy_sum, multiply, inf, power
+from numpy import (
+    array,
+    isclose,
+    prod,
+    amin,
+    amax,
+    sum as numpy_sum,
+    multiply,
+    inf,
+    power,
+)
 
 
 class MetacommunityError(Exception):
-    """Base class for all custom Metacommunity exceptions."""
+    """Base class for all custom metacommunity exceptions."""
 
     pass
 
@@ -25,6 +35,37 @@ class InvalidArgumentError(MetacommunityError):
     """Raised when a function receives an invalid argument."""
 
     pass
+
+
+def unique_correspondence(items, ordered_unique_items=None):
+    """Returns uniqued items and a mapping from items to uniqued items.
+
+    Parameters
+    ----------
+    items: numpy.ndarray
+        Array of items to unique and/or obtain mapping for.
+    ordered_unique_items: Iterable
+        Unique items in desired order. If None, ordering will be
+        established according to numpy.unique.
+
+    Returns
+    -------
+    A tuple with coordinates:
+    0 - numpy.ndarray
+        The ordered unique items.
+    1 - numpy.ndarray
+        The position in the unique items iterable for each item in
+        items.
+    """
+    if ordered_unique_items is None:
+        ordered_unique_items_, item_positions = unique(items, return_inverse=True)
+    else:
+        ordered_unique_items_ = array(ordered_unique_items)
+        item_to_position = {item: pos for pos, item in enumerate(ordered_unique_items_)}
+        if len(item_to_position) != len(ordered_unique_items):
+            raise InvalidArgumentError(f"Expected ordered_unique_items to be uniqued.")
+        item_positions = array([item_to_position[item] for item in items])
+    return (ordered_unique_items_, item_positions)
 
 
 def power_mean(order, weights, items):
