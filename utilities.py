@@ -18,6 +18,7 @@ from numpy import (
     prod,
     amin,
     amax,
+    unique,
     sum as numpy_sum,
     multiply,
     inf,
@@ -58,12 +59,15 @@ def unique_correspondence(items, ordered_unique_items=None):
         items.
     """
     if ordered_unique_items is None:
-        ordered_unique_items_, item_positions = unique(items, return_inverse=True)
+        ordered_unique_items_, item_positions = unique(
+            items, return_inverse=True)
     else:
         ordered_unique_items_ = array(ordered_unique_items)
-        item_to_position = {item: pos for pos, item in enumerate(ordered_unique_items_)}
+        item_to_position = {item: pos for pos,
+                            item in enumerate(ordered_unique_items_)}
         if len(item_to_position) != len(ordered_unique_items):
-            raise InvalidArgumentError(f"Expected ordered_unique_items to be uniqued.")
+            raise InvalidArgumentError(
+                f"Expected ordered_unique_items to be uniqued.")
         item_positions = array([item_to_position[item] for item in items])
     return (ordered_unique_items_, item_positions)
 

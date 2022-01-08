@@ -15,13 +15,13 @@ Metacommunity
 """
 from collections.abc import Iterable
 from csv import reader, writer
-from dataclasses import dataclass, field
-from functools import cache, cached_property
+from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from typing import Callable
 
 from pandas import DataFrame
-from numpy import dot, array, empty, zeros, unique, broadcast_to, divide, float64
+from numpy import dot, array, empty, zeros, broadcast_to, divide, float64
 
 from metacommunity.utilities import (
     InvalidArgumentError,
@@ -72,36 +72,20 @@ class Abundance:
     def __post_init__(self):
         self.species_order, self.__species_unique_pos = unique_correspondence(
             items=self.counts[:, self.species_column],
-            ordered_items=self.species_order,
+            ordered_unique_items=self.species_order,
         )
         self.subcommunity_order, self.__subcommunity_unique_pos = unique_correspondence(
             items=self.counts[:, self.subcommunity_column],
-            ordered_items=self.subcommunity_order,
+            ordered_unique_items=self.subcommunity_order,
         )
 
     def pivot_table(self):
-        table = zeros((len(), len(self.subcommunity_order)), dtype=float64)
+        table = zeros((len(self.species_order), len(
+            self.subcommunity_order)), dtype=float64)
         table[self.__species_unique_pos, self.__subcommunity_unique_pos] = self.counts[
-            :, self.counts_column
+            :, self.count_column
         ]
         return table
-
-    @cached_property
-    def subcommunity_order(self):
-        """Uniques and orders subcommunity identifiers.
-
-        Also sets the __counts_pos_to_subcommunity_pos attribute.
-
-        Returns
-        -------
-        A numpy.ndarray of u
-        The ordering determines
-        in which order values corresponding to each subcommunity are
-        returned by methods of the object."""
-        subcommunity_order_, self.__counts_pos_to_subcommunity_pos = unique(
-            self.counts[:, self.subcommunity_column], return_inverse=True
-        )
-        return subcommunity_order_
 
     @cached_property
     def subcommunity_abundance(self):
@@ -206,7 +190,9 @@ class Similarity:
                 return next(reader(file))
 
     def validate_features(self):
-        if self.features is not None or self.similarity_matrix is not None:
+        if self.similarity_matrix is not None:
+            pass  # FIXME
+        if self.features is not None:
             if self.species_order is None:
                 raise InvalidArgumentError(
                     # FIXME reword
@@ -277,7 +263,8 @@ class Similarity:
             next(reader(file))
             for i, row in enumerate(reader(file)):
                 similarities_row = array(row, dtype=float64)
-                weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
+                weighted_similarities[i, :] = dot(
+                    similarities_row, relative_abundances)
         return weighted_similarities
 
     def weighted_similarities_from_array(self, relative_abundances):
@@ -335,7 +322,7 @@ class Metacommunity:
     """
 
     counts: array
-    similarities_filepath: str
+    similarities_filepath: str = None
     similarity_matrix: array = None
     similarity_function: Callable = None
     features: array = None
@@ -357,17 +344,11 @@ class Metacommunity:
             species_order=self.species_order,
         )
 
-    # FIXME repr is potientially large for datalasses, right? could be slow
-    def __hash__(self):
-        return hash(repr(self))
-
-    @cache
     def alpha(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint, 1, self.similarity.subcommunity_similarity
         )
 
-    @cache
     def rho(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint,
@@ -375,11 +356,9 @@ class Metacommunity:
             self.similarity.subcommunity_similarity,
         )
 
-    @cache
     def beta(self, viewpoint):
         return 1 / self.rho(viewpoint)
 
-    @cache
     def gamma(self, viewpoint):
         denominator = broadcast_to(
             self.similarity.metacommunity_similarity,
@@ -387,13 +366,11 @@ class Metacommunity:
         )
         return self.subcommunity_measure(viewpoint, 1, denominator)
 
-    @cache
     def normalized_alpha(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint, 1, self.similarity.normalized_subcommunity_similarity
         )
 
-    @cache
     def normalized_rho(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint,
@@ -401,35 +378,27 @@ class Metacommunity:
             self.similarity.normalized_subcommunity_similarity,
         )
 
-    @cache
     def normalized_beta(self, viewpoint):
         return 1 / self.normalized_rho(viewpoint)
 
-    @cache
     def A(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.alpha)
 
-    @cache
     def R(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.rho)
 
-    @cache
     def B(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.beta)
 
-    @cache
     def G(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.gamma)
 
-    @cache
     def normalized_A(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.normalized_alpha)
 
-    @cache
     def normalized_R(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.normalized_rho)
 
-    @cache
     def normalized_B(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.normalized_beta)
 
@@ -454,7 +423,7 @@ class Metacommunity:
     def subcommunities_to_dataframe(self, viewpoint):
         return DataFrame(
             {
-                "community": self.similarity.abundance.subcommunity_names,
+                "community": self.similarity.abundance.subcommunity_order,
                 "viewpoint": viewpoint,
                 "alpha": self.alpha(viewpoint),
                 "rho": self.rho(viewpoint),
