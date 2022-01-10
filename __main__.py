@@ -10,7 +10,7 @@ from diversity.log import LOG_HANDLER, LOGGER
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
-getLogger('py.warnings').addHandler(LOG_HANDLER)
+getLogger("py.warnings").addHandler(LOG_HANDLER)
 
 ########################################################################
 
@@ -21,14 +21,14 @@ def main():
     args = parser.parse_args()
 
     LOGGER.setLevel(args.log_level)
-    LOGGER.info(' '.join([f'python{python_version()}', *argv]))
-    LOGGER.debug(f'args: {args}')
+    LOGGER.info(" ".join([f"python{python_version()}", *argv]))
+    LOGGER.debug(f"args: {args}")
 
     species_counts = read_csv(args.input_file)
 
-    LOGGER.debug(f'data: {species_counts}')
+    LOGGER.debug(f"data: {species_counts}")
 
-    features = 'FIXME'  # FIXME read features in separately
+    features = "FIXME"  # FIXME read features in separately
 
     meta = Metacommunity(species_counts, args.similarity_matrix_file)
 
@@ -38,10 +38,9 @@ def main():
         community_views.append(meta.metacommunity_to_dataframe(view))
 
     community_views = concat(community_views)
-    community_views.to_csv(args.output_file, sep='\t',
-                           float_format='%.4f', index=False)
+    community_views.to_csv(args.output_file, sep="\t", float_format="%.4f", index=False)
 
-    LOGGER.info('Done!')
+    LOGGER.info("Done!")
 
 
 ########################################################################

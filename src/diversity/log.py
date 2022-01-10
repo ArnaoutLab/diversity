@@ -15,14 +15,14 @@ from logging import (
     INFO,
     StreamHandler,
     WARNING,
-    )
+)
 from multiprocessing import get_logger
-from time import (
-    gmtime,
-    strftime)
+from time import gmtime, strftime
 
-date_format = '%Y-%m-%dT%H:%M:%S%z'
-logging_format = '%(asctime)s\t(%(processName)s, %(threadName)s)\t%(levelname)s\t%(message)s'
+date_format = "%Y-%m-%dT%H:%M:%S%z"
+logging_format = (
+    "%(asctime)s\t(%(processName)s, %(threadName)s)\t%(levelname)s\t%(message)s"
+)
 
 LOGGER = get_logger()
 formatter = Formatter(fmt=logging_format, datefmt=date_format)

@@ -178,29 +178,36 @@ class Similarity:
         features=None,
         species_order=None,
     ):
-        self.abundance = Abundance(counts, species_order)
+
         self.similarity_matrix = similarity_matrix
         self.similarities_filepath = similarities_filepath
         self.similarity_function = similarity_function
         self.features = features
+        species_order = self.__get_species_order(species_order)
+        self.abundance = Abundance(counts, species_order)
         self.__validate_features()
-        if species_order is None:
-            species_order = self.__get_species_order()
 
-    def __get_species_order(self):
-        if self.similarities_filepath is None:
-            raise InvalidArgumentError(
-                "Unable to determine species ordering to correspond between"
-                " species counts and similarities. If no similarity matrix"
-                " filepath is provided, then the species order must be"
-                " specified."
-            )
+    def __get_species_order(self, species_order):
+        if species_order is None:
+            if self.similarities_filepath is None:
+                raise InvalidArgumentError(
+                    "Unable to determine species ordering to correspond between"
+                    " species counts and similarities. If no similarity matrix"
+                    " filepath is provided, then the species order must be"
+                    " specified."
+                )
+            else:
+                with open(self.similarities_filepath, "r") as file:
+                    return next(reader(file))
         else:
-            with open(self.similarities_filepath, "r") as file:
-                return next(reader(file))
+            return species_order
 
     def __validate_features(self):
-        if self.similarity_matrix is None and self.similarities_filepath is None and self.similarity_function is None:
+        if (
+            self.similarity_matrix is None
+            and self.similarities_filepath is None
+            and self.similarity_function is None
+        ):
             raise InvalidArgumentError(
                 "At least one of similarity_matrix, similarities_filepath, and"
                 " similarity_function must be specified to initialize a"
@@ -215,15 +222,15 @@ class Similarity:
                 "Must specify features if similarity_function is provided."
             )
         if self.features is not None:
-            if self.features.shape[0] != len(self.species_order):
+            if self.features.shape[0] != len(self.abundance.species_order):
                 raise InvalidArgumentError(
                     "Number of entries in features array doesn't match number"
                     " of species."
                 )
         if self.similarity_matrix is not None:
             if (
-                len(self.species_order) != self.similarity_matrix.shape[0]
-                or len(self.species_order) != self.similarity_matrix.shape[1]
+                len(self.abundance.species_order) != self.similarity_matrix.shape[0]
+                or len(self.abundance.species_order) != self.similarity_matrix.shape[1]
             ):
                 raise InvalidArgumentError(
                     "Dimensions of similarity matrix don't correspond to the"
@@ -264,10 +271,10 @@ class Similarity:
         similarities_filepath attribute. Any existing contents are
         overwritten.
         """
-        row_i = empty(self.species_order.shape, dtype=float64)
+        row_i = empty(self.abundance.species_order.shape, dtype=float64)
         with open(self.similarities_filepath, "w") as file:
             csv_writer = writer(file)
-            csv_writer.writerow(self.species_order)  # write header
+            csv_writer.writerow(self.abundance.species_order)  # write header
             for features_i in self.features:
                 for j, features_j in enumerate(self.features):
                     row_i[j] = self.similarity_function(features_i, features_j)
@@ -285,8 +292,7 @@ class Similarity:
             next(reader(file))
             for i, row in enumerate(reader(file)):
                 similarities_row = array(row, dtype=float64)
-                weighted_similarities[i, :] = dot(
-                    similarities_row, relative_abundances)
+                weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
         return weighted_similarities
 
     def __weighted_similarities_from_array(self, relative_abundances):
@@ -354,6 +360,7 @@ class Metacommunity:
         if isinstance(counts, DataFrame):
             counts = counts.to_numpy()
         if isinstance(similarity_matrix, DataFrame):
+            species_order = similarity_matrix.columns
             similarity_matrix = similarity_matrix.to_numpy()
         if similarities_filepath:
             similarities_filepath = Path(similarities_filepath)
