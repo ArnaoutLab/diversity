@@ -39,7 +39,7 @@ class ValidateQ(Action):
         """
         if any([viewpoint > 100 for viewpoint in values]):
             warn(
-                "q > 100.0 defaults to the analytical formula for q = inf.",
+                "viewpoints > 100.0 defaults to the analytical formula for viewpoint = infinity.",
                 category=ArgumentWarning,
             )
         setattr(args, self.dest, values)
