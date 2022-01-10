@@ -41,7 +41,7 @@ class InvalidArgumentError(MetacommunityError):
     pass
 
 
-def power_mean(order, weights, items):
+def power_mean(order, weights, items, atol=1e-9):
     """Calculates weighted power means.
 
     Parameters
@@ -60,11 +60,11 @@ def power_mean(order, weights, items):
     as exponent, weighing by weights. The array shape is the same as
     that of weights, or items except with the 0-axis removed. In the
     case of 1-d weights and items, the result has shape (1,). When order
-    is close to 0 (absolute value less than 1e-8), less than -100, or
+    is close to 0 (absolute value less than atol), less than -100, or
     greater than 100 analytical formulas for the limits at 0, -infinity,
     or infinity are used respectively.
     """
-    mask = abs(weights) > 1e-8
+    mask = abs(weights) > atol
     if isclose(order, 0):
         return prod(power(items, weights, where=mask), axis=0, where=mask)
     elif order < -100:

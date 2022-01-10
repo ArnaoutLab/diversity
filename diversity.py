@@ -30,7 +30,6 @@ from metacommunity.utilities import (
 )
 
 
-@dataclass(repr=False)
 class Abundance:
     """Relative abundances of species in a metacommunity.
 
@@ -60,48 +59,34 @@ class Abundance:
         Index of species count column in counts.
     """
 
-    counts: array
-    species_order: Iterable = None
-    subcommunity_order: Iterable = None
-    subcommunity_column: int = 0
-    species_column: int = 1
-    count_column: int = 2
-    __species_unique_pos: dict = None
-    __subcommunity_unique_pos: dict = None
-
-    def __post_init__(self):
+    def __init__(
+        self,
+        counts,
+        species_order=None,
+        subcommunity_order=None,
+        subcommunity_column=0,
+        species_column=1,
+        count_column=2,
+    ):
+        self.counts = counts
         self.species_order, self.__species_unique_pos = unique_correspondence(
             items=self.counts[:, self.species_column],
-            ordered_items=self.species_order,
+            ordered_items=species_order,
         )
         self.subcommunity_order, self.__subcommunity_unique_pos = unique_correspondence(
             items=self.counts[:, self.subcommunity_column],
-            ordered_items=self.subcommunity_order,
+            ordered_items=subcommunity_order,
         )
+        self.subcommunity_column = subcommunity_column
+        self.species_column = species_column
+        self.count_column = count_column
 
-    def pivot_table(self):
+    def __pivot_table(self):
         table = zeros((len(), len(self.subcommunity_order)), dtype=float64)
         table[self.__species_unique_pos, self.__subcommunity_unique_pos] = self.counts[
             :, self.counts_column
         ]
         return table
-
-    @cached_property
-    def subcommunity_order(self):
-        """Uniques and orders subcommunity identifiers.
-
-        Also sets the __counts_pos_to_subcommunity_pos attribute.
-
-        Returns
-        -------
-        A numpy.ndarray of u
-        The ordering determines
-        in which order values corresponding to each subcommunity are
-        returned by methods of the object."""
-        subcommunity_order_, self.__counts_pos_to_subcommunity_pos = unique(
-            self.counts[:, self.subcommunity_column], return_inverse=True
-        )
-        return subcommunity_order_
 
     @cached_property
     def subcommunity_abundance(self):
@@ -115,7 +100,7 @@ class Abundance:
         in the subcommunity relative to the total metacommunity size.
         The row ordering is established by the species_to_row attribute.
         """
-        metacommunity_counts = self.pivot_table()
+        metacommunity_counts = self.__pivot_table()
         total_abundance = metacommunity_counts.sum()
         return metacommunity_counts / total_abundance
 
@@ -158,7 +143,6 @@ class Abundance:
         return self.subcommunity_abundance / self.subcommunity_normalizing_constants
 
 
-@dataclass(repr=False)
 class Similarity:
     """Species similarities weighted by meta- and subcommunity abundance.
 
@@ -186,41 +170,52 @@ class Similarity:
         Maps species names uniquely to integers between 0 and n_species - 1.
     """
 
-    counts: array
-    similarity_matrix: array = None
-    similarities_filepath: str = None
-    similarity_function: Callable = None
-    features: array = None
-    species_order: array = None
+    def __init__(
+        self,
+        counts,
+        similarity_matrix=None,
+        similarities_filepath=None,
+        similarity_function=None,
+        features=None,
+        species_order=None,
+    ):
+        self.similarity_matrix = similarity_matrix
+        self.similarities_filepath = similarities_filepath
+        self.similarity_function = similarity_function
+        self.features = features
+        if species_order is None:
+            species_order = self.__get_species_order()
+        self.abundance = Abundance(counts, species_order)
+        self.__validate_features()
 
-    def __post_init__(self):
-        if not self.species_order:
-            self.species_order = self.get_species_order()
-        self.abundance = Abundance(self.counts, self.species_order)
-        """Validates attributes."""
-        self.validate_features()
-
-    def get_species_order(self):
-        if self.similarities_filepath:
+    def __get_species_order(self):
+        if self.similarities_filepath is None:
+            raise InvalidArgumentError(
+                "Unable to determine species ordering to correspond between"
+                " species counts and similarities. If no similarity matrix"
+                " filepath is provided, then the species order must be"
+                " specified."
+            )
+        else:
             with open(self.similarities_filepath, "r") as file:
                 return next(reader(file))
 
-    def validate_features(self):
-        if self.features is not None or self.similarity_matrix is not None:
-            if self.species_order is None:
+    def __validate_features(self):
+        if self.features is not None:
+            if self.features.shape[0] != len(self.species_order):
                 raise InvalidArgumentError(
-                    # FIXME reword
-                    "If features argument is provided, then species must be"
-                    " provided to establish the similarity matrix row and column ordering."
+                    "Number of entries in features array doesn't match number"
+                    " of species."
                 )
-            elif self.features.shape[0] != len(self.species_order):
+        if self.similarity_matrix is not None:
+            if (
+                len(self.species_order) != self.similarity_matrix.shape[0]
+                or len(self.species_order) != self.similarity_matrix.shape[1]
+            ):
                 raise InvalidArgumentError(
-                    # FIXME reword
-                    "Invalid species array shape. Expected 1-d array of"
-                    " length equal to number of rows in features"
+                    "Dimensions of similarity matrix don't correspond to the"
+                    " number of species."
                 )
-            elif "FIXME":  # FIXME
-                pass
 
     @cached_property
     def metacommunity_similarity(self):
@@ -249,7 +244,7 @@ class Similarity:
             self.abundance.normalized_subcommunity_abundance
         )
 
-    def write_similarity_matrix(self):
+    def __write_similarity_matrix(self):
         """Writes species similarity matrix into file.
 
         The matrix is written into file referred to by object's
@@ -265,7 +260,7 @@ class Similarity:
                     row_i[j] = self.similarity_function(features_i, features_j)
                 csv_writer.writerow(row_i)
 
-    def weighted_similarities_from_file(self, relative_abundances):
+    def __weighted_similarities_from_file(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
         Same as calculate_weighted_similarities, except that similarities
@@ -280,7 +275,7 @@ class Similarity:
                 weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
         return weighted_similarities
 
-    def weighted_similarities_from_array(self, relative_abundances):
+    def __weighted_similarities_from_array(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
         Same as calculate_weighted_similarities, except that the object's
