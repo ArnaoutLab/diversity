@@ -56,10 +56,8 @@ def mock_empty_matrix_file(tmp_path):
     return str(datafile)
 
 
-# FIXME process_input_file is no longer define, function is broken
 def test_subcommunity_from_file(mock_input_file, mock_matrix_file):
-    df = read_csv(mock_input_file).to_numpy()
-    print(df)
+    df = read_csv(mock_input_file)
     meta = diversity.Metacommunity(df, similarities_filepath=mock_matrix_file)
     output_df = meta.subcommunities_to_dataframe(viewpoint=TEST_VIEWPOINT)
     assert_frame_equal(TEST_DF, output_df)
