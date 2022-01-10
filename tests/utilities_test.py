@@ -1,8 +1,10 @@
 """Tests for metacommunity.utilities."""
+from copy import deepcopy
+
 from numpy import allclose, array, inf
 from pytest import mark
 
-from metacommunity.utilities import power_mean
+from metacommunity.utilities import power_mean, unique_correspondence
 
 
 POWER_MEAN_TEST_CASES = [
@@ -436,3 +438,87 @@ class TestPowerMean:
         )
         assert allclose(actual_result, test_case["expected_result"])
         assert allclose(test_case["expected_result"], actual_result)
+
+
+UNIQUE_CORRESPONDENCE_TEST_CASES = [
+    {
+        "description": "No ordering imposed; non-empty non-unique items",
+        "items": array([1, 2, 1, 5, 3, 2, 4, 100, 3, 4]),
+        "ordered_unique_items": None,
+        "n_unique": 6,
+    },
+    {
+        "description": "No ordering imposed; non-empty unique items",
+        "items": array(["foo", "bar", "zip", "zap", "zongo", "wakka"]),
+        "ordered_unique_items": None,
+        "n_unique": 6,
+    },
+    {
+        "description": "No ordering imposed; empty items",
+        "items": array([]),
+        "ordered_unique_items": None,
+        "n_unique": 0,
+    },
+    {
+        "description": "Ordering consists of uniques only; non-empty non-unique items",
+        "items": array(["foo", "bar", "fooo", "zip", "bar", "foo", "foo"]),
+        "ordered_unique_items": array(["zip", "fooo", "bar", "foo"]),
+        "n_unique": 4,
+    },
+    {
+        "description": "Ordering consists of uniques only; non-empty unique items",
+        "items": array([124, 64, 12, 32]),
+        "ordered_unique_items": array([64, 12, 32, 124]),
+        "n_unique": 4,
+    },
+    {
+        "description": "Ordering consists of uniques only; empty items",
+        "items": array([]),
+        "ordered_unique_items": array([]),
+        "n_unique": 0,
+    },
+    {
+        "description": "Ordering properly conains uniques; non-empty non-unique items",
+        "items": array(["foo", "bar", "fooo", "zip", "bar", "foo", "foo"]),
+        "ordered_unique_items": array(
+            ["zip", "shazam", "foo", "bar", "bazinga", "fooo"]
+        ),
+        "n_unique": 4,
+    },
+    {
+        "description": "Ordering properly conains uniques; non-empty unique items",
+        "items": array(["foo", "bar", "fooo", "zip"]),
+        "ordered_unique_items": array(
+            ["zip", "shazam", "foo", "bar", "bazinga", "fooo"]
+        ),
+        "n_unique": 4,
+    },
+    {
+        "description": "Ordering properly conains uniques; empty items",
+        "items": array([]),
+        "ordered_unique_items": array(
+            ["zip", "shazam", "foo", "bar", "bazinga", "fooo"]
+        ),
+        "n_unique": 0,
+    },
+]
+
+
+class TestUniqueCorrespondence:
+    """Tests metacommunity.utilities.unique_correspondence."""
+
+    @mark.parametrize("test_case", UNIQUE_CORRESPONDENCE_TEST_CASES)
+    def test_unique_correspondence(self, test_case):
+        """Tests unique_correspondence test cases."""
+        original_items = deepcopy(test_case["items"])
+        original_ordered_unique_items = deepcopy(test_case["ordered_unique_items"])
+        result_unique_items, result_item_positions = unique_correspondence(
+            items=test_case["items"],
+            ordered_unique_items=test_case["ordered_unique_items"],
+        )
+        assert len(set(result_unique_items)) == len(result_unique_items)
+        assert set(original_items).issubset(set(result_unique_items))
+        for unique_pos, item in zip(result_item_positions, original_items):
+            assert item == result_unique_items[unique_pos]
+        if original_ordered_unique_items is not None:
+            assert all(result_unique_items == original_ordered_unique_items)
