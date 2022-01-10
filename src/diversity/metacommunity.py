@@ -84,7 +84,7 @@ class Abundance:
         )
         table[self.__species_unique_pos, self.__subcommunity_unique_pos] = self.counts[
             :, self.count_column
-        ]
+        ].astype(float64)
         return table
 
     @cached_property
