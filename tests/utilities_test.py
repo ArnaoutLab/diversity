@@ -4,7 +4,7 @@ from copy import deepcopy
 from numpy import allclose, array, inf
 from pytest import mark
 
-from metacommunity.utilities import power_mean, unique_correspondence
+from diversity.utilities import power_mean, unique_correspondence
 
 
 POWER_MEAN_TEST_CASES = [
