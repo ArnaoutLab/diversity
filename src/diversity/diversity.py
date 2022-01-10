@@ -13,16 +13,14 @@ Metacommunity
     Represents a metacommunity made up of subcommunities and computes
     metacommunity subcommunity diversity measures.
 """
-from collections.abc import Iterable
 from csv import reader, writer
 from functools import cached_property
 from pathlib import Path
-from typing import Callable
 
 from pandas import DataFrame
 from numpy import dot, array, empty, zeros, broadcast_to, divide, float64
 
-from metacommunity.utilities import (
+from diversity.utilities import (
     InvalidArgumentError,
     power_mean,
     unique_correspondence,
@@ -68,19 +66,19 @@ class Abundance:
         count_column=2,
     ):
         self.counts = counts
-        self.species_order, self.__species_unique_pos = unique_correspondence(
-            items=self.counts[:, self.species_column],
-            ordered_items=species_order,
-        )
-        self.subcommunity_order, self.__subcommunity_unique_pos = unique_correspondence(
-            items=self.counts[:, self.subcommunity_column],
-            ordered_items=subcommunity_order,
-        )
         self.subcommunity_column = subcommunity_column
         self.species_column = species_column
         self.count_column = count_column
+        self.species_order, self.__species_unique_pos = unique_correspondence(
+            items=self.counts[:, self.species_column],
+            ordered_unique_items=species_order,
+        )
+        self.subcommunity_order, self.__subcommunity_unique_pos = unique_correspondence(
+            items=self.counts[:, self.subcommunity_column],
+            ordered_unique_items=subcommunity_order,
+        )
 
-    def pivot_table(self):
+    def __pivot_table(self):
         table = zeros(
             (len(self.species_order), len(self.subcommunity_order)), dtype=float64
         )
@@ -180,14 +178,14 @@ class Similarity:
         features=None,
         species_order=None,
     ):
-        if species_order is None:
-            species_order = self.__get_species_order()
         self.abundance = Abundance(counts, species_order)
         self.similarity_matrix = similarity_matrix
         self.similarities_filepath = similarities_filepath
         self.similarity_function = similarity_function
         self.features = features
         self.__validate_features()
+        if species_order is None:
+            species_order = self.__get_species_order()
 
     def __get_species_order(self):
         if self.similarities_filepath is None:
@@ -241,7 +239,7 @@ class Similarity:
         """Calculates the sums of similarities weighted by the metacommunity
         abundance of each species.
         """
-        return self.calculate_weighted_similarities(
+        return self.__calculate_weighted_similarities(
             self.abundance.metacommunity_abundance
         )
 
@@ -250,7 +248,7 @@ class Similarity:
         """Calculates the sums of similarities weighted by the subcommunity
         abundance of each species.
         """
-        return self.calculate_weighted_similarities(
+        return self.__calculate_weighted_similarities(
             self.abundance.subcommunity_abundance
         )
 
@@ -259,7 +257,7 @@ class Similarity:
         """Calculates the sums of similarities weighted by the normalized
         subcommunity abundance of each species.
         """
-        return self.calculate_weighted_similarities(
+        return self.__calculate_weighted_similarities(
             self.abundance.normalized_subcommunity_abundance
         )
 
@@ -291,7 +289,8 @@ class Similarity:
             next(reader(file))
             for i, row in enumerate(reader(file)):
                 similarities_row = array(row, dtype=float64)
-                weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
+                weighted_similarities[i, :] = dot(
+                    similarities_row, relative_abundances)
         return weighted_similarities
 
     def __weighted_similarities_from_array(self, relative_abundances):

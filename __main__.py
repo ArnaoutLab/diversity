@@ -4,9 +4,9 @@ from logging import captureWarnings, getLogger
 
 from pandas import read_csv, concat
 
-from metacommunity.diversity import Metacommunity
-from metacommunity.parameters import configure_arguments
-from metacommunity.log import LOG_HANDLER, LOGGER
+from diversity.diversity import Metacommunity
+from diversity.parameters import configure_arguments
+from diversity.log import LOG_HANDLER, LOGGER
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
@@ -41,7 +41,7 @@ def main():
     community_views = concat(
         [subcommunity_views, metacommunity_views])
     community_views.to_csv(args.output_file, sep='\t',
-                           float_format='%.2f', index=False)
+                           float_format='%.4f', index=False)
 
     LOGGER.info('Done!')
 
