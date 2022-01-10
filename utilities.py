@@ -21,6 +21,7 @@ from numpy import (
     prod,
     amin,
     amax,
+    unique,
     sum as numpy_sum,
     multiply,
     inf,
@@ -53,6 +54,7 @@ def power_mean(order, weights, items, atol=1e-9):
     items: numpy.ndarray
         The elements for which the weighted power mean is computed. Must
         have same shape as weights.
+    atols:
 
     Returns
     -------

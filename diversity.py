@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Callable
 
 from pandas import DataFrame
-from numpy import dot, array, empty, zeros, unique, broadcast_to, divide, float64
+from numpy import dot, array, empty, zeros, broadcast_to, divide, float64
 
 from metacommunity.utilities import (
     InvalidArgumentError,
@@ -80,10 +80,12 @@ class Abundance:
         self.species_column = species_column
         self.count_column = count_column
 
-    def __pivot_table(self):
-        table = zeros((len(), len(self.subcommunity_order)), dtype=float64)
+    def pivot_table(self):
+        table = zeros(
+            (len(self.species_order), len(self.subcommunity_order)), dtype=float64
+        )
         table[self.__species_unique_pos, self.__subcommunity_unique_pos] = self.counts[
-            :, self.counts_column
+            :, self.count_column
         ]
         return table
 
@@ -369,17 +371,11 @@ class Metacommunity:
             species_order=species_order,
         )
 
-    # FIXME repr is potientially large for datalasses, right? could be slow
-    def __hash__(self):
-        return hash(repr(self))
-
-    @cache
     def alpha(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint, 1, self.similarity.subcommunity_similarity
         )
 
-    @cache
     def rho(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint,
@@ -387,11 +383,9 @@ class Metacommunity:
             self.similarity.subcommunity_similarity,
         )
 
-    @cache
     def beta(self, viewpoint):
         return 1 / self.rho(viewpoint)
 
-    @cache
     def gamma(self, viewpoint):
         denominator = broadcast_to(
             self.similarity.metacommunity_similarity,
@@ -399,13 +393,11 @@ class Metacommunity:
         )
         return self.subcommunity_measure(viewpoint, 1, denominator)
 
-    @cache
     def normalized_alpha(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint, 1, self.similarity.normalized_subcommunity_similarity
         )
 
-    @cache
     def normalized_rho(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint,
@@ -413,35 +405,27 @@ class Metacommunity:
             self.similarity.normalized_subcommunity_similarity,
         )
 
-    @cache
     def normalized_beta(self, viewpoint):
         return 1 / self.normalized_rho(viewpoint)
 
-    @cache
     def A(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.alpha)
 
-    @cache
     def R(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.rho)
 
-    @cache
     def B(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.beta)
 
-    @cache
     def G(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.gamma)
 
-    @cache
     def normalized_A(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.normalized_alpha)
 
-    @cache
     def normalized_R(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.normalized_rho)
 
-    @cache
     def normalized_B(self, viewpoint):
         return self.metacommunity_measure(viewpoint, self.normalized_beta)
 
@@ -466,7 +450,7 @@ class Metacommunity:
     def subcommunities_to_dataframe(self, viewpoint):
         return DataFrame(
             {
-                "community": self.similarity.abundance.subcommunity_names,
+                "community": self.similarity.abundance.subcommunity_order,
                 "viewpoint": viewpoint,
                 "alpha": self.alpha(viewpoint),
                 "rho": self.rho(viewpoint),
