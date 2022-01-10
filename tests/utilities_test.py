@@ -1,10 +1,10 @@
-"""Tests for metacommunity.utilities."""
+"""Tests for diversity.utilities."""
 from copy import deepcopy
 
 from numpy import allclose, array, inf
 from pytest import mark
 
-from metacommunity.utilities import power_mean, unique_correspondence
+from diversity.utilities import power_mean, unique_correspondence
 
 
 POWER_MEAN_TEST_CASES = [
@@ -511,7 +511,8 @@ class TestUniqueCorrespondence:
     def test_unique_correspondence(self, test_case):
         """Tests unique_correspondence test cases."""
         original_items = deepcopy(test_case["items"])
-        original_ordered_unique_items = deepcopy(test_case["ordered_unique_items"])
+        original_ordered_unique_items = deepcopy(
+            test_case["ordered_unique_items"])
         result_unique_items, result_item_positions = unique_correspondence(
             items=test_case["items"],
             ordered_unique_items=test_case["ordered_unique_items"],

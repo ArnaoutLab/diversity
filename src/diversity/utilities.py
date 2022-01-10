@@ -54,7 +54,8 @@ def power_mean(order, weights, items, atol=1e-9):
     items: numpy.ndarray
         The elements for which the weighted power mean is computed. Must
         have same shape as weights.
-    atols:
+    atol: float
+        Threshold below which weights are considered to be 0.
 
     Returns
     -------
@@ -66,7 +67,7 @@ def power_mean(order, weights, items, atol=1e-9):
     greater than 100 analytical formulas for the limits at 0, -infinity,
     or infinity are used respectively.
     """
-    mask = abs(weights) > atol
+    mask = abs(weights) >= atol
     if isclose(order, 0):
         return prod(power(items, weights, where=mask), axis=0, where=mask)
     elif order < -100:
@@ -100,11 +101,14 @@ def unique_correspondence(items, ordered_unique_items=None):
         items.
     """
     if ordered_unique_items is None:
-        ordered_unique_items_, item_positions = unique(items, return_inverse=True)
+        ordered_unique_items_, item_positions = unique(
+            items, return_inverse=True)
     else:
         ordered_unique_items_ = array(ordered_unique_items)
-        item_to_position = {item: pos for pos, item in enumerate(ordered_unique_items_)}
+        item_to_position = {item: pos for pos,
+                            item in enumerate(ordered_unique_items_)}
         if len(item_to_position) != len(ordered_unique_items):
-            raise InvalidArgumentError(f"Expected ordered_unique_items to be uniqued.")
+            raise InvalidArgumentError(
+                f"Expected ordered_unique_items to be uniqued.")
         item_positions = array([item_to_position[item] for item in items])
     return (ordered_unique_items_, item_positions)
