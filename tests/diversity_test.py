@@ -1,5 +1,5 @@
 """Tests for diversity.diversity."""
-from diversity.diversity import Metacommunity
+from diversity.metacommunity import Metacommunity
 import pytest
 from pandas import read_csv, DataFrame
 from pandas.testing import assert_frame_equal

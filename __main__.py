@@ -4,7 +4,7 @@ from logging import captureWarnings, getLogger
 
 from pandas import read_csv, concat
 
-from diversity.diversity import Metacommunity
+from diversity.metacommunity import Metacommunity
 from diversity.parameters import configure_arguments
 from diversity.log import LOG_HANDLER, LOGGER
 
@@ -29,17 +29,15 @@ def main():
     LOGGER.debug(f'data: {species_counts}')
 
     features = 'FIXME'  # FIXME read features in separately
-    viewpoint = args.viewpoint
 
     meta = Metacommunity(species_counts, args.similarity_matrix_file)
 
-    subcommunity_views = concat([meta.subcommunities_to_dataframe(view)
-                                 for view in viewpoint])
-    metacommunity_views = concat([meta.metacommunity_to_dataframe(view)
-                                  for view in viewpoint])
-    metacommunity_views.columns = subcommunity_views.columns
-    community_views = concat(
-        [subcommunity_views, metacommunity_views])
+    community_views = []
+    for view in args.viewpoint:
+        community_views.append(meta.subcommunities_to_dataframe(view))
+        community_views.append(meta.metacommunity_to_dataframe(view))
+
+    community_views = concat(community_views)
     community_views.to_csv(args.output_file, sep='\t',
                            float_format='%.4f', index=False)
 

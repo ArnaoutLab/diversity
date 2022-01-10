@@ -200,11 +200,7 @@ class Similarity:
                 return next(reader(file))
 
     def __validate_features(self):
-        if (
-            self.similarity_matrix,
-            self.similarities_filepath,
-            self.similarity_function,
-        ) == (None, None, None):
+        if self.similarity_matrix is None and self.similarities_filepath is None and self.similarity_function is None:
             raise InvalidArgumentError(
                 "At least one of similarity_matrix, similarities_filepath, and"
                 " similarity_function must be specified to initialize a"
@@ -349,7 +345,7 @@ class Metacommunity:
     def __init__(
         self,
         counts,
-        similarities_filepath,
+        similarities_filepath=None,
         similarity_matrix=None,
         similarity_function=None,
         features=None,
@@ -370,63 +366,63 @@ class Metacommunity:
             species_order=species_order,
         )
 
-    def alpha(self, viewpoint):
+    def subcommunity_alpha(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint, 1, self.similarity.subcommunity_similarity
         )
 
-    def rho(self, viewpoint):
+    def subcommunity_rho(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint,
             self.similarity.metacommunity_similarity,
             self.similarity.subcommunity_similarity,
         )
 
-    def beta(self, viewpoint):
-        return 1 / self.rho(viewpoint)
+    def subcommunity_beta(self, viewpoint):
+        return 1 / self.subcommunity_rho(viewpoint)
 
-    def gamma(self, viewpoint):
+    def subcommunity_gamma(self, viewpoint):
         denominator = broadcast_to(
             self.similarity.metacommunity_similarity,
             self.similarity.abundance.normalized_subcommunity_abundance.shape,
         )
         return self.subcommunity_measure(viewpoint, 1, denominator)
 
-    def normalized_alpha(self, viewpoint):
+    def normalized_subcommunity_alpha(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint, 1, self.similarity.normalized_subcommunity_similarity
         )
 
-    def normalized_rho(self, viewpoint):
+    def normalized_subcommunity_rho(self, viewpoint):
         return self.subcommunity_measure(
             viewpoint,
             self.similarity.metacommunity_similarity,
             self.similarity.normalized_subcommunity_similarity,
         )
 
-    def normalized_beta(self, viewpoint):
-        return 1 / self.normalized_rho(viewpoint)
+    def normalized_subcommunity_beta(self, viewpoint):
+        return 1 / self.normalized_subcommunity_rho(viewpoint)
 
-    def A(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.alpha)
+    def metacommunity_alpha(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.subcommunity_alpha)
 
-    def R(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.rho)
+    def metacommunity_rho(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.subcommunity_rho)
 
-    def B(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.beta)
+    def metacommunity_beta(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.subcommunity_beta)
 
-    def G(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.gamma)
+    def metacommunity_gamma(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.subcommunity_gamma)
 
-    def normalized_A(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.normalized_alpha)
+    def normalized_metacommunity_alpha(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.normalized_subcommunity_alpha)
 
-    def normalized_R(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.normalized_rho)
+    def normalized_metacommunity_rho(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.normalized_subcommunity_rho)
 
-    def normalized_B(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.normalized_beta)
+    def normalized_metacommunity_beta(self, viewpoint):
+        return self.metacommunity_measure(viewpoint, self.normalized_subcommunity_beta)
 
     def subcommunity_measure(self, viewpoint, numerator, denominator):
         similarities = divide(
@@ -451,13 +447,13 @@ class Metacommunity:
             {
                 "community": self.similarity.abundance.subcommunity_order,
                 "viewpoint": viewpoint,
-                "alpha": self.alpha(viewpoint),
-                "rho": self.rho(viewpoint),
-                "beta": self.beta(viewpoint),
-                "gamma": self.gamma(viewpoint),
-                "normalized_alpha": self.normalized_alpha(viewpoint),
-                "normalized_rho": self.normalized_rho(viewpoint),
-                "normalised_beta": self.normalized_beta(viewpoint),
+                "alpha": self.subcommunity_alpha(viewpoint),
+                "rho": self.subcommunity_rho(viewpoint),
+                "beta": self.subcommunity_beta(viewpoint),
+                "gamma": self.subcommunity_gamma(viewpoint),
+                "normalized_alpha": self.normalized_subcommunity_alpha(viewpoint),
+                "normalized_rho": self.normalized_subcommunity_rho(viewpoint),
+                "normalized_beta": self.normalized_subcommunity_beta(viewpoint),
             }
         )
 
@@ -466,13 +462,13 @@ class Metacommunity:
             {
                 "community": "metacommunity",
                 "viewpoint": viewpoint,
-                "A": self.A(viewpoint),
-                "R": self.R(viewpoint),
-                "B": self.B(viewpoint),
-                "G": self.G(viewpoint),
-                "normalized_A": self.normalized_A(viewpoint),
-                "normalized_R": self.normalized_R(viewpoint),
-                "normalized_B": self.normalized_B(viewpoint),
+                "alpha": self.metacommunity_alpha(viewpoint),
+                "rho": self.metacommunity_rho(viewpoint),
+                "beta": self.metacommunity_beta(viewpoint),
+                "gamma": self.metacommunity_gamma(viewpoint),
+                "normalized_alpha": self.normalized_metacommunity_alpha(viewpoint),
+                "normalized_rho": self.normalized_metacommunity_rho(viewpoint),
+                "normalized_beta": self.normalized_metacommunity_beta(viewpoint),
             },
             index=[0],
         )
