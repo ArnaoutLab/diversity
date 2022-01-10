@@ -15,8 +15,7 @@ Metacommunity
 """
 from collections.abc import Iterable
 from csv import reader, writer
-from dataclasses import dataclass, field
-from functools import cache, cached_property
+from functools import cached_property
 from pathlib import Path
 from typing import Callable
 
@@ -179,13 +178,13 @@ class Similarity:
         features=None,
         species_order=None,
     ):
+        if species_order is None:
+            species_order = self.__get_species_order()
+        self.abundance = Abundance(counts, species_order)
         self.similarity_matrix = similarity_matrix
         self.similarities_filepath = similarities_filepath
         self.similarity_function = similarity_function
         self.features = features
-        if species_order is None:
-            species_order = self.__get_species_order()
-        self.abundance = Abundance(counts, species_order)
         self.__validate_features()
 
     def __get_species_order(self):
@@ -201,6 +200,24 @@ class Similarity:
                 return next(reader(file))
 
     def __validate_features(self):
+        if (
+            self.similarity_matrix,
+            self.similarities_filepath,
+            self.similarity_function,
+        ) == (None, None, None):
+            raise InvalidArgumentError(
+                "At least one of similarity_matrix, similarities_filepath, and"
+                " similarity_function must be specified to initialize a"
+                " Similarity object."
+            )
+        if self.similarity_matrix is None and self.similarities_filepath is None:
+            raise InvalidArgumentError(
+                "Must specify similarities_filepath if not using" " similarity_matrix."
+            )
+        if self.similarity_function is not None and self.features is None:
+            raise InvalidArgumentError(
+                "Must specify features if similarity_function is provided."
+            )
         if self.features is not None:
             if self.features.shape[0] != len(self.species_order):
                 raise InvalidArgumentError(
@@ -283,7 +300,7 @@ class Similarity:
         """
         return dot(self.similarity_matrix, relative_abundances)
 
-    def calculate_weighted_similarities(self, relative_abundances):
+    def __calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
         Attempts to read similarities from the file at object's
@@ -308,15 +325,14 @@ class Similarity:
         in the similarities file.
         """
         if self.similarity_matrix is not None:
-            return self.weighted_similarities_from_array(relative_abundances)
+            return self.__weighted_similarities_from_array(relative_abundances)
         if not self.similarities_filepath.is_file():
-            self.write_similarity_matrix()
-        return self.weighted_similarities_from_file(relative_abundances)
+            self.__write_similarity_matrix()
+        return self.__weighted_similarities_from_file(relative_abundances)
 
 
-@dataclass(repr=False)
 class Metacommunity:
-    """Class for metacommunities and calculation their diversity.
+    """Class for metacommunities and calculating their diversity.
 
     Attributes
     ----------
@@ -329,27 +345,28 @@ class Metacommunity:
     similarity: Similarity
     """
 
-    counts: array
-    similarities_filepath: str
-    similarity_matrix: array = None
-    similarity_function: Callable = None
-    features: array = None
-    species_order: list = None
-
-    def __post_init__(self):
-        if isinstance(self.counts, DataFrame):
-            self.counts = self.counts.to_numpy()
-        if isinstance(self.similarity_matrix, DataFrame):
-            self.similarity_matrix = self.similarity_matrix.to_numpy()
-        if self.similarities_filepath:
-            self.similarities_filepath = Path(self.similarities_filepath)
+    def __init__(
+        self,
+        counts,
+        similarities_filepath,
+        similarity_matrix=None,
+        similarity_function=None,
+        features=None,
+        species_order=None,
+    ):
+        if isinstance(counts, DataFrame):
+            counts = counts.to_numpy()
+        if isinstance(similarity_matrix, DataFrame):
+            similarity_matrix = similarity_matrix.to_numpy()
+        if similarities_filepath:
+            similarities_filepath = Path(similarities_filepath)
         self.similarity = Similarity(
-            counts=self.counts,
-            similarity_matrix=self.similarity_matrix,
-            similarities_filepath=self.similarities_filepath,
-            similarity_function=self.similarity_function,
-            features=self.features,
-            species_order=self.species_order,
+            counts=counts,
+            similarity_matrix=similarity_matrix,
+            similarities_filepath=similarities_filepath,
+            similarity_function=similarity_function,
+            features=features,
+            species_order=species_order,
         )
 
     # FIXME repr is potientially large for datalasses, right? could be slow
