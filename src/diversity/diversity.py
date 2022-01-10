@@ -289,8 +289,7 @@ class Similarity:
             next(reader(file))
             for i, row in enumerate(reader(file)):
                 similarities_row = array(row, dtype=float64)
-                weighted_similarities[i, :] = dot(
-                    similarities_row, relative_abundances)
+                weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
         return weighted_similarities
 
     def __weighted_similarities_from_array(self, relative_abundances):
