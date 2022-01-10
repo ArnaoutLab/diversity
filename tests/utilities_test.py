@@ -4,7 +4,7 @@ from copy import deepcopy
 from numpy import allclose, array, inf
 from pytest import mark
 
-from diversity.utilities import power_mean, unique_correspondence
+from metacommunity.utilities import power_mean, unique_correspondence
 
 
 POWER_MEAN_TEST_CASES = [
@@ -25,7 +25,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.32955284, 0.06034367, 0.39917668]),
     },
     {
@@ -45,7 +44,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.07100004, 0.01300007, 0.08600006]),
     },
     {
@@ -65,7 +63,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.35246927, 0.13302809, 0.62156143]),
     },
     {
@@ -91,7 +88,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.22452176, 0.04111019, 0.27195594]),
     },
     {
@@ -117,7 +113,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.0, 0.0, 0.0]),
     },
     {
@@ -137,7 +132,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.96633071, 0.8154443, 0.9850308]),
     },
     {
@@ -163,7 +157,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.96633071, 0.8154443, 0.9850308]),
     },
     {
@@ -189,7 +182,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.0, 0.0, 0.0]),
     },
     {
@@ -209,7 +201,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.30, 0.13, 0.53]),
     },
     {
@@ -227,7 +218,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "items": array(
             [
-                [0.28, 0.10, 0.51],
+                [0.52, 0.73, 0.85],
                 [0.56, 0.28, 0.99],
                 [0.30, 0.69, 0.53],
                 [0.28, 0.09, 0.14],
@@ -235,7 +226,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.30, 0.13, 0.53]),
     },
     {
@@ -261,7 +251,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.0, 0.0, 0.0]),
     },
     {
@@ -281,7 +270,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.74, 0.69, 0.86]),
     },
     {
@@ -299,7 +287,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "items": array(
             [
-                [0.99, 0.79, 0.90],
+                [0.52, 0.73, 0.85],
                 [0.56, 0.28, 0.99],
                 [0.30, 0.69, 0.53],
                 [0.89, 0.09, 0.14],
@@ -307,7 +295,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.74, 0.69, 0.86]),
     },
     {
@@ -333,7 +320,6 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.0, 0.0, 0.0]),
     },
     {
@@ -359,7 +345,6 @@ POWER_MEAN_TEST_CASES = [
                 0.71,
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.22452176]),
     },
     {
@@ -385,7 +370,6 @@ POWER_MEAN_TEST_CASES = [
                 0.71,
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.96633071]),
     },
     {
@@ -411,7 +395,6 @@ POWER_MEAN_TEST_CASES = [
                 0.71,
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.30]),
     },
     {
@@ -437,114 +420,7 @@ POWER_MEAN_TEST_CASES = [
                 0.71,
             ]
         ),
-        "atol": 1e-8,
         "expected_result": array([0.74]),
-    },
-    {
-        "description": "Some zero weights; nonzero order; -100 <= order <= 100; 2-d data; atol == 1e-9.",
-        "order": 2,
-        "weights": array(
-            [
-                [1.1e-09, 1.1e-09, 1.1e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-06, 1.0e-06, 1.0e-06],
-            ]
-        ),
-        "items": array(
-            [
-                [0.52, 0.73, 0.85],
-                [0.56, 0.28, 0.99],
-                [0.30, 0.69, 0.53],
-                [0.65, 0.65, 0.65],
-                [0.74, 0.14, 0.53],
-                [0.71, 0.13, 0.86],
-            ]
-        ),
-        "atol": 1e-9,
-        "expected_result": array([0.0007241198, 0.0002559066, 0.0008798311]),
-    },
-    {
-        "description": "Some zero weights; zero order; 2-d data; atol == 1e-9.",
-        "order": 0,
-        "weights": array(
-            [
-                [1.1e-09, 1.1e-09, 1.1e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-06, 1.0e-06, 1.0e-06],
-            ]
-        ),
-        "items": array(
-            [
-                [0.52, 0.73, 0.85],
-                [0.56, 0.28, 0.99],
-                [0.30, 0.69, 0.53],
-                [0.65, 0.65, 0.65],
-                [0.74, 0.14, 0.53],
-                [0.71, 0.13, 0.86],
-            ]
-        ),
-        "atol": 1e-8,
-        "expected_result": array(
-            [0.9999995303711, 0.9999978830066052, 0.9999997728129726]
-        ),
-    },
-    {
-        "description": "Some zero weights; order == -inf; 2-d data; atol == 1e-9.",
-        "order": -inf,
-        "weights": array(
-            [
-                [1.1e-09, 1.1e-09, 1.1e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-01, 1.0e-01, 1.0e-01],
-            ]
-        ),
-        "items": array(
-            [
-                [0.28, 0.10, 0.51],
-                [0.56, 0.28, 0.99],
-                [0.30, 0.69, 0.53],
-                [0.28, 0.09, 0.14],
-                [0.74, 0.14, 0.53],
-                [0.71, 0.13, 0.86],
-            ]
-        ),
-        "atol": 1e-9,
-        "expected_result": array([0.28, 0.10, 0.51]),
-    },
-    {
-        "description": "Some zero weights; order == inf; 2-d data; atol == 1e-9.",
-        "order": inf,
-        "weights": array(
-            [
-                [1.1e-09, 1.1e-09, 1.1e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-01, 1.0e-01, 1.0e-01],
-            ]
-        ),
-        "items": array(
-            [
-                [0.99, 0.79, 0.90],
-                [0.56, 0.28, 0.99],
-                [0.30, 0.69, 0.53],
-                [0.89, 0.09, 0.14],
-                [0.74, 0.14, 0.53],
-                [0.71, 0.13, 0.86],
-            ]
-        ),
-        "atol": 1e-9,
-        "expected_result": array([0.99, 0.79, 0.90]),
     },
 ]
 
@@ -559,7 +435,6 @@ class TestPowerMean:
             order=test_case["order"],
             weights=test_case["weights"],
             items=test_case["items"],
-            atol=test_case["atol"],
         )
         assert allclose(actual_result, test_case["expected_result"])
         assert allclose(test_case["expected_result"], actual_result)
@@ -636,7 +511,8 @@ class TestUniqueCorrespondence:
     def test_unique_correspondence(self, test_case):
         """Tests unique_correspondence test cases."""
         original_items = deepcopy(test_case["items"])
-        original_ordered_unique_items = deepcopy(test_case["ordered_unique_items"])
+        original_ordered_unique_items = deepcopy(
+            test_case["ordered_unique_items"])
         result_unique_items, result_item_positions = unique_correspondence(
             items=test_case["items"],
             ordered_unique_items=test_case["ordered_unique_items"],
