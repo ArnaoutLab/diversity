@@ -54,7 +54,8 @@ def power_mean(order, weights, items, atol=1e-9):
     items: numpy.ndarray
         The elements for which the weighted power mean is computed. Must
         have same shape as weights.
-    atols:
+    atol: float
+        Threshold below which weights are considered to be 0.
 
     Returns
     -------
@@ -66,7 +67,7 @@ def power_mean(order, weights, items, atol=1e-9):
     greater than 100 analytical formulas for the limits at 0, -infinity,
     or infinity are used respectively.
     """
-    mask = abs(weights) > atol
+    mask = abs(weights) >= atol
     if isclose(order, 0):
         return prod(power(items, weights, where=mask), axis=0, where=mask)
     elif order < -100:
