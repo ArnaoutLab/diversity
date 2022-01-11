@@ -33,27 +33,8 @@ class Abundance:
     A community consists of a set of species, each of which may appear
     any (non-negative) number of times. A metacommunity consists of one
     or more subcommunities and can be represented by the number of
-    appearances of each species in each of the subcommunities.
-
-    Attributes
-    ----------
-    counts: numpy.ndarray
-        A 2-d numpy.ndarray with subcommunity identifiers, species
-        identifiers and number of appearances of the row's species in
-        the row's subcommunity. The column ordering is determined by the
-        subcommunity_column, species_column, and counts_column
-        attributes. Each combination of species and subcommunity must
-        appear no more than once.
-    species_order: Iterable
-        Ordered unique species identifiers. The ordering determines in
-        which order values corresponding to each species are returned by
-        methods the object.
-    subcommunity_column: int
-        Index of subcommunity identifier column in counts.
-    species_column: int
-        Index of species identifier column in counts.
-    count_column: int
-        Index of species count column in counts.
+    appearances of each species in each of the subcommunities that the
+    species appears in.
     """
 
     def __init__(
@@ -65,6 +46,34 @@ class Abundance:
         species_column=1,
         count_column=2,
     ):
+        """Initializes object.
+
+        Determines species and subcommunity orderings if needed.
+
+        Parameters
+        ----------
+        counts: numpy.ndarray
+            A 2-d numpy.ndarray with subcommunity identifiers, species
+            identifiers and number of appearances of the row's species
+            in the row's subcommunity. The column ordering is determined
+            by the subcommunity_column, species_column, and
+            counts_column parameters. Each combination of species and
+            subcommunity must appear no more than once.
+        species_order: Iterable
+            Ordered unique species identifiers. The ordering determines
+            in which order values corresponding to each species are
+            returned by methods of the object.
+        subcommunity_order: Iterable
+            Ordered unique subcommunity identifiers. The ordering
+            determines in which order values corresponding to each
+            species are returned by methods of the object.
+        subcommunity_column: int
+            Index of subcommunity identifier column in counts.
+        species_column: int
+            Index of species identifier column in counts.
+        count_column: int
+            Index of species count column in counts.
+        """
         self.counts = counts
         self.subcommunity_column = subcommunity_column
         self.species_column = species_column
@@ -84,7 +93,7 @@ class Abundance:
         )
         table[self.__species_unique_pos, self.__subcommunity_unique_pos] = self.counts[
             :, self.count_column
-        ]
+        ].astype(float64)
         return table
 
     @cached_property
@@ -143,31 +152,7 @@ class Abundance:
 
 
 class Similarity:
-    """Species similarities weighted by meta- and subcommunity abundance.
-
-    Attributes
-    ----------
-    abundance: Abundance
-        Relative species abundances in metacommunity and its
-        subcommunities.
-    similarities_filepath: str
-        Path to file containing species similarity matrix. If it doesn't
-        exist, the write_similarity_matrix method generates one. File
-        must have a header listing the species names according to the
-        column ordering of the matrix. Column and row ordering must be
-        the same.
-    similarity_function: Callable
-        Similarity function used to generate similarity matrix file.
-    features: numpy.ndarray
-        A 2d numpy.ndarray where rows are species and columns correspond
-        to features. The order of features corresponds to the species
-        argument.
-    species: numpy.ndarray
-        A 1d numpy.nds array of unique species corresponding to the rows
-        in features.
-    species_to_idx: FrozenDict
-        Maps species names uniquely to integers between 0 and n_species - 1.
-    """
+    """Species similarities weighted by abundances in communities."""
 
     def __init__(
         self,
@@ -179,6 +164,33 @@ class Similarity:
         species_order=None,
     ):
 
+        """Initializes object.
+
+        Parameters
+        ----------
+        counts: numpy.ndarray
+            Describes species abundances in (sub-)communities. See
+            Abundance.__init__ for parameter specification.
+        similarity_matrix: numpy.ndarray
+
+        similarities_filepath: str
+            Path to file containing species similarity matrix. If it doesn't
+            exist, the write_similarity_matrix method generates one. File
+            must have a header listing the species names according to the
+            column ordering of the matrix. Column and row ordering must be
+            the same.
+        similarity_function: Callable
+            Similarity function used to generate similarity matrix file.
+        features: numpy.ndarray
+            A 2d numpy.ndarray where rows are species and columns correspond
+            to features. The order of features corresponds to the species
+            argument.
+        species: numpy.ndarray
+            A 1d numpy.nds array of unique species corresponding to the rows
+            in features.
+        species_to_idx: FrozenDict
+            Maps species names uniquely to integers between 0 and n_species - 1.
+        """
         self.similarity_matrix = similarity_matrix
         self.similarities_filepath = similarities_filepath
         self.similarity_function = similarity_function
@@ -209,9 +221,9 @@ class Similarity:
             and self.similarity_function is None
         ):
             raise InvalidArgumentError(
-                "At least one of similarity_matrix, similarities_filepath, and"
-                " similarity_function must be specified to initialize a"
-                " Similarity object."
+                "Exactly one of similarity_matrix, similarities_filepath"
+                " and similarity_function must be specified to initialize"
+                " a Similarity object."
             )
         if self.similarity_matrix is None and self.similarities_filepath is None:
             raise InvalidArgumentError(

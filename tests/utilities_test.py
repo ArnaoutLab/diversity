@@ -426,7 +426,7 @@ POWER_MEAN_TEST_CASES = [
 
 
 class TestPowerMean:
-    """Tests metacommunity.utilities.power_mean."""
+    """Tests diversity.utilities.power_mean."""
 
     @mark.parametrize("test_case", POWER_MEAN_TEST_CASES)
     def test_power_mean(self, test_case):
@@ -505,14 +505,13 @@ UNIQUE_CORRESPONDENCE_TEST_CASES = [
 
 
 class TestUniqueCorrespondence:
-    """Tests metacommunity.utilities.unique_correspondence."""
+    """Tests diversity.utilities.unique_correspondence."""
 
     @mark.parametrize("test_case", UNIQUE_CORRESPONDENCE_TEST_CASES)
     def test_unique_correspondence(self, test_case):
         """Tests unique_correspondence test cases."""
         original_items = deepcopy(test_case["items"])
-        original_ordered_unique_items = deepcopy(
-            test_case["ordered_unique_items"])
+        original_ordered_unique_items = deepcopy(test_case["ordered_unique_items"])
         result_unique_items, result_item_positions = unique_correspondence(
             items=test_case["items"],
             ordered_unique_items=test_case["ordered_unique_items"],
