@@ -152,31 +152,7 @@ class Abundance:
 
 
 class Similarity:
-    """Species similarities weighted by meta- and subcommunity abundance.
-
-    Attributes
-    ----------
-    abundance: Abundance
-        Relative species abundances in metacommunity and its
-        subcommunities.
-    similarities_filepath: str
-        Path to file containing species similarity matrix. If it doesn't
-        exist, the write_similarity_matrix method generates one. File
-        must have a header listing the species names according to the
-        column ordering of the matrix. Column and row ordering must be
-        the same.
-    similarity_function: Callable
-        Similarity function used to generate similarity matrix file.
-    features: numpy.ndarray
-        A 2d numpy.ndarray where rows are species and columns correspond
-        to features. The order of features corresponds to the species
-        argument.
-    species: numpy.ndarray
-        A 1d numpy.nds array of unique species corresponding to the rows
-        in features.
-    species_to_idx: FrozenDict
-        Maps species names uniquely to integers between 0 and n_species - 1.
-    """
+    """Species similarities weighted by abundances in communities."""
 
     def __init__(
         self,
@@ -187,6 +163,33 @@ class Similarity:
         features=None,
         species_order=None,
     ):
+        """Initializes object.
+
+        Parameters
+        ----------
+        counts: numpy.ndarray
+            Describes species abundances in (sub-)communities. See
+            Abundance.__init__ for parameter specification.
+        similarity_matrix: numpy.ndarray
+
+        similarities_filepath: str
+            Path to file containing species similarity matrix. If it doesn't
+            exist, the write_similarity_matrix method generates one. File
+            must have a header listing the species names according to the
+            column ordering of the matrix. Column and row ordering must be
+            the same.
+        similarity_function: Callable
+            Similarity function used to generate similarity matrix file.
+        features: numpy.ndarray
+            A 2d numpy.ndarray where rows are species and columns correspond
+            to features. The order of features corresponds to the species
+            argument.
+        species: numpy.ndarray
+            A 1d numpy.nds array of unique species corresponding to the rows
+            in features.
+        species_to_idx: FrozenDict
+            Maps species names uniquely to integers between 0 and n_species - 1.
+        """
         self.abundance = Abundance(counts, species_order)
         self.similarity_matrix = similarity_matrix
         self.similarities_filepath = similarities_filepath
@@ -210,14 +213,14 @@ class Similarity:
 
     def __validate_features(self):
         if (
-            self.similarity_matrix,
-            self.similarities_filepath,
-            self.similarity_function,
-        ) == (None, None, None):
+            self.similarity_matrix is None
+            and self.similarities_filepath is None
+            and self.similarity_function is None
+        ):
             raise InvalidArgumentError(
-                "At least one of similarity_matrix, similarities_filepath, and"
-                " similarity_function must be specified to initialize a"
-                " Similarity object."
+                "Exactly one of similarity_matrix, similarities_filepath"
+                " and similarity_function must be specified to initialize"
+                " a Similarity object."
             )
         if self.similarity_matrix is None and self.similarities_filepath is None:
             raise InvalidArgumentError(

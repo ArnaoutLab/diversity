@@ -539,3 +539,41 @@ class TestAbundance:
                 f"\n(i,j): {(i,j)};"
                 f"\n(species,subcommunity): {(species,subcommunity)};"
             )
+
+
+SIMILARITY_TEST_CASES = [
+    {
+        "description": "similarities in memory; 2 communities; default species order",
+        "counts": array(
+            [
+                ["community_1", "species_1", "2"],
+                ["community_1", "species_2", "3"],
+                ["community_2", "species_1", "4"],
+                ["community_2", "species_3", "1"],
+            ]
+        ),
+        "similarity_matrix": array(
+            [
+                [1, 0.5, 0.1],
+                [0.5, 1, 0.2],
+                [0.1, 0.2, 1],
+            ]
+        ),
+        "similarities_filepath": None,
+        "similarity_function": None,
+        "features": None,
+        "species_order": None,
+        "expected_species_order": unique_correspondence(
+            array(["species_1", "species_2", "species_1", "species_3"])
+        )[0],
+        "species_to_metacommunity_similarity": array([[0.76], [0.62], [0.22]]),
+    }
+]
+
+
+class SimilarityTest:
+    """Tests diversity.metacommunity.Similarity."""
+
+    @mark.parametrize("test_case", SIMILARITY_TEST_CASES)
+    def test_init(self, test_case):
+        

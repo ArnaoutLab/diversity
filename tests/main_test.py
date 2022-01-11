@@ -3,7 +3,7 @@ from pytest import fixture
 from pandas import read_csv, DataFrame
 from pandas.testing import assert_frame_equal
 
-from diversity.diversity import Metacommunity
+from diversity.metacommunity import Metacommunity
 
 TEST_VIEWPOINT = 0
 TEST_DF = DataFrame(
