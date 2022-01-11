@@ -21,7 +21,9 @@ from warnings import warn
 
 class ArgumentWarning(Warning):
     """Used for warnings related to problematic argument choices."""
+
     pass
+
 
 ########################################################################
 
@@ -36,9 +38,12 @@ class ValidateQ(Action):
         they are treated as infinity in the diversity calculation.
         """
         if any([viewpoint > 100 for viewpoint in values]):
-            warn("q > 100.0 defaults to the analytical formula for q = inf.",
-                 category=ArgumentWarning)
+            warn(
+                "viewpoints > 100.0 defaults to the analytical formula for viewpoint = infinity.",
+                category=ArgumentWarning,
+            )
         setattr(args, self.dest, values)
+
 
 ########################################################################
 
@@ -53,39 +58,50 @@ def configure_arguments():
     """
     parser = ArgumentParser()
     parser.add_argument(
-        '-i',
+        "-i",
         "--input_file",
         default=stdin,
         type=str,
-        help=("A csv file where the first 3 columns of the file are the"
-              " species name, its count, and subcommunity name, and all"
-              " following columns are features of that species that"
-              " will be used to calculate similarity between species."))
+        help=(
+            "A csv file where the first 3 columns of the file are the"
+            " species name, its count, and subcommunity name, and all"
+            " following columns are features of that species that"
+            " will be used to calculate similarity between species."
+        ),
+    )
     parser.add_argument(
-        '-s',
+        "-s",
         "--similarity_matrix_file",
         type=str,
-        help=("The filepath to a csv file containing a symmetric"
-              " similarity matrix. If the file does not exist, one will"
-              " be created with the user defined similarity function."))
+        help=(
+            "The filepath to a csv file containing a symmetric"
+            " similarity matrix. If the file does not exist, one will"
+            " be created with the user defined similarity function."
+        ),
+    )
     parser.add_argument(
-        '-o',
+        "-o",
         "--output_file",
         default=stdout,
         type=str,
-        help=("A filepath to where the program's output will be saved"))
+        help=("A filepath to where the program's output will be saved"),
+    )
     parser.add_argument(
         "-l",
         "--log_level",
-        help=("Logging verbosity level. Must be one of DEBUG, INFO,"
-              " WARNING, ERROR, CRITICAL (listed in decreasing"
-              " verbosity)."),
-        default="INFO")
+        help=(
+            "Logging verbosity level. Must be one of DEBUG, INFO,"
+            " WARNING, ERROR, CRITICAL (listed in decreasing"
+            " verbosity)."
+        ),
+        default="INFO",
+    )
     parser.add_argument(
-        '-v',
+        "-v",
         "--viewpoint",
-        nargs='+',
+        nargs="+",
         type=float,
         help="A list of viewpoint parameters.",
-        action=ValidateQ)
+        action=ValidateQ,
+    )
     return parser

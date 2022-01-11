@@ -4,13 +4,13 @@ from logging import captureWarnings, getLogger
 
 from pandas import read_csv, concat
 
-from diversity.diversity import Metacommunity
+from diversity.metacommunity import Metacommunity
 from diversity.parameters import configure_arguments
 from diversity.log import LOG_HANDLER, LOGGER
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
-getLogger('py.warnings').addHandler(LOG_HANDLER)
+getLogger("py.warnings").addHandler(LOG_HANDLER)
 
 ########################################################################
 
@@ -21,29 +21,26 @@ def main():
     args = parser.parse_args()
 
     LOGGER.setLevel(args.log_level)
-    LOGGER.info(' '.join([f'python{python_version()}', *argv]))
-    LOGGER.debug(f'args: {args}')
+    LOGGER.info(" ".join([f"python{python_version()}", *argv]))
+    LOGGER.debug(f"args: {args}")
 
     species_counts = read_csv(args.input_file)
 
-    LOGGER.debug(f'data: {species_counts}')
+    LOGGER.debug(f"data: {species_counts}")
 
-    features = 'FIXME'  # FIXME read features in separately
-    viewpoint = args.viewpoint
+    features = None  # FIXME read features in separately
 
     meta = Metacommunity(species_counts, args.similarity_matrix_file)
 
-    subcommunity_views = concat([meta.subcommunities_to_dataframe(view)
-                                 for view in viewpoint])
-    metacommunity_views = concat([meta.metacommunity_to_dataframe(view)
-                                  for view in viewpoint])
-    metacommunity_views.columns = subcommunity_views.columns
-    community_views = concat(
-        [subcommunity_views, metacommunity_views])
-    community_views.to_csv(args.output_file, sep='\t',
-                           float_format='%.4f', index=False)
+    community_views = []
+    for view in args.viewpoint:
+        community_views.append(meta.subcommunities_to_dataframe(view))
+        community_views.append(meta.metacommunity_to_dataframe(view))
 
-    LOGGER.info('Done!')
+    community_views = concat(community_views, ignore_index=True)
+    community_views.to_csv(args.output_file, sep="\t", float_format="%.4f", index=False)
+
+    LOGGER.info("Done!")
 
 
 ########################################################################
