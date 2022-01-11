@@ -33,27 +33,8 @@ class Abundance:
     A community consists of a set of species, each of which may appear
     any (non-negative) number of times. A metacommunity consists of one
     or more subcommunities and can be represented by the number of
-    appearances of each species in each of the subcommunities.
-
-    Attributes
-    ----------
-    counts: numpy.ndarray
-        A 2-d numpy.ndarray with subcommunity identifiers, species
-        identifiers and number of appearances of the row's species in
-        the row's subcommunity. The column ordering is determined by the
-        subcommunity_column, species_column, and counts_column
-        attributes. Each combination of species and subcommunity must
-        appear no more than once.
-    species_order: Iterable
-        Ordered unique species identifiers. The ordering determines in
-        which order values corresponding to each species are returned by
-        methods the object.
-    subcommunity_column: int
-        Index of subcommunity identifier column in counts.
-    species_column: int
-        Index of species identifier column in counts.
-    count_column: int
-        Index of species count column in counts.
+    appearances of each species in each of the subcommunities that the
+    species appears in.
     """
 
     def __init__(
@@ -65,6 +46,34 @@ class Abundance:
         species_column=1,
         count_column=2,
     ):
+        """Initializes object.
+
+        Determines species and subcommunity orderings if needed.
+
+        Parameters
+        ----------
+        counts: numpy.ndarray
+            A 2-d numpy.ndarray with subcommunity identifiers, species
+            identifiers and number of appearances of the row's species
+            in the row's subcommunity. The column ordering is determined
+            by the subcommunity_column, species_column, and
+            counts_column parameters. Each combination of species and
+            subcommunity must appear no more than once.
+        species_order: Iterable
+            Ordered unique species identifiers. The ordering determines
+            in which order values corresponding to each species are
+            returned by methods of the object.
+        subcommunity_order: Iterable
+            Ordered unique subcommunity identifiers. The ordering
+            determines in which order values corresponding to each
+            species are returned by methods of the object.
+        subcommunity_column: int
+            Index of subcommunity identifier column in counts.
+        species_column: int
+            Index of species identifier column in counts.
+        count_column: int
+            Index of species count column in counts.
+        """
         self.counts = counts
         self.subcommunity_column = subcommunity_column
         self.species_column = species_column
