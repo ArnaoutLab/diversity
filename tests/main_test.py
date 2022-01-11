@@ -16,7 +16,7 @@ TEST_DF = DataFrame(
         "gamma": [1.463415, 1.463415],
         "normalized_alpha": [1.5, 1.5],
         "normalized_rho": [1.025, 1.025],
-        "normalised_beta": [0.97561, 0.97561],
+        "normalized_beta": [0.97561, 0.97561],
     }
 )
 
@@ -63,4 +63,4 @@ def test_subcommunity_from_file(mock_input_file, mock_matrix_file):
     df = read_csv(mock_input_file)
     meta = Metacommunity(df, similarities_filepath=mock_matrix_file)
     output_df = meta.subcommunities_to_dataframe(viewpoint=TEST_VIEWPOINT)
-    assert_frame_equal(TEST_DF, output_df)
+    assert_frame_equal(TEST_DF, output_df, check_exact=False)
