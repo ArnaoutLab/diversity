@@ -13,6 +13,7 @@ Metacommunity
     Represents a metacommunity made up of subcommunities and computes
     metacommunity subcommunity diversity measures.
 """
+from abc import ABC, abstractmethod
 from csv import reader
 from functools import cached_property
 from pathlib import Path
@@ -151,28 +152,15 @@ class Abundance:
         return self.subcommunity_abundance / self.subcommunity_normalizing_constants
 
 
-class Similarity:
-    """Species similarities weighted by abundances in communities."""
+class SimilarityStrategy(ABC):
+    @abstractmethod
+    def make_similarities(self):
+        pass
 
-    def __init__(
-        self,
-        similarity_matrix=None,
-        similarities_filepath=None,
-        similarity_function=None,
-        features=None,
-        species_order=None,
-    ):
 
-        """Initializes object.
-
-        Parameters
-        ----------
-        similarity_matrix: numpy.ndarray
-            2-d array of similarities between species. Must be specified
-            together with species_order, which establishes row and
-            column ordering. If None, a similarity function or a file
-            containing similarities must be specified via the
-            similarities_filepath and similarity_function parameters.
+class SimilarityFileStrategy(SimilarityStrategy):
+    def __init__(self, similarities_filepath):
+        """
         similarities_filepath: str
             Path to similarities file. If similarity_function is None
             the file must exist and contain a square matrix of
@@ -181,6 +169,32 @@ class Similarity:
             column ordering. If similarity_function is also specified,
             the file must not exist, but will instead be generated as
             soon as it is needed in subsequent computations.
+        """
+        self.similarities_filepath = Path(similarities_filepath)
+
+    def make_similarities(self, relative_abundances):
+        """Calculates weighted sums of similarities to each species.
+
+        Same as calculate_weighted_similarities, except that
+        similarities are read from similarities file referred to by
+        object's similarities_filepath attribute.
+        """
+        weighted_similarities = empty(relative_abundances.shape, dtype=float64)
+        with open(self.similarities_filepath, "r") as file:
+            next(reader(file, delimiter="\t"))
+            for i, row in enumerate(reader(file, delimiter="\t")):
+                similarities_row = array(row, dtype=float64)
+                weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
+        return weighted_similarities
+
+
+class SimilarityFunctionStrategy(SimilarityFileStrategy):
+    def __init__(
+        self, similarities_filepath, similarity_function, features, species_order
+    ):
+        """
+        Parameters
+        ----------
         similarity_function: Callable
             Callable to determine similarity between species. Must take
             two numpy.ndarray objects containing species features as
@@ -200,6 +214,88 @@ class Similarity:
             similarity matrix calculations is determined by this
             argument.
         """
+        super().__init__(similarities_filepath)
+        self.similarity_function = similarity_function
+        self.features = features
+        self.species_order = species_order
+
+    def __write_similarity_matrix(self):
+        """Writes species similarity matrix into file.
+
+        The matrix is computed using the object's similarity_function
+        attribute applied to the object's features attribute. The result
+        is written into file referred to by object's
+        similarities_filepath attribute together with a header
+        establishing row and column ordering. Any existing contents are
+        overwritten.
+        """
+        row_i = empty(len(self.species_order), dtype=float64)
+        with open(self.similarities_filepath, "w") as file:
+            file.write("\t".join(map(str, self.species_order)) + "\n")
+            for features_i in self.features:
+                for j, features_j in enumerate(self.features):
+                    row_i[j] = self.similarity_function(features_i, features_j)
+                formatted_row_i = (
+                    "\t".join(map(lambda x: format(x, ".3e"), row_i)) + "\n"
+                )
+                file.write(formatted_row_i)
+
+    def make_similarities(self, relative_abundances):
+        if not self.similarities_filepath.is_file():
+            self.__write_similarity_matrix()
+        return super().make_similarities(relative_abundances)
+
+
+class SimilarityInMemoryStrategy(SimilarityStrategy):
+    def __init__(self, similarity_matrix):
+        """
+        similarity_matrix: numpy.ndarray
+            2-d array of similarities between species. Must be specified
+            together with species_order, which establishes row and
+            column ordering. If None, a similarity function or a file
+            containing similarities must be specified via the
+            similarities_filepath and similarity_function parameters.
+        """
+        self.similarity_matrix = similarity_matrix
+
+    def make_similarities(self, relative_abundances):
+        """Calculates weighted sums of similarities to each species.
+
+        Same as calculate_weighted_similarities, except that the object's
+        similarity_matrix attribute is used.
+        """
+        return dot(self.similarity_matrix, relative_abundances)
+
+
+SIMILARITY_STRATEGIES = {
+    "file": SimilarityFileStrategy,
+    "in_memory": SimilarityInMemoryStrategy,
+    "function": SimilarityFunctionStrategy,
+}
+
+
+def create_similarity_strategy(similarity_strategy, **kwargs):
+    """A factory function that creates similarity strategy classes"""
+    try:
+        return SIMILARITY_STRATEGIES[similarity_strategy](**kwargs)
+    except KeyError:
+        raise InvalidArgumentError(
+            "Invalid similarity strategy. Must be one of: 'file', 'in_memory', or 'function'"
+        )
+
+
+class Similarity:
+
+    """Species similarities weighted by abundances in communities."""
+
+    def __init__(
+        self,
+        similarity_matrix=None,
+        similarities_filepath=None,
+        similarity_function=None,
+        features=None,
+        species_order=None,
+    ):
         self.similarity_matrix = similarity_matrix
         if similarities_filepath is None:
             self.similarities_filepath = similarities_filepath
@@ -298,78 +394,6 @@ class Similarity:
                     "Number of species in species_order doesn't match number of rows"
                     " in features."
                 )
-
-    def __write_similarity_matrix(self):
-        """Writes species similarity matrix into file.
-
-        The matrix is computed using the object's similarity_function
-        attribute applied to the object's features attribute. The result
-        is written into file referred to by object's
-        similarities_filepath attribute together with a header
-        establishing row and column ordering. Any existing contents are
-        overwritten.
-        """
-        row_i = empty(len(self.species_order), dtype=float64)
-        with open(self.similarities_filepath, "w") as file:
-            file.write("\t".join(map(str, self.species_order)) + "\n")
-            for features_i in self.features:
-                for j, features_j in enumerate(self.features):
-                    row_i[j] = self.similarity_function(features_i, features_j)
-                formatted_row_i = (
-                    "\t".join(map(lambda x: format(x, ".3e"), row_i)) + "\n"
-                )
-                file.write(formatted_row_i)
-
-    def __weighted_similarities_from_file(self, relative_abundances):
-        """Calculates weighted sums of similarities to each species.
-
-        Same as calculate_weighted_similarities, except that
-        similarities are read from similarities file referred to by
-        object's similarities_filepath attribute.
-        """
-        weighted_similarities = empty(relative_abundances.shape, dtype=float64)
-        with open(self.similarities_filepath, "r") as file:
-            next(reader(file, delimiter="\t"))
-            for i, row in enumerate(reader(file, delimiter="\t")):
-                similarities_row = array(row, dtype=float64)
-                weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
-        return weighted_similarities
-
-    def __weighted_similarities_from_array(self, relative_abundances):
-        """Calculates weighted sums of similarities to each species.
-
-        Same as calculate_weighted_similarities, except that the object's
-        similarity_matrix attribute is used.
-        """
-        return dot(self.similarity_matrix, relative_abundances)
-
-    def calculate_weighted_similarities(self, relative_abundances):
-        """Calculates weighted sums of similarities to each species.
-
-        A similarity matrix is generated and written into file at
-        object's similarities_filepath if needed.
-
-        Parameters
-        ----------
-        relative_abundances: numpy.ndarray
-            Array of shape (n_species, n_communities), where rows
-            correspond to unique species, columns correspond to
-            (meta-/sub-)communities and each element is the relative
-            abundance of a species in a (meta-/sub-)community.
-
-        Returns
-        -------
-        A 2-d numpy.ndarray of shape (n_species, n_communities), where
-        rows correspond to unique species, columns correspond to
-        (meta-/sub-)communities and each element is a sum of
-        similarities to one species weighted by the similarities stored
-        in the similarities file.
-        """
-        if self.similarity_matrix is not None:
-            return self.__weighted_similarities_from_array(relative_abundances)
-        if not self.similarities_filepath.is_file():
-            self.__write_similarity_matrix()
-        return self.__weighted_similarities_from_file(relative_abundances)
 
 
 class Metacommunity:
