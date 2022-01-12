@@ -107,8 +107,6 @@ def unique_correspondence(items, ordered_unique_items=None):
         item_to_position = {
             str(item): pos for pos, item in enumerate(ordered_unique_items_)
         }
-        print(f"items: {items}")
-        print(f"item_to_position: {item_to_position}")
         if len(item_to_position) != len(ordered_unique_items):
             raise InvalidArgumentError(f"Expected ordered_unique_items to be uniqued.")
         item_positions = array([item_to_position[str(item)] for item in items])

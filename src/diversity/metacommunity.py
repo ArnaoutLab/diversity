@@ -49,31 +49,31 @@ class Abundance:
     ):
         """Initializes object.
 
-        Determines species and subcommunity orderings if needed.
+              Determines species and subcommunity orderings if needed.
 
-        Parameters
-        ----------
-        counts: numpy.ndarray
-            A 2-d numpy.ndarray with subcommunity identifiers, species
-            identifiers and number of appearances of the row's species
-            in the row's subcommunity. The column ordering is determined
-            by the subcommunity_column, species_column, and
-            counts_column parameters. Each combination of species and
-            subcommunity must appear no more than once.
-        species_order: numpy.ndarray
-            Ordered unique species identifiers. The ordering determines
-            in which order values corresponding to each species are
-            returned by methods of the object.
-        subcommunity_order: Iterable
-            Ordered unique subcommunity identifiers. The ordering
-            determines in which order values corresponding to each
-            species are returned by methods of the object.
-        subcommunity_column: int
-            Index of subcommunity identifier column in counts.
-        species_column: int
-            Index of species identifier column in counts.
-        count_column: int
-            Index of species count column in counts.
+              Parameters
+              ----------
+              counts: numpy.ndarray
+                  A 2-d numpy.ndarray with subcommunity identifiers, species
+                  identifiers and number of appearances of the row's species
+                  in the row's subcommunity. The column ordering is determined
+                  by the subcommunity_column, species_column, and
+                  counts_column parameters. Each combination of species and
+                  subcommunity must appear no more than once.
+              species_order: numpy.ndarray
+                  Ordered unique species identifiers. The ordering determines
+                  in which order values corresponding to each species are
+                  returned by methods of the object.
+              subcommunity_order: Iterable
+                  Ordered unique subcommunity identifiers. The ordering
+                  determines in which order values corresponding to each
+                  species are returned by methods of the object.
+              subcommunity_column: int
+                  Index of subcommunity identifier column in counts.
+              species_column: int
+        Index of species identifier column in counts.
+              count_column: int
+                  Index of species count column in counts.
         """
         self.counts = counts
         self.subcommunity_column = subcommunity_column
@@ -374,20 +374,19 @@ class Similarity:
 
 
 class Metacommunity:
-    """Class for metacommunities and calculating their diversity.
-
-    Attributes
-    ----------
-    counts: numpy.ndarray
-    viewpoint: float
-    similarities_filepath: str
-    similarity_function: Callable
-    features: np.ndarray
-    abundance: Abundance
-    similarity: Similarity
-    """
+    """Class for metacommunities and calculating their diversity."""
 
     def __init__(self, similarity, abundance):
+        """Initializes object.
+
+        Parameters
+        ----------
+        similarity: diversity.metacommunity.Similarity
+            Object for calculating abundance-weighted similarities.
+        abundance: diversity.metacommunity.Abundance
+            Object whose (sub-/meta-)community species abundances are
+            used.
+        """
         self.similarity = similarity
         self.abundance = abundance
         if not all(self.similarity.species_order == self.abundance.species_order):
@@ -400,40 +399,34 @@ class Metacommunity:
             )
 
     @cached_property
-    def metacommunity_similarity(self):
-        """Calculates the sums of similarities weighted by the metacommunity
-        abundance of each species.
-        """
+    def __metacommunity_similarity(self):
+        """Sums of similarities weighted by metacommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
             self.abundance.metacommunity_abundance
         )
 
     @cached_property
-    def subcommunity_similarity(self):
-        """Calculates the sums of similarities weighted by the subcommunity
-        abundance of each species.
-        """
+    def __subcommunity_similarity(self):
+        """Sums of similarities weighted by subcommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
             self.abundance.subcommunity_abundance
         )
 
     @cached_property
-    def normalized_subcommunity_similarity(self):
-        """Calculates the sums of similarities weighted by the normalized
-        subcommunity abundance of each species.
-        """
+    def __normalized_subcommunity_similarity(self):
+        """Sums of similarities weighted by the normalized subcommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
             self.abundance.normalized_subcommunity_abundance
         )
 
     def subcommunity_alpha(self, viewpoint):
-        return self.subcommunity_measure(viewpoint, 1, self.subcommunity_similarity)
+        return self.__subcommunity_measure(viewpoint, 1, self.__subcommunity_similarity)
 
     def subcommunity_rho(self, viewpoint):
-        return self.subcommunity_measure(
+        return self.__subcommunity_measure(
             viewpoint,
-            self.metacommunity_similarity,
-            self.subcommunity_similarity,
+            self.__metacommunity_similarity,
+            self.__subcommunity_similarity,
         )
 
     def subcommunity_beta(self, viewpoint):
@@ -441,48 +434,52 @@ class Metacommunity:
 
     def subcommunity_gamma(self, viewpoint):
         denominator = broadcast_to(
-            self.metacommunity_similarity,
+            self.__metacommunity_similarity,
             self.abundance.normalized_subcommunity_abundance.shape,
         )
-        return self.subcommunity_measure(viewpoint, 1, denominator)
+        return self.__subcommunity_measure(viewpoint, 1, denominator)
 
     def normalized_subcommunity_alpha(self, viewpoint):
-        return self.subcommunity_measure(
-            viewpoint, 1, self.normalized_subcommunity_similarity
+        return self.__subcommunity_measure(
+            viewpoint, 1, self.__normalized_subcommunity_similarity
         )
 
     def normalized_subcommunity_rho(self, viewpoint):
-        return self.subcommunity_measure(
+        return self.__subcommunity_measure(
             viewpoint,
-            self.metacommunity_similarity,
-            self.normalized_subcommunity_similarity,
+            self.__metacommunity_similarity,
+            self.__normalized_subcommunity_similarity,
         )
 
     def normalized_subcommunity_beta(self, viewpoint):
         return 1 / self.normalized_subcommunity_rho(viewpoint)
 
     def metacommunity_alpha(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.subcommunity_alpha)
+        return self.__metacommunity_measure(viewpoint, self.subcommunity_alpha)
 
     def metacommunity_rho(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.subcommunity_rho)
+        return self.__metacommunity_measure(viewpoint, self.subcommunity_rho)
 
     def metacommunity_beta(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.subcommunity_beta)
+        return self.__metacommunity_measure(viewpoint, self.subcommunity_beta)
 
     def metacommunity_gamma(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.subcommunity_gamma)
+        return self.__metacommunity_measure(viewpoint, self.subcommunity_gamma)
 
     def normalized_metacommunity_alpha(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.normalized_subcommunity_alpha)
+        return self.__metacommunity_measure(
+            viewpoint, self.normalized_subcommunity_alpha
+        )
 
     def normalized_metacommunity_rho(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.normalized_subcommunity_rho)
+        return self.__metacommunity_measure(viewpoint, self.normalized_subcommunity_rho)
 
     def normalized_metacommunity_beta(self, viewpoint):
-        return self.metacommunity_measure(viewpoint, self.normalized_subcommunity_beta)
+        return self.__metacommunity_measure(
+            viewpoint, self.normalized_subcommunity_beta
+        )
 
-    def subcommunity_measure(self, viewpoint, numerator, denominator):
+    def __subcommunity_measure(self, viewpoint, numerator, denominator):
         similarities = divide(
             numerator, denominator, out=zeros(denominator.shape), where=denominator != 0
         )
@@ -492,7 +489,7 @@ class Metacommunity:
             similarities,
         )
 
-    def metacommunity_measure(self, viewpoint, subcommunity_function):
+    def __metacommunity_measure(self, viewpoint, subcommunity_function):
         subcommunity_measure = subcommunity_function(viewpoint)
         return power_mean(
             1 - viewpoint,
