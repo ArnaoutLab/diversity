@@ -651,7 +651,7 @@ SIMILARITY_TEST_CASES = [
     {
         "description": "similarity function; 2 communities",
         "similarity_matrix": None,
-        "similarities_filepath": "similarities_file.tsv",
+        "similarities_filepath": "similarities_file_.tsv",
         "similarity_function": lambda a, b: 1 / sum(a * b),
         "features": array([[1, 2], [3, 5], [7, 11]]),
         "species_order": array(["species_3", "species_1", "species_2"]),
