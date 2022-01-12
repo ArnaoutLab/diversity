@@ -63,7 +63,7 @@ def configure_arguments():
         default=stdin,
         type=str,
         help=(
-            "A csv file where the first 3 columns of the file are the"
+            "A tsv file where the first 3 columns of the file are the"
             " species name, its count, and subcommunity name, and all"
             " following columns are features of that species that"
             " will be used to calculate similarity between species."
@@ -74,7 +74,7 @@ def configure_arguments():
         "--similarity_matrix_file",
         type=str,
         help=(
-            "The filepath to a csv file containing a symmetric"
+            "The filepath to a tsv file containing a symmetric"
             " similarity matrix. If the file does not exist, one will"
             " be created with the user defined similarity function."
         ),
