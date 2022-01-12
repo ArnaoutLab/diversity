@@ -17,6 +17,7 @@ from abc import ABC, abstractmethod
 from csv import reader
 from functools import cached_property
 from pathlib import Path
+from warnings import warn
 
 from pandas import DataFrame
 from numpy import dot, array, empty, zeros, broadcast_to, divide, float64
@@ -60,7 +61,7 @@ class Abundance:
             by the subcommunity_column, species_column, and
             counts_column parameters. Each combination of species and
             subcommunity must appear no more than once.
-        species_order: Iterable
+        species_order: numpy.ndarray
             Ordered unique species identifiers. The ordering determines
             in which order values corresponding to each species are
             returned by methods of the object.
@@ -206,7 +207,7 @@ class SimilarityFunctionStrategy(SimilarityFileStrategy):
             A 2d numpy.ndarray where rows are species and columns
             correspond to features. The order of features is inferred
             from species_order.
-        species_order: Iterable
+        species_order: numpy.ndarray
             The unique species in desired order. Must be specified when
             similarity_matrix, or similarity_function are provided. Must
             not be specified, when similarities_filepath but not
@@ -335,7 +336,7 @@ class Similarity:
             )
         else:
             with open(self.similarities_filepath, "r") as file:
-                return next(reader(file, delimiter="\t"))
+                return array(next(reader(file, delimiter="\t")))
 
     def __validate_attributes(self):
         """Validates the configuration of attributes of the object."""
@@ -410,32 +411,17 @@ class Metacommunity:
     similarity: Similarity
     """
 
-    def __init__(
-        self,
-        counts,
-        similarities_filepath=None,
-        similarity_matrix=None,
-        similarity_function=None,
-        features=None,
-        species_order=None,
-    ):
-        if isinstance(counts, DataFrame):
-            counts = counts.to_numpy()
-        if isinstance(similarity_matrix, DataFrame):
-            species_order = similarity_matrix.columns
-            similarity_matrix = similarity_matrix.to_numpy()
-        if similarities_filepath:
-            similarities_filepath = Path(similarities_filepath)
-        self.similarity = Similarity(
-            similarity_matrix=similarity_matrix,
-            similarities_filepath=similarities_filepath,
-            similarity_function=similarity_function,
-            features=features,
-            species_order=species_order,
-        )
-        self.abundance = Abundance(
-            counts=counts, species_order=self.similarity.species_order
-        )
+    def __init__(self, similarity, abundance):
+        self.similarity = similarity
+        self.abundance = abundance
+        if not all(self.similarity.species_order == self.abundance.species_order):
+            self.abundance.species_order = self.similarity.species_order
+            warn(
+                "similarity and abundance must have same species order"
+                " attribute. species_order attribute of abundance is"
+                " set to the value of the species_order attribute of"
+                " similarity."
+            )
 
     @cached_property
     def metacommunity_similarity(self):
