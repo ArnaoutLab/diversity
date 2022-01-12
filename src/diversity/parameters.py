@@ -70,6 +70,23 @@ def configure_arguments():
         ),
     )
     parser.add_argument(
+        "-l",
+        "--log_level",
+        help=(
+            "Logging verbosity level. Must be one of DEBUG, INFO,"
+            " WARNING, ERROR, CRITICAL (listed in decreasing"
+            " verbosity)."
+        ),
+        default="INFO",
+    )
+    parser.add_argument(
+        "-o",
+        "--output_file",
+        default=stdout,
+        type=str,
+        help=("A filepath to where the program's output will be saved"),
+    )
+    parser.add_argument(
         "-s",
         "--similarity_matrix_file",
         type=str,
@@ -80,21 +97,9 @@ def configure_arguments():
         ),
     )
     parser.add_argument(
-        "-o",
-        "--output_file",
-        default=stdout,
-        type=str,
-        help=("A filepath to where the program's output will be saved"),
-    )
-    parser.add_argument(
-        "-l",
-        "--log_level",
-        help=(
-            "Logging verbosity level. Must be one of DEBUG, INFO,"
-            " WARNING, ERROR, CRITICAL (listed in decreasing"
-            " verbosity)."
-        ),
-        default="INFO",
+        "-t",
+        "--store_similarity_matrix",
+        help="Do not delete similarity matrix if generated via similarity function.",
     )
     parser.add_argument(
         "-v",

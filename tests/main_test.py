@@ -66,3 +66,21 @@ def test_subcommunity_from_file(mock_input_file, mock_matrix_file):
     meta = Metacommunity(similarity=similarity, abundance=abundance)
     output_df = meta.subcommunities_to_dataframe(viewpoint=TEST_VIEWPOINT)
     assert_frame_equal(TEST_DF, output_df, check_exact=False)
+
+
+"""
+Test cases:
+1. similarity matrix file: use cases from Metacommunity tests
+    - ensure matrix file is not deleted, regardless of --store_similarity_matrix
+    - ensure correcly formatted output file is created
+2. delimited features file:
+    - test delimiters
+    - hand-calculate
+3. json features file:
+    - use same similarity and hand-calculations as in 2.
+
+hand-calculations for similarity function:
+define function & features
+calculate similarity matrix
+use matrix for hand-calculations of diversity
+"""

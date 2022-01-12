@@ -28,7 +28,7 @@ def main():
 
     LOGGER.debug(f"data: {species_counts}")
 
-    features = None  # FIXME read features in separately
+    features = x  # FIXME read features in separately
 
     similarity = Similarity(similarities_filepath=args.similarity_matrix_file)
     abundance = Abundance(
