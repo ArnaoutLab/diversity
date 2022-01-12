@@ -648,6 +648,31 @@ SIMILARITY_TEST_CASES = [
             "0.2\t0.5\t1\n"
         ),
     },
+    {
+        "description": "similarity function; 2 communities",
+        "similarity_matrix": None,
+        "similarities_filepath": "similarities_file.tsv",
+        "similarity_function": lambda a, b: 1 / sum(a * b),
+        "features": array([[1, 2], [3, 5], [7, 11]]),
+        "species_order": array(["species_3", "species_1", "species_2"]),
+        "expected_species_order": array(["species_3", "species_1", "species_2"]),
+        "species_to_relative_abundances": {
+            "species_3": array([1 / 1000, 1 / 100]),
+            "species_1": array([1 / 10, 1 / 1]),
+            "species_2": array([10, 100]),
+        },
+        "species_to_weighted_similarities": {
+            "species_3": array([0.35271989, 3.52719894]),
+            "species_1": array([0.13459705, 1.34597047]),
+            "species_2": array([0.0601738, 0.60173802]),
+        },
+        "similarities_filecontents": (
+            "species_3\tspecies_1\tspecies_2\n"
+            "2.00e-01\t7.69e-02\t3.45e-02\n"
+            "7.69e-02\t2.94e-02\t1.32e-02\n"
+            "3.45e-02\t1.32e-02\t5.88e-03\n"
+        ),
+    },
 ]
 
 

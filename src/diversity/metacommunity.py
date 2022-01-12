@@ -13,7 +13,7 @@ Metacommunity
     Represents a metacommunity made up of subcommunities and computes
     metacommunity subcommunity diversity measures.
 """
-from csv import reader, writer
+from csv import reader  # , writer
 from functools import cached_property
 from pathlib import Path
 
@@ -311,12 +311,17 @@ class Similarity:
         """
         row_i = empty(len(self.species_order), dtype=float64)
         with open(self.similarities_filepath, "w") as file:
-            csv_writer = writer(file, delimiter="\t")
-            csv_writer.writerow(self.species_order)  # write header
+            # csv_writer = writer(file, delimiter="\t", lineterminator="\n")
+            # csv_writer.writerow(self.species_order)  # write header
+            file.write("\t".join(map(str, self.species_order)) + "\n")
             for features_i in self.features:
                 for j, features_j in enumerate(self.features):
                     row_i[j] = self.similarity_function(features_i, features_j)
-                csv_writer.writerow(row_i)
+                formatted_row_i = (
+                    "\t".join(map(lambda x: format(x, ".2"), row_i)) + "\n"
+                )
+                # csv_writer.writerow(row_i)
+                file.write(formatted_row_i)
 
     def __weighted_similarities_from_file(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
