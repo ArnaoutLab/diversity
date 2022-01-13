@@ -4,8 +4,8 @@ Classes
 -------
 ArgumentWarning
     Warning category for problematic arguments.
-ValidateQ
-    Validator for -q parameter.
+ValidateViewpoint
+    Validator for -viewpoint parameter.
 
 Functions
 ---------
@@ -28,7 +28,7 @@ class ArgumentWarning(Warning):
 ########################################################################
 
 
-class ValidateQ(Action):
+class ValidateViewpoint(Action):
     """Validator for -viewpoint parameter."""
 
     def __call__(self, parser, args, values, option_string=None):
@@ -71,7 +71,7 @@ def configure_arguments():
     )
     parser.add_argument(
         "-s",
-        "--similarity_matrix_file",
+        "--similarity_matrix_filepath",
         type=str,
         help=(
             "The filepath to a tsv file containing a symmetric"
@@ -87,6 +87,14 @@ def configure_arguments():
         help=("A filepath to where the program's output will be saved"),
     )
     parser.add_argument(
+        "-v",
+        "--viewpoint",
+        nargs="+",
+        type=float,
+        help="A list of viewpoint parameters.",
+        action=ValidateViewpoint,
+    )
+    parser.add_argument(
         "-l",
         "--log_level",
         help=(
@@ -95,13 +103,5 @@ def configure_arguments():
             " verbosity)."
         ),
         default="INFO",
-    )
-    parser.add_argument(
-        "-v",
-        "--viewpoint",
-        nargs="+",
-        type=float,
-        help="A list of viewpoint parameters.",
-        action=ValidateQ,
     )
     return parser

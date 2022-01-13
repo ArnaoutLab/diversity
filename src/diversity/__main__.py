@@ -1,10 +1,12 @@
+from collections import defaultdict
+from json import load
 from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger
 
-from pandas import read_csv, concat
+from pandas import read_csv, concat, DataFrame
 
-from diversity.metacommunity import Abundance, Metacommunity, Similarity
+from diversity.metacommunity import make_metacommunity
 from diversity.parameters import configure_arguments
 from diversity.log import LOG_HANDLER, LOGGER
 
@@ -24,17 +26,14 @@ def main():
     LOGGER.info(" ".join([f"python{python_version()}", *argv]))
     LOGGER.debug(f"args: {args}")
 
-    species_counts = read_csv(args.input_file, sep="\t")
+    species_counts = read_csv(args.input_file, sep=",").to_numpy()
+    print(species_counts)
 
     LOGGER.debug(f"data: {species_counts}")
 
-    features = None  # FIXME read features in separately
-
-    similarity = Similarity(similarities_filepath=args.similarity_matrix_file)
-    abundance = Abundance(
-        counts=species_counts.to_numpy(), species_order=similarity.species_order
+    meta = make_metacommunity(
+        species_counts, similarity_matrix_filepath=args.similarity_matrix_filepath
     )
-    meta = Metacommunity(similarity=similarity, abundance=abundance)
 
     community_views = []
     for view in args.viewpoint:

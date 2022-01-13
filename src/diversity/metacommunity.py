@@ -22,11 +22,7 @@ from warnings import warn
 from pandas import DataFrame
 from numpy import dot, array, empty, zeros, broadcast_to, divide, float64
 
-from diversity.utilities import (
-    InvalidArgumentError,
-    power_mean,
-    unique_correspondence,
-)
+from diversity.utilities import power_mean, unique_correspondence
 
 
 class Abundance:
@@ -155,14 +151,14 @@ class Abundance:
 
 class SimilarityStrategy(ABC):
     @abstractmethod
-    def make_similarities(self):
-        pass
+    def calculate_weighted_similarities(self):
+        """Abstract method"""
 
 
 class SimilarityFileStrategy(SimilarityStrategy):
-    def __init__(self, similarities_filepath):
+    def __init__(self, similarity_matrix_filepath):
         """
-        similarities_filepath: str
+        similarity_matrix_filepath: str
             Path to similarities file. If similarity_function is None
             the file must exist and contain a square matrix of
             similarities between species, together with a header
@@ -171,19 +167,26 @@ class SimilarityFileStrategy(SimilarityStrategy):
             the file must not exist, but will instead be generated as
             soon as it is needed in subsequent computations.
         """
-        self.similarities_filepath = Path(similarities_filepath)
+        self.similarity_matrix_filepath = Path(similarity_matrix_filepath)
+        self.file_suffix = self.similarity_matrix_filepath.suffix
+        if self.file_suffix == ".csv":
+            self.delimiter = ","
+        elif self.file_suffix == ".tsv":
+            self.delimiter = "\t"
+        with open(self.similarity_matrix_filepath, "r") as file:
+            self.species_order = array(next(reader(file, delimiter=self.delimiter)))
 
-    def make_similarities(self, relative_abundances):
+    def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
         Same as calculate_weighted_similarities, except that
         similarities are read from similarities file referred to by
-        object's similarities_filepath attribute.
+        object's similarity_matrix_filepath attribute.
         """
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
-        with open(self.similarities_filepath, "r") as file:
-            next(reader(file, delimiter="\t"))
-            for i, row in enumerate(reader(file, delimiter="\t")):
+        with open(self.similarity_matrix_filepath, "r") as file:
+            next(reader(file, delimiter=self.delimiter))
+            for i, row in enumerate(reader(file, delimiter=self.delimiter)):
                 similarities_row = array(row, dtype=float64)
                 weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
         return weighted_similarities
@@ -191,7 +194,7 @@ class SimilarityFileStrategy(SimilarityStrategy):
 
 class SimilarityFunctionStrategy(SimilarityFileStrategy):
     def __init__(
-        self, similarities_filepath, similarity_function, features, species_order
+        self, similarity_matrix_filepath, similarity_function, features, species_order
     ):
         """
         Parameters
@@ -200,7 +203,7 @@ class SimilarityFunctionStrategy(SimilarityFileStrategy):
             Callable to determine similarity between species. Must take
             two numpy.ndarray objects containing species features as
             arguments and return a numeric similarity value. Must be
-            specified together with similarities_filepath, a path to a
+            specified together with similarity_matrix_filepath, a path to a
             non-existing filename to store similarities in, which will
             be generated when needed.
         features: numpy.ndarray
@@ -210,15 +213,18 @@ class SimilarityFunctionStrategy(SimilarityFileStrategy):
         species_order: numpy.ndarray
             The unique species in desired order. Must be specified when
             similarity_matrix, or similarity_function are provided. Must
-            not be specified, when similarities_filepath but not
+            not be specified, when similarity_matrix_filepath but not
             similarity_function as provided. Row and column ordering in
             similarity matrix calculations is determined by this
             argument.
         """
-        super().__init__(similarities_filepath)
+        super().__init__(similarity_matrix_filepath)
         self.similarity_function = similarity_function
         self.features = features
         self.species_order = species_order
+
+    def format_row(self, row):
+        return "\t".join(map(lambda x: format(x, ".3e"), row)) + "\n"
 
     def __write_similarity_matrix(self):
         """Writes species similarity matrix into file.
@@ -226,25 +232,23 @@ class SimilarityFunctionStrategy(SimilarityFileStrategy):
         The matrix is computed using the object's similarity_function
         attribute applied to the object's features attribute. The result
         is written into file referred to by object's
-        similarities_filepath attribute together with a header
+        similarity_matrix_filepath attribute together with a header
         establishing row and column ordering. Any existing contents are
         overwritten.
         """
         row_i = empty(len(self.species_order), dtype=float64)
-        with open(self.similarities_filepath, "w") as file:
+        with open(self.similarity_matrix_filepath, "w") as file:
             file.write("\t".join(map(str, self.species_order)) + "\n")
             for features_i in self.features:
                 for j, features_j in enumerate(self.features):
                     row_i[j] = self.similarity_function(features_i, features_j)
-                formatted_row_i = (
-                    "\t".join(map(lambda x: format(x, ".3e"), row_i)) + "\n"
-                )
+                formatted_row_i = self.format_row(row_i)
                 file.write(formatted_row_i)
 
-    def make_similarities(self, relative_abundances):
-        if not self.similarities_filepath.is_file():
+    def calculate_weighted_similarities(self, relative_abundances):
+        if not self.similarity_matrix_filepath.is_file():
             self.__write_similarity_matrix()
-        return super().make_similarities(relative_abundances)
+        return super().calculate_weighted_similarities(relative_abundances)
 
 
 class SimilarityInMemoryStrategy(SimilarityStrategy):
@@ -255,11 +259,12 @@ class SimilarityInMemoryStrategy(SimilarityStrategy):
             together with species_order, which establishes row and
             column ordering. If None, a similarity function or a file
             containing similarities must be specified via the
-            similarities_filepath and similarity_function parameters.
+            similarity_matrix_filepath and similarity_function parameters.
         """
         self.similarity_matrix = similarity_matrix
+        self.species_order = self.similarity_matrix[0, :]
 
-    def make_similarities(self, relative_abundances):
+    def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
         Same as calculate_weighted_similarities, except that the object's
@@ -268,133 +273,33 @@ class SimilarityInMemoryStrategy(SimilarityStrategy):
         return dot(self.similarity_matrix, relative_abundances)
 
 
-SIMILARITY_STRATEGIES = {
-    "file": SimilarityFileStrategy,
-    "in_memory": SimilarityInMemoryStrategy,
-    "function": SimilarityFunctionStrategy,
-}
+def similarity_strategy_factory(
+    similarity_matrix=None,
+    similarity_matrix_filepath=None,
+    similarity_function=None,
+    features=None,
+    species_order=None,
+):
+    in_memory_parameters = (similarity_matrix,)
+    function_parameters = (
+        similarity_matrix_filepath,
+        similarity_function,
+        features,
+        species_order,
+    )
+    file_parameters = (similarity_matrix_filepath,)
 
-
-def create_similarity_strategy(similarity_strategy, **kwargs):
-    """A factory function that creates similarity strategy classes"""
-    try:
-        return SIMILARITY_STRATEGIES[similarity_strategy](**kwargs)
-    except KeyError:
-        raise InvalidArgumentError(
-            "Invalid similarity strategy. Must be one of: 'file', 'in_memory', or 'function'"
+    if None not in in_memory_parameters:
+        return SimilarityInMemoryStrategy(*in_memory_parameters)
+    elif None not in function_parameters:
+        return SimilarityFunctionStrategy(*function_parameters)
+    elif None not in file_parameters:
+        return SimilarityFileStrategy(*file_parameters)
+    else:
+        # FIXME need to refer to correct documentation
+        raise Exception(
+            "Invalid argument combination. See the documentation for valid argument combinations"
         )
-
-
-class Similarity:
-
-    """Species similarities weighted by abundances in communities."""
-
-    def __init__(
-        self,
-        similarity_matrix=None,
-        similarities_filepath=None,
-        similarity_function=None,
-        features=None,
-        species_order=None,
-    ):
-        self.similarity_matrix = similarity_matrix
-        if similarities_filepath is None:
-            self.similarities_filepath = similarities_filepath
-        else:
-            self.similarities_filepath = Path(similarities_filepath)
-        self.similarity_function = similarity_function
-        self.features = features
-        if similarity_matrix is None and similarity_function is None:
-            self.species_order = self.__get_species_order()
-        else:
-            self.species_order = species_order
-        self.__validate_attributes()
-
-    def __get_species_order(self):
-        """Determines species ordering from file header.
-
-        Parameters
-        ----------
-        similarities_filepath: str
-            Path to file containing similarities with a header
-            containing the unique species identifiers in desired order.
-
-        Returns
-        -------
-        A list of str objects of the unique species identifiers in their
-        order of appearance in file header.
-        """
-
-        if (
-            self.similarities_filepath is None
-            or not self.similarities_filepath.is_file()
-        ):
-            raise InvalidArgumentError(
-                "Unable to determine species ordering from file. No"
-                " similarity matrix filepath is provided, or the file"
-                " does not exist."
-            )
-        else:
-            with open(self.similarities_filepath, "r") as file:
-                return array(next(reader(file, delimiter="\t")))
-
-    def __validate_attributes(self):
-        """Validates the configuration of attributes of the object."""
-        if (
-            self.similarity_matrix is None
-            and self.similarities_filepath is None
-            and self.similarity_function is None
-        ):
-            raise InvalidArgumentError(
-                "No species similarity values are specified. Use similarity_matrix,"
-                " similarities_filepath, or similarity_function together with"
-                " similarity_filepath to specify similarity values."
-            )
-        if self.similarity_matrix is not None:
-            if (
-                self.similarity_function is not None
-                or self.similarities_filepath is not None
-            ):
-                raise InvalidArgumentError(
-                    "Cannot specify similarity_function and/or similarities_filepath"
-                    " when similarity_matrix is provided."
-                )
-            if self.species_order is None:
-                raise InvalidArgumentError(
-                    "Must specify species_order when similarity_matrix is provided."
-                )
-            if (
-                len(self.species_order) != self.similarity_matrix.shape[0]
-                or len(self.species_order) != self.similarity_matrix.shape[1]
-            ):
-                raise InvalidArgumentError(
-                    "Number of species in species_order doesn't match dimensions"
-                    " of similarity_matrix."
-                )
-        elif self.similarity_function is not None:
-            if self.similarities_filepath is None:
-                raise InvalidArgumentError(
-                    "Must specify similarities_filepath when similarity_function is"
-                    " provided."
-                )
-            if self.similarities_filepath.is_file():
-                raise InvalidArgumentError(
-                    "File at similarities_filepath must not exist when"
-                    " similarity_function is provided."
-                )
-            if self.species_order is None:
-                raise InvalidArgumentError(
-                    "Must specify species_order when similarity_function is provided."
-                )
-            if self.features is None:
-                raise InvalidArgumentError(
-                    "Must specify features when similarity_function is provided."
-                )
-            if len(self.species_order) != self.features.shape[0]:
-                raise InvalidArgumentError(
-                    "Number of species in species_order doesn't match number of rows"
-                    " in features."
-                )
 
 
 class Metacommunity:
@@ -404,7 +309,7 @@ class Metacommunity:
     ----------
     counts: numpy.ndarray
     viewpoint: float
-    similarities_filepath: str
+    similarity_matrix_filepath: str
     similarity_function: Callable
     features: np.ndarray
     abundance: Abundance
@@ -554,3 +459,22 @@ class Metacommunity:
             },
             index=[0],
         )
+
+
+def make_metacommunity(
+    counts,
+    similarity_matrix=None,
+    similarity_matrix_filepath=None,
+    similarity_function=None,
+    features=None,
+    species_order=None,
+):
+    similarity = similarity_strategy_factory(
+        similarity_matrix,
+        similarity_matrix_filepath,
+        similarity_function,
+        features,
+        species_order,
+    )
+    abundance = Abundance(counts, similarity.species_order)
+    return Metacommunity(similarity, abundance)
