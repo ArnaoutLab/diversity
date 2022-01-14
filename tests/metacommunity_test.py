@@ -1,12 +1,22 @@
 """Tests for diversity.metacommunity."""
 from copy import deepcopy
 from itertools import product
+from warnings import filterwarnings, resetwarnings
 
-from numpy import allclose, array, empty, float64, isclose
+from numpy import allclose, array, empty, float64, isclose, ndarray, unique
+from pandas import DataFrame
 from pytest import mark
 
-from diversity.metacommunity import Abundance, Metacommunity, Similarity
-from diversity.utilities import unique_correspondence
+from diversity.metacommunity import (
+    Abundance,
+    create_similarity,
+    make_metacommunity,
+    Metacommunity,
+    SimilarityFromFile,
+    SimilarityFromFunction,
+    SimilarityFromMemory,
+)
+from diversity.utilities import ArgumentWarning, unique_correspondence
 
 ABUNDANCE_TEST_CASES = [
     ####################################################################
@@ -545,7 +555,262 @@ class TestAbundance:
             )
 
 
-SIMILARITY_TEST_CASES = [
+def arrange_values(ordered_names, name_to_row):
+    """Arranges matrix rows according to ordered_names ordering."""
+    matrix = empty(
+        shape=(len(ordered_names), name_to_row[ordered_names[0]].shape[0]),
+        dtype=float64,
+    )
+    for i, name in enumerate(ordered_names):
+        matrix[i][:] = name_to_row[name]
+    return matrix
+
+
+SIMILARITY_FROM_FILE_TEST_CASES = [
+    {
+        "description": "tsv file; 2 communities",
+        "similarity_matrix_filepath": "similarities_file.tsv",
+        "expected_species_order": array(["species_3", "species_1", "species_2"]),
+        "species_to_relative_abundances": {
+            "species_1": array([1 / 1000, 1 / 100]),
+            "species_2": array([1 / 10, 1 / 1]),
+            "species_3": array([10, 100]),
+        },
+        "species_to_weighted_similarities": {
+            "species_1": array([1.051, 10.51]),
+            "species_2": array([2.1005, 21.005]),
+            "species_3": array([10.0201, 100.201]),
+        },
+        "similarities_filecontents": (
+            "species_3\tspecies_1\tspecies_2\n"
+            "1\t0.1\t0.2\n"
+            "0.1\t1\t0.5\n"
+            "0.2\t0.5\t1\n"
+        ),
+    },
+    {
+        "description": "csv file; 2 communities",
+        "similarity_matrix_filepath": "similarities_file.csv",
+        "expected_species_order": array(["species_3", "species_1", "species_2"]),
+        "species_to_relative_abundances": {
+            "species_1": array([1 / 1000, 1 / 100]),
+            "species_2": array([1 / 10, 1 / 1]),
+            "species_3": array([10, 100]),
+        },
+        "species_to_weighted_similarities": {
+            "species_1": array([1.051, 10.51]),
+            "species_2": array([2.1005, 21.005]),
+            "species_3": array([10.0201, 100.201]),
+        },
+        "similarities_filecontents": (
+            "species_3,species_1,species_2\n" "1,0.1,0.2\n" "0.1,1,0.5\n" "0.2,0.5,1\n"
+        ),
+    },
+    {
+        "description": "no file extension; 1 community",
+        "similarity_matrix_filepath": "similarities_file",
+        "expected_species_order": array(["species_3", "species_1", "species_2"]),
+        "species_to_relative_abundances": {
+            "species_1": array([1 / 1000]),
+            "species_2": array([1 / 10]),
+            "species_3": array([10]),
+        },
+        "species_to_weighted_similarities": {
+            "species_1": array([1.051]),
+            "species_2": array([2.1005]),
+            "species_3": array([10.0201]),
+        },
+        "similarities_filecontents": (
+            "species_3\tspecies_1\tspecies_2\n"
+            "1\t0.1\t0.2\n"
+            "0.1\t1\t0.5\n"
+            "0.2\t0.5\t1\n"
+        ),
+    },
+]
+
+
+class TestSimilarityFromFile:
+    """Tests diversity.metacommunity.Similarity."""
+
+    @mark.parametrize("test_case", SIMILARITY_FROM_FILE_TEST_CASES)
+    def test_init(self, test_case, tmp_path):
+        """Tests initializer."""
+        test_case["similarity_matrix_filepath"] = (
+            tmp_path / test_case["similarity_matrix_filepath"]
+        )
+        with open(test_case["similarity_matrix_filepath"], "w") as file:
+            file.write(test_case["similarities_filecontents"])
+        if test_case["similarity_matrix_filepath"].suffix == "":
+            filterwarnings("ignore", category=ArgumentWarning)
+        similarity = SimilarityFromFile(
+            similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
+        )
+        resetwarnings()
+        assert (similarity.species_order == test_case["expected_species_order"]).all()
+
+    @mark.parametrize("test_case", SIMILARITY_FROM_FILE_TEST_CASES)
+    def test_calculate_weighted_similarities(self, test_case, tmp_path):
+        """Tests .calculate_weighted_similarities."""
+        test_case["similarity_matrix_filepath"] = (
+            tmp_path / test_case["similarity_matrix_filepath"]
+        )
+        with open(test_case["similarity_matrix_filepath"], "w") as file:
+            file.write(test_case["similarities_filecontents"])
+        if test_case["similarity_matrix_filepath"].suffix == "":
+            filterwarnings("ignore", category=ArgumentWarning)
+        similarity = SimilarityFromFile(
+            similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
+        )
+        resetwarnings()
+        relative_abundances = arrange_values(
+            test_case["expected_species_order"],
+            test_case["species_to_relative_abundances"],
+        )
+        weighted_similarities = similarity.calculate_weighted_similarities(
+            relative_abundances
+        )
+        expected_weighted_similarities = arrange_values(
+            test_case["expected_species_order"],
+            test_case["species_to_weighted_similarities"],
+        )
+        assert weighted_similarities.shape == relative_abundances.shape
+        assert allclose(weighted_similarities, expected_weighted_similarities)
+        with open(test_case["similarity_matrix_filepath"], "r") as file:
+            similarities_filecontents = file.read()
+        assert similarities_filecontents == test_case["similarities_filecontents"]
+
+
+SIMILARITY_FROM_FUNCTION_TEST_CASES = [
+    {
+        "description": "similarity function; 2 communities; tsv similarities file",
+        "similarity_matrix_filepath": "similarities_file_.tsv",
+        "similarity_function": lambda a, b: 1 / sum(a * b),
+        "features": array([[1, 2], [3, 5], [7, 11]]),
+        "species_order": array(["species_3", "species_1", "species_2"]),
+        "expected_species_order": array(["species_3", "species_1", "species_2"]),
+        "species_to_relative_abundances": {
+            "species_3": array([1 / 1000, 1 / 100]),
+            "species_1": array([1 / 10, 1 / 1]),
+            "species_2": array([10, 100]),
+        },
+        "species_to_weighted_similarities": {
+            "species_3": array([0.352692, 3.52692]),
+            "species_1": array([0.13461792, 1.3461792]),
+            "species_2": array([0.06017048, 0.6017048]),
+        },
+        "similarities_filecontents": (
+            "species_3\tspecies_1\tspecies_2\n"
+            "2.000e-01\t7.692e-02\t3.448e-02\n"  # [0.2       , 0.07692308, 0.03448276]
+            "7.692e-02\t2.941e-02\t1.316e-02\n"  # [0.07692308, 0.02941176, 0.01315789]
+            "3.448e-02\t1.316e-02\t5.882e-03\n"  # [0.03448276, 0.01315789, 0.00588235]
+        ),
+    },
+    {
+        "description": "similarity function; 2 communities; csv similarities file",
+        "similarity_matrix_filepath": "similarities_file_.csv",
+        "similarity_function": lambda a, b: 1 / sum(a * b),
+        "features": array([[1, 2], [3, 5], [7, 11]]),
+        "species_order": array(["species_3", "species_1", "species_2"]),
+        "expected_species_order": array(["species_3", "species_1", "species_2"]),
+        "species_to_relative_abundances": {
+            "species_3": array([1 / 1000, 1 / 100]),
+            "species_1": array([1 / 10, 1 / 1]),
+            "species_2": array([10, 100]),
+        },
+        "species_to_weighted_similarities": {
+            "species_3": array([0.352692, 3.52692]),
+            "species_1": array([0.13461792, 1.3461792]),
+            "species_2": array([0.06017048, 0.6017048]),
+        },
+        "similarities_filecontents": (
+            "species_3,species_1,species_2\n"
+            "2.000e-01,7.692e-02,3.448e-02\n"  # [0.2       , 0.07692308, 0.03448276]
+            "7.692e-02,2.941e-02,1.316e-02\n"  # [0.07692308, 0.02941176, 0.01315789]
+            "3.448e-02,1.316e-02,5.882e-03\n"  # [0.03448276, 0.01315789, 0.00588235]
+        ),
+    },
+    {
+        "description": "similarity function; 1 community; similarities file without extension",
+        "similarity_matrix_filepath": "similarities_file_",
+        "similarity_function": lambda a, b: 1 / sum(a * b),
+        "features": array([[1, 2], [3, 5], [7, 11]]),
+        "species_order": array(["species_3", "species_1", "species_2"]),
+        "expected_species_order": array(["species_3", "species_1", "species_2"]),
+        "species_to_relative_abundances": {
+            "species_3": array([1 / 1000]),
+            "species_1": array([1 / 10]),
+            "species_2": array([10]),
+        },
+        "species_to_weighted_similarities": {
+            "species_3": array([0.352692]),
+            "species_1": array([0.13461792]),
+            "species_2": array([0.06017048]),
+        },
+        "similarities_filecontents": (
+            "species_3\tspecies_1\tspecies_2\n"
+            "2.000e-01\t7.692e-02\t3.448e-02\n"  # [0.2       , 0.07692308, 0.03448276]
+            "7.692e-02\t2.941e-02\t1.316e-02\n"  # [0.07692308, 0.02941176, 0.01315789]
+            "3.448e-02\t1.316e-02\t5.882e-03\n"  # [0.03448276, 0.01315789, 0.00588235]
+        ),
+    },
+]
+
+
+class TestSimilarityFromFunction:
+    """Tests diversity.metacommunity.Similarity."""
+
+    @mark.parametrize("test_case", SIMILARITY_FROM_FUNCTION_TEST_CASES)
+    def test_init(self, test_case, tmp_path):
+        """Tests initializer."""
+        test_case["similarity_matrix_filepath"] = (
+            tmp_path / test_case["similarity_matrix_filepath"]
+        )
+        if test_case["similarity_matrix_filepath"].suffix == "":
+            filterwarnings("ignore", category=ArgumentWarning)
+        similarity = SimilarityFromFunction(
+            similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
+            similarity_function=test_case["similarity_function"],
+            features=test_case["features"],
+            species_order=test_case["species_order"],
+        )
+        resetwarnings()
+        assert (similarity.species_order == test_case["expected_species_order"]).all()
+
+    @mark.parametrize("test_case", SIMILARITY_FROM_FUNCTION_TEST_CASES)
+    def test_calculate_weighted_similarities(self, test_case, tmp_path):
+        """Tests .calculate_weighted_similarities."""
+        test_case["similarity_matrix_filepath"] = (
+            tmp_path / test_case["similarity_matrix_filepath"]
+        )
+        if test_case["similarity_matrix_filepath"].suffix == "":
+            filterwarnings("ignore", category=ArgumentWarning)
+        similarity = SimilarityFromFunction(
+            similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
+            similarity_function=test_case["similarity_function"],
+            features=test_case["features"],
+            species_order=test_case["species_order"],
+        )
+        resetwarnings()
+        relative_abundances = arrange_values(
+            test_case["expected_species_order"],
+            test_case["species_to_relative_abundances"],
+        )
+        weighted_similarities = similarity.calculate_weighted_similarities(
+            relative_abundances
+        )
+        expected_weighted_similarities = arrange_values(
+            test_case["expected_species_order"],
+            test_case["species_to_weighted_similarities"],
+        )
+        assert weighted_similarities.shape == relative_abundances.shape
+        assert allclose(weighted_similarities, expected_weighted_similarities)
+        with open(test_case["similarity_matrix_filepath"], "r") as file:
+            similarities_filecontents = file.read()
+        assert similarities_filecontents == test_case["similarities_filecontents"]
+
+
+SIMILARITY_FROM_MEMORY_TEST_CASES = [
     {
         "description": "similarities in memory; 2 communities",
         "similarity_matrix": array(
@@ -555,9 +820,6 @@ SIMILARITY_TEST_CASES = [
                 [0.1, 0.2, 1],
             ]
         ),
-        "similarities_filepath": None,
-        "similarity_function": None,
-        "features": None,
         "species_order": array(["species_1", "species_2", "species_3"]),
         "expected_species_order": array(["species_1", "species_2", "species_3"]),
         "species_to_relative_abundances": {
@@ -570,7 +832,6 @@ SIMILARITY_TEST_CASES = [
             "species_2": array([2.1005, 21.005]),
             "species_3": array([10.0201, 100.201]),
         },
-        "similarities_filecontents": None,
     },
     {
         "description": "similarities in memory; 1 community",
@@ -598,127 +859,11 @@ SIMILARITY_TEST_CASES = [
         },
         "similarities_filecontents": None,
     },
-    {
-        "description": "similarities in file; 2 communities",
-        "similarity_matrix": None,
-        "similarities_filepath": "similarities_file.tsv",
-        "similarity_function": None,
-        "features": None,
-        "species_order": None,
-        "expected_species_order": array(["species_3", "species_1", "species_2"]),
-        "species_to_relative_abundances": {
-            "species_1": array([1 / 1000, 1 / 100]),
-            "species_2": array([1 / 10, 1 / 1]),
-            "species_3": array([10, 100]),
-        },
-        "species_to_weighted_similarities": {
-            "species_1": array([1.051, 10.51]),
-            "species_2": array([2.1005, 21.005]),
-            "species_3": array([10.0201, 100.201]),
-        },
-        "similarities_filecontents": (
-            "species_3\tspecies_1\tspecies_2\n"
-            "1\t0.1\t0.2\n"
-            "0.1\t1\t0.5\n"
-            "0.2\t0.5\t1\n"
-        ),
-    },
-    {
-        "description": "similarities in file; 1 community",
-        "similarity_matrix": None,
-        "similarities_filepath": "similarities_file.tsv",
-        "similarity_function": None,
-        "features": None,
-        "species_order": None,
-        "expected_species_order": array(["species_3", "species_1", "species_2"]),
-        "species_to_relative_abundances": {
-            "species_1": array([1 / 1000]),
-            "species_2": array([1 / 10]),
-            "species_3": array([10]),
-        },
-        "species_to_weighted_similarities": {
-            "species_1": array([1.051]),
-            "species_2": array([2.1005]),
-            "species_3": array([10.0201]),
-        },
-        "similarities_filecontents": (
-            "species_3\tspecies_1\tspecies_2\n"
-            "1\t0.1\t0.2\n"
-            "0.1\t1\t0.5\n"
-            "0.2\t0.5\t1\n"
-        ),
-    },
-    {
-        "description": "similarity function; 2 communities",
-        "similarity_matrix": None,
-        "similarities_filepath": "similarities_file_.tsv",
-        "similarity_function": lambda a, b: 1 / sum(a * b),
-        "features": array([[1, 2], [3, 5], [7, 11]]),
-        "species_order": array(["species_3", "species_1", "species_2"]),
-        "expected_species_order": array(["species_3", "species_1", "species_2"]),
-        "species_to_relative_abundances": {
-            "species_3": array([1 / 1000, 1 / 100]),
-            "species_1": array([1 / 10, 1 / 1]),
-            "species_2": array([10, 100]),
-        },
-        "species_to_weighted_similarities": {
-            "species_3": array([0.352692, 3.52692]),
-            "species_1": array([0.13461792, 1.3461792]),
-            "species_2": array([0.06017048, 0.6017048]),
-        },
-        "similarities_filecontents": (
-            "species_3\tspecies_1\tspecies_2\n"
-            "2.000e-01\t7.692e-02\t3.448e-02\n"  # [0.2       , 0.07692308, 0.03448276]
-            "7.692e-02\t2.941e-02\t1.316e-02\n"  # [0.07692308, 0.02941176, 0.01315789]
-            "3.448e-02\t1.316e-02\t5.882e-03\n"  # [0.03448276, 0.01315789, 0.00588235]
-        ),
-    },
-    {
-        "description": "similarity function; 1 community",
-        "similarity_matrix": None,
-        "similarities_filepath": "similarities_file_.tsv",
-        "similarity_function": lambda a, b: 1 / sum(a * b),
-        "features": array([[1, 2], [3, 5], [7, 11]]),
-        "species_order": array(["species_3", "species_1", "species_2"]),
-        "expected_species_order": array(["species_3", "species_1", "species_2"]),
-        "species_to_relative_abundances": {
-            "species_3": array([1 / 1000]),
-            "species_1": array([1 / 10]),
-            "species_2": array([10]),
-        },
-        "species_to_weighted_similarities": {
-            "species_3": array([0.352692]),
-            "species_1": array([0.13461792]),
-            "species_2": array([0.06017048]),
-        },
-        "similarities_filecontents": (
-            "species_3\tspecies_1\tspecies_2\n"
-            "2.000e-01\t7.692e-02\t3.448e-02\n"  # [0.2       , 0.07692308, 0.03448276]
-            "7.692e-02\t2.941e-02\t1.316e-02\n"  # [0.07692308, 0.02941176, 0.01315789]
-            "3.448e-02\t1.316e-02\t5.882e-03\n"  # [0.03448276, 0.01315789, 0.00588235]
-        ),
-    },
 ]
 
 
-class TestSimilarity:
+class TestSimilarityFromMemory:
     """Tests diversity.metacommunity.Similarity."""
-
-    def make_similarity(self, test_case, tmp_path):
-        """Initializes test object creating similarities file, if needed."""
-        if test_case["similarities_filepath"] is not None:
-            absolute_path = tmp_path / test_case["similarities_filepath"]
-            test_case["similarities_filepath"] = absolute_path
-            if test_case["similarity_function"] is None:
-                with open(absolute_path, "w") as file:
-                    file.write(test_case["similarities_filecontents"])
-        return Similarity(
-            similarity_matrix=test_case["similarity_matrix"],
-            similarities_filepath=test_case["similarities_filepath"],
-            similarity_function=test_case["similarity_function"],
-            features=test_case["features"],
-            species_order=test_case["species_order"],
-        )
 
     def arrange_values(self, ordered_names, name_to_row):
         """Arranges rows according to ordered_names ordering."""
@@ -730,16 +875,22 @@ class TestSimilarity:
             matrix[i] = name_to_row[name]
         return matrix
 
-    @mark.parametrize("test_case", SIMILARITY_TEST_CASES)
-    def test_init(self, test_case, tmp_path):
+    @mark.parametrize("test_case", SIMILARITY_FROM_MEMORY_TEST_CASES)
+    def test_init(self, test_case):
         """Tests initializer."""
-        similarity = self.make_similarity(test_case, tmp_path)
+        similarity = SimilarityFromMemory(
+            similarity_matrix=test_case["similarity_matrix"],
+            species_order=test_case["species_order"],
+        )
         assert (similarity.species_order == test_case["expected_species_order"]).all()
 
-    @mark.parametrize("test_case", SIMILARITY_TEST_CASES)
+    @mark.parametrize("test_case", SIMILARITY_FROM_MEMORY_TEST_CASES)
     def test_calculate_weighted_similarities(self, test_case, tmp_path):
         """Tests .calculate_weighted_similarities."""
-        similarity = self.make_similarity(test_case, tmp_path)
+        similarity = SimilarityFromMemory(
+            similarity_matrix=test_case["similarity_matrix"],
+            species_order=test_case["species_order"],
+        )
         relative_abundances = self.arrange_values(
             test_case["expected_species_order"],
             test_case["species_to_relative_abundances"],
@@ -753,16 +904,81 @@ class TestSimilarity:
         )
         assert weighted_similarities.shape == relative_abundances.shape
         assert allclose(weighted_similarities, expected_weighted_similarities)
-        if test_case["similarities_filepath"] is not None:
-            with open(test_case["similarities_filepath"], "r") as file:
-                similarities_filecontents = file.read()
-            assert similarities_filecontents == test_case["similarities_filecontents"]
+
+
+CREATE_SIMILARITY_TEST_CASES = [
+    {
+        "description": "from memory; no additional parameters",
+        "similarity_matrix": array([[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0]]),
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": None,
+        "similarity_function": None,
+        "features": None,
+        "expected_type": SimilarityFromMemory,
+    },
+    {
+        "description": "from memory; with additional ignored parameters",
+        "similarity_matrix": array([[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0]]),
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": None,
+        "similarity_function": None,
+        "features": array(
+            [[3.2, 5.3, 1.2, 9.4], [4.2, 7.4, 9.5, 7.3], [4.2, 6.2, 6.4, 7.3]]
+        ),
+        "expected_type": SimilarityFromMemory,
+    },
+    {
+        "description": "from function",
+        "similarity_matrix": None,
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": "foo_similarities.tsv",
+        "similarity_function": lambda x, y: 1 / sum(x * y),
+        "features": array(
+            [[3.2, 5.3, 1.2, 9.4], [4.2, 7.4, 9.5, 7.3], [4.2, 6.2, 6.4, 7.3]]
+        ),
+        "expected_type": SimilarityFromFunction,
+    },
+    {
+        "description": "from file; no additional parameters",
+        "similarity_matrix": None,
+        "species_order": None,
+        "similarity_matrix_filepath": "foo_similarities.tsv",
+        "similarity_function": None,
+        "features": None,
+        "expected_type": SimilarityFromFile,
+    },
+    {
+        "description": "from memory; with additional ignored parameters",
+        "similarity_matrix": None,
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": "foo_similarities.tsv",
+        "similarity_function": None,
+        "features": None,
+        "expected_type": SimilarityFromFile,
+    },
+]
+
+
+class TestCreateSimilarity:
+    """Tests metacommunity.create_similarity."""
+
+    @mark.parametrize("test_case", CREATE_SIMILARITY_TEST_CASES)
+    def test_create_similarity(self, test_case):
+        """Tests create_similarity test cases."""
+        similarity_object = create_similarity(
+            similarity_matrix=test_case["similarity_matrix"],
+            species_order=test_case["species_order"],
+            similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
+            similarity_function=test_case["similarity_function"],
+            features=test_case["features"],
+        )
+        assert isinstance(similarity_object, test_case["expected_type"])
 
 
 METACOMMUNITY_TEST_CASES = [
     {
         "description": "disjoint communities; uniform counts; uniform inter-community similarities; viewpoint 0.",
-        "similarity": Similarity(
+        "similarity": SimilarityFromMemory(
             similarity_matrix=array(
                 [
                     [1.0, 0.5, 0.5, 0.7, 0.7, 0.7],
@@ -845,7 +1061,7 @@ METACOMMUNITY_TEST_CASES = [
     },
     {
         "description": "overlapping communities; non-uniform counts; non-uniform inter-community similarities; viewpoint 2.",
-        "similarity": Similarity(
+        "similarity": SimilarityFromMemory(
             similarity_matrix=array(
                 [[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0]]
             ),
@@ -1055,4 +1271,236 @@ class TestMetacommunity:
         )
         assert isclose(
             metacommunity_normalized_beta, test_case["metacommunity_normalized_beta"]
+        )
+
+
+MAKE_METACOMMUNITY_TEST_CASES = [
+    {
+        "description": "numpy.ndarray counts; similarities from memory; no additional parameters",
+        "counts": array(
+            [
+                ["community_1", "species_1", "2"],
+                ["community_1", "species_2", "3"],
+                ["community_2", "species_1", "4"],
+                ["community_2", "species_3", "1"],
+            ]
+        ),
+        "similarity_matrix": array([[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0]]),
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": None,
+        "similarity_function": None,
+        "features": None,
+        "expected_similarity_type": SimilarityFromMemory,
+    },
+    {
+        "description": "numpy.ndarray counts; similarities from memory; with additional ignored parameters",
+        "counts": array(
+            [
+                ["community_1", "species_1", "2"],
+                ["community_1", "species_2", "3"],
+                ["community_2", "species_1", "4"],
+                ["community_2", "species_3", "1"],
+            ]
+        ),
+        "similarity_matrix": array([[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0]]),
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": None,
+        "similarity_function": None,
+        "features": array(
+            [[3.2, 5.3, 1.2, 9.4], [4.2, 7.4, 9.5, 7.3], [4.2, 6.2, 6.4, 7.3]]
+        ),
+        "expected_similarity_type": SimilarityFromMemory,
+    },
+    {
+        "description": "numpy.ndarray counts; similarities from function",
+        "counts": array(
+            [
+                ["community_1", "species_1", "2"],
+                ["community_1", "species_2", "3"],
+                ["community_2", "species_1", "4"],
+                ["community_2", "species_3", "1"],
+            ]
+        ),
+        "similarity_matrix": None,
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": "foo_similarities.tsv",
+        "similarity_function": lambda x, y: 1 / sum(x * y),
+        "features": array(
+            [[3.2, 5.3, 1.2, 9.4], [4.2, 7.4, 9.5, 7.3], [4.2, 6.2, 6.4, 7.3]]
+        ),
+        "expected_similarity_type": SimilarityFromFunction,
+    },
+    {
+        "description": "numpy.ndarray counts; similarities from file; no additional parameters",
+        "counts": array(
+            [
+                ["community_1", "species_1", "2"],
+                ["community_1", "species_2", "3"],
+                ["community_2", "species_1", "4"],
+                ["community_2", "species_3", "1"],
+            ]
+        ),
+        "similarity_matrix": None,
+        "species_order": None,
+        "similarity_matrix_filepath": "foo_similarities.tsv",
+        "similarity_function": None,
+        "features": None,
+        "expected_similarity_type": SimilarityFromFile,
+    },
+    {
+        "description": "numpy.ndarray counts; similarities from memory; with additional ignored parameters",
+        "counts": array(
+            [
+                ["community_1", "species_1", "2"],
+                ["community_1", "species_2", "3"],
+                ["community_2", "species_1", "4"],
+                ["community_2", "species_3", "1"],
+            ]
+        ),
+        "similarity_matrix": None,
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": "foo_similarities.tsv",
+        "similarity_function": None,
+        "features": None,
+        "expected_similarity_type": SimilarityFromFile,
+    },
+    {
+        "description": "pandas.DataFrame counts; similarities from memory; no additional parameters",
+        "counts": DataFrame(
+            {
+                "community": [
+                    "community_1",
+                    "community_1",
+                    "community_2",
+                    "community_2",
+                ],
+                "species": ["species_1", "species_2", "species_1", "species_3"],
+                "count": [2, 3, 4, 1],
+            }
+        ),
+        "similarity_matrix": array([[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0]]),
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": None,
+        "similarity_function": None,
+        "features": None,
+        "expected_similarity_type": SimilarityFromMemory,
+    },
+    {
+        "description": "pandas.DataFrame counts; similarities from memory; with additional ignored parameters",
+        "counts": DataFrame(
+            {
+                "community": [
+                    "community_1",
+                    "community_1",
+                    "community_2",
+                    "community_2",
+                ],
+                "species": ["species_1", "species_2", "species_1", "species_3"],
+                "count": [2, 3, 4, 1],
+            }
+        ),
+        "similarity_matrix": array([[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0]]),
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": None,
+        "similarity_function": None,
+        "features": array(
+            [[3.2, 5.3, 1.2, 9.4], [4.2, 7.4, 9.5, 7.3], [4.2, 6.2, 6.4, 7.3]]
+        ),
+        "expected_similarity_type": SimilarityFromMemory,
+    },
+    {
+        "description": "pandas.DataFrame counts; similarities from function",
+        "counts": DataFrame(
+            {
+                "community": [
+                    "community_1",
+                    "community_1",
+                    "community_2",
+                    "community_2",
+                ],
+                "species": ["species_1", "species_2", "species_1", "species_3"],
+                "count": [2, 3, 4, 1],
+            }
+        ),
+        "similarity_matrix": None,
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": "foo_similarities.tsv",
+        "similarity_function": lambda x, y: 1 / sum(x * y),
+        "features": array(
+            [[3.2, 5.3, 1.2, 9.4], [4.2, 7.4, 9.5, 7.3], [4.2, 6.2, 6.4, 7.3]]
+        ),
+        "expected_similarity_type": SimilarityFromFunction,
+    },
+    {
+        "description": "pandas.DataFrame counts; similarities from file; no additional parameters",
+        "counts": DataFrame(
+            {
+                "community": [
+                    "community_1",
+                    "community_1",
+                    "community_2",
+                    "community_2",
+                ],
+                "species": ["species_1", "species_2", "species_1", "species_3"],
+                "count": [2, 3, 4, 1],
+            }
+        ),
+        "similarity_matrix": None,
+        "species_order": None,
+        "similarity_matrix_filepath": "foo_similarities.tsv",
+        "similarity_function": None,
+        "features": None,
+        "expected_similarity_type": SimilarityFromFile,
+    },
+    {
+        "description": "pandas.DataFrame counts; similarities from memory; with additional ignored parameters",
+        "counts": DataFrame(
+            {
+                "community": [
+                    "community_1",
+                    "community_1",
+                    "community_2",
+                    "community_2",
+                ],
+                "species": ["species_1", "species_2", "species_1", "species_3"],
+                "count": [2, 3, 4, 1],
+            }
+        ),
+        "similarity_matrix": None,
+        "species_order": array(["species_1", "species_2", "species_3"]),
+        "similarity_matrix_filepath": "foo_similarities.tsv",
+        "similarity_function": None,
+        "features": None,
+        "expected_similarity_type": SimilarityFromFile,
+    },
+]
+
+
+class TestMakeMetacommunity:
+    """Tests metacommunity.make_metacommunity."""
+
+    @mark.parametrize("test_case", MAKE_METACOMMUNITY_TEST_CASES)
+    def test_create_similarity(self, test_case, tmp_path):
+        """Tests make_metacommunity test cases."""
+        if test_case["expected_similarity_type"] == SimilarityFromFile:
+            test_case["similarity_matrix_filepath"] = (
+                tmp_path / test_case["similarity_matrix_filepath"]
+            )
+            with open(test_case["similarity_matrix_filepath"], "w") as file:
+                if isinstance(test_case["counts"], ndarray):
+                    unique_species = unique(test_case["counts"][:, 1])
+                else:
+                    unique_species = unique(test_case["counts"].iloc[:, 1].to_numpy())
+
+                file.write("\t".join(species for species in unique_species) + "\n")
+        metacommunity = make_metacommunity(
+            counts=test_case["counts"],
+            similarity_matrix=test_case["similarity_matrix"],
+            similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
+            similarity_function=test_case["similarity_function"],
+            features=test_case["features"],
+            species_order=test_case["species_order"],
+        )
+        assert isinstance(
+            metacommunity.similarity, test_case["expected_similarity_type"]
         )

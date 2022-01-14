@@ -16,16 +16,7 @@ from argparse import Action, ArgumentParser
 from sys import stdout, stdin
 from warnings import warn
 
-########################################################################
-
-
-class ArgumentWarning(Warning):
-    """Used for warnings related to problematic argument choices."""
-
-    pass
-
-
-########################################################################
+from diversity.utilities import ArgumentWarning
 
 
 class ValidateViewpoint(Action):
@@ -39,13 +30,11 @@ class ValidateViewpoint(Action):
         """
         if any([viewpoint > 100 for viewpoint in values]):
             warn(
-                "viewpoints > 100.0 defaults to the analytical formula for viewpoint = infinity.",
+                "viewpoints > 100.0 defaults to the analytical formula"
+                " for viewpoint = infinity.",
                 category=ArgumentWarning,
             )
         setattr(args, self.dest, values)
-
-
-########################################################################
 
 
 def configure_arguments():
@@ -59,8 +48,7 @@ def configure_arguments():
     parser = ArgumentParser()
     parser.add_argument(
         "-i",
-        "--input_file",
-        default=stdin,
+        "--input_filepath",
         help=(
             "A tsv file where the first 3 columns of the file are the"
             " species name, its count, and subcommunity name, and all"
@@ -80,13 +68,13 @@ def configure_arguments():
     )
     parser.add_argument(
         "-o",
-        "--output_file",
+        "--output_filepath",
         default=stdout,
         help=("A filepath to where the program's output will be saved"),
     )
     parser.add_argument(
         "-s",
-        "--similarity_matrix_file",
+        "--similarity_matrix_filepath",
         help=(
             "The filepath to a tsv file containing a symmetric"
             " similarity matrix. If the file does not exist, one will"

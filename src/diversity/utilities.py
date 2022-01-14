@@ -16,6 +16,8 @@ InvalidArgumentError
     Raised when invalid argument is passed to a function.
 """
 from pathlib import Path
+from warnings import warn
+
 from numpy import (
     array,
     isclose,
@@ -43,11 +45,35 @@ class InvalidArgumentError(MetacommunityError):
     pass
 
 
+class ArgumentWarning(Warning):
+    """Used for warnings related to problematic argument choices."""
+
+    pass
+
+
 def get_file_delimiter(filepath):
+    """Determines delimiter of file from filepath ending.
+
+    Parameters
+    ----------
+    filepath: str
+        The filepath whose delimiter to determine.
+
+    Returns
+    -------
+    "," if the file has the csv extension and "\t" otherwise.
+    """
     suffix = Path(filepath).suffix
     if suffix == ".csv":
         return ","
     elif suffix == ".tsv":
+        return "\t"
+    else:
+        warn(
+            f"File extension for {filepath} not recognized. Assuming"
+            " tab-delimited file.",
+            category=ArgumentWarning,
+        )
         return "\t"
 
 

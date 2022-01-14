@@ -14,9 +14,9 @@ MAIN_TEST_CASES = [
     {
         "description": "disjoint communities; uniform counts; uniform inter-community similarities; viewpoint 0.",
         "args": Namespace(
-            input_file="counts.tsv",
-            output_file="diversities.tsv",
-            similarity_matrix_file="similarities.tsv",
+            input_filepath="counts.tsv",
+            output_filepath="diversities.tsv",
+            similarity_matrix_filepath="similarities.tsv",
             viewpoint=[0],
             log_level="WARNING",
         ),
@@ -48,9 +48,9 @@ MAIN_TEST_CASES = [
     {
         "description": "overlapping communities; non-uniform counts; non-uniform inter-community similarities; viewpoint 2.",
         "args": Namespace(
-            input_file="foo_counts.tsv",
-            output_file="bar_counts.tsv",
-            similarity_matrix_file="baz_similarities.tsv",
+            input_filepath="foo_counts.tsv",
+            output_filepath="bar_counts.tsv",
+            similarity_matrix_filepath="baz_similarities.tsv",
             viewpoint=[2, 101, 102, inf],
             log_level="WARNING",
         ),
@@ -98,40 +98,22 @@ class TestMain:
     def test_main(self, test_case, tmp_path):
         """Tests __main__.main."""
         for filepath in [
-            test_case["args"].input_file,
-            test_case["args"].similarity_matrix_file,
-            test_case["args"].output_file,
+            test_case["args"].input_filepath,
+            test_case["args"].similarity_matrix_filepath,
+            test_case["args"].output_filepath,
         ]:
             filepath = f"{tmp_path}/{filepath}"
 
         self.write_file(
-            test_case["args"].input_file,
+            test_case["args"].input_filepath,
             test_case["input_filecontents"],
         )
         self.write_file(
-            test_case["args"].similarity_matrix_file,
+            test_case["args"].similarity_matrix_filepath,
             test_case["similarities_filecontents"],
         )
 
         main(test_case["args"])
-        with open(test_case["args"].output_file, "r") as file:
+        with open(test_case["args"].output_filepath, "r") as file:
             output_filecontents = file.read()
         assert output_filecontents == test_case["output_filecontents"]
-
-
-"""
-Test cases:
-1. similarity matrix file: use cases from Metacommunity tests
-    - ensure matrix file is not deleted, regardless of --store_similarity_matrix
-    - ensure correcly formatted output file is created
-2. delimited features file:
-    - test delimiters
-    - hand-calculate
-3. json features file:
-    - use same similarity and hand-calculations as in 2.
-
-hand-calculations for similarity function:
-define function & features
-calculate similarity matrix
-use matrix for hand-calculations of diversity
-"""

@@ -13,8 +13,6 @@ from diversity.utilities import get_file_delimiter
 captureWarnings(True)
 getLogger("py.warnings").addHandler(LOG_HANDLER)
 
-########################################################################
-
 
 def main(args):
     """Calculates diversity from species counts and similarities.
@@ -30,8 +28,8 @@ def main(args):
     LOGGER.info(" ".join([f"python{python_version()}", *argv]))
     LOGGER.debug(f"args: {args}")
 
-    delimiter = get_file_delimiter(args.input_file)
-    species_counts = read_csv(args.input_file, sep=delimiter)
+    delimiter = get_file_delimiter(args.input_filepath)
+    species_counts = read_csv(args.input_filepath, sep=delimiter)
 
     LOGGER.debug(f"data: {species_counts}")
 
@@ -48,12 +46,13 @@ def main(args):
     community_views.viewpoint = community_views.viewpoint.map(
         lambda v: format(v, ".2f")
     )
-    community_views.to_csv(args.output_file, sep="\t", float_format="%.4f", index=False)
+    community_views.to_csv(
+        args.output_filepath, sep="\t", float_format="%.4f", index=False
+    )
 
     LOGGER.info("Done!")
 
 
-########################################################################
 if __name__ == "__main__":
     parser = configure_arguments()
     args = parse.parse_args()

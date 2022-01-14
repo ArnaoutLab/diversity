@@ -17,7 +17,6 @@ from abc import ABC, abstractmethod
 from csv import reader
 from functools import cached_property
 from pathlib import Path
-from warnings import warn
 
 from pandas import DataFrame
 from numpy import dot, array, empty, zeros, broadcast_to, divide, float64
@@ -46,31 +45,31 @@ class Abundance:
     ):
         """Initializes object.
 
-              Determines species and subcommunity orderings if needed.
+        Determines species and subcommunity orderings if needed.
 
-              Parameters
-              ----------
-              counts: numpy.ndarray
-                  A 2-d numpy.ndarray with subcommunity identifiers, species
-                  identifiers and number of appearances of the row's species
-                  in the row's subcommunity. The column ordering is determined
-                  by the subcommunity_column, species_column, and
-                  counts_column parameters. Each combination of species and
-                  subcommunity must appear no more than once.
-              species_order: numpy.ndarray
-                  Ordered unique species identifiers. The ordering determines
-                  in which order values corresponding to each species are
-                  returned by methods of the object.
-              subcommunity_order: Iterable
-                  Ordered unique subcommunity identifiers. The ordering
-                  determines in which order values corresponding to each
-                  species are returned by methods of the object.
-              subcommunity_column: int
-                  Index of subcommunity identifier column in counts.
-              species_column: int
-        Index of species identifier column in counts.
-              count_column: int
-                  Index of species count column in counts.
+        Parameters
+        ----------
+        counts: numpy.ndarray
+            A 2-d numpy.ndarray with subcommunity identifiers, species
+            identifiers and number of appearances of the row's species
+            in the row's subcommunity. The column ordering is determined
+            by the subcommunity_column, species_column, and
+            counts_column parameters. Each combination of species and
+            subcommunity must appear no more than once.
+        species_order: numpy.ndarray
+            Ordered unique species identifiers. The ordering determines
+            in which order values corresponding to each species are
+            returned by methods of the object.
+        subcommunity_order: Iterable
+            Ordered unique subcommunity identifiers. The ordering
+            determines in which order values corresponding to each
+            species are returned by methods of the object.
+        subcommunity_column: int
+            Index of subcommunity identifier column in counts.
+        species_column: int
+            Index of species identifier column in counts.
+        count_column: int
+            Index of species count column in counts.
         """
         self.counts = counts
         self.subcommunity_column = subcommunity_column
@@ -149,13 +148,13 @@ class Abundance:
         return self.subcommunity_abundance / self.subcommunity_normalizing_constants
 
 
-class SimilarityStrategy(ABC):
+class Similarity(ABC):
     @abstractmethod
     def calculate_weighted_similarities(self):
         """Abstract method."""
 
 
-class SimilarityFileStrategy(SimilarityStrategy):
+class SimilarityFromFile(Similarity):
     def __init__(self, similarity_matrix_filepath):
         """
         similarity_matrix_filepath: str
@@ -168,9 +167,14 @@ class SimilarityFileStrategy(SimilarityStrategy):
             soon as it is needed in subsequent computations.
         """
         self.similarity_matrix_filepath = Path(similarity_matrix_filepath)
-        self.delimiter = get_file_delimiter(self.similarity_matrix_filepath)
+        self._delimiter = get_file_delimiter(self.similarity_matrix_filepath)
+
+    @cached_property
+    def species_order(self):
+        """The species ordering used in similarity matrix file."""
         with open(self.similarity_matrix_filepath, "r") as file:
-            self.species_order = array(next(reader(file, delimiter=self.delimiter)))
+            species_order_ = array(next(reader(file, delimiter=self._delimiter)))
+        return species_order_
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -181,14 +185,14 @@ class SimilarityFileStrategy(SimilarityStrategy):
         """
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
         with open(self.similarity_matrix_filepath, "r") as file:
-            next(reader(file, delimiter=self.delimiter))
-            for i, row in enumerate(reader(file, delimiter=self.delimiter)):
+            next(reader(file, delimiter=self._delimiter))
+            for i, row in enumerate(reader(file, delimiter=self._delimiter)):
                 similarities_row = array(row, dtype=float64)
                 weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
         return weighted_similarities
 
 
-class SimilarityFunctionStrategy(SimilarityFileStrategy):
+class SimilarityFromFunction(SimilarityFromFile):
     def __init__(
         self, similarity_matrix_filepath, similarity_function, features, species_order
     ):
@@ -219,8 +223,9 @@ class SimilarityFunctionStrategy(SimilarityFileStrategy):
         self.features = features
         self.species_order = species_order
 
-    def format_row(self, row):
-        return "\t".join(map(lambda x: format(x, ".3e"), row)) + "\n"
+    def __format_row(self, row):
+        """Formats row to a string of delimited data."""
+        return self._delimiter.join(map(lambda x: format(x, ".3e"), row)) + "\n"
 
     def __write_similarity_matrix(self):
         """Writes species similarity matrix into file.
@@ -234,11 +239,11 @@ class SimilarityFunctionStrategy(SimilarityFileStrategy):
         """
         row_i = empty(len(self.species_order), dtype=float64)
         with open(self.similarity_matrix_filepath, "w") as file:
-            file.write("\t".join(map(str, self.species_order)) + "\n")
+            file.write(self._delimiter.join(self.species_order) + "\n")
             for features_i in self.features:
                 for j, features_j in enumerate(self.features):
                     row_i[j] = self.similarity_function(features_i, features_j)
-                formatted_row_i = self.format_row(row_i)
+                formatted_row_i = self.__format_row(row_i)
                 file.write(formatted_row_i)
 
     def calculate_weighted_similarities(self, relative_abundances):
@@ -247,7 +252,7 @@ class SimilarityFunctionStrategy(SimilarityFileStrategy):
         return super().calculate_weighted_similarities(relative_abundances)
 
 
-class SimilarityInMemoryStrategy(SimilarityStrategy):
+class SimilarityFromMemory(Similarity):
     def __init__(self, similarity_matrix, species_order):
         """
         similarity_matrix: numpy.ndarray
@@ -269,32 +274,61 @@ class SimilarityInMemoryStrategy(SimilarityStrategy):
         return dot(self.similarity_matrix, relative_abundances)
 
 
-def similarity_strategy_factory(
+def create_similarity(
     similarity_matrix=None,
     species_order=None,
     similarity_matrix_filepath=None,
     similarity_function=None,
     features=None,
 ):
-    in_memory_parameters = (similarity_matrix, species_order)
-    function_parameters = (
+    """Creates a Similarity object from specified parameter combination.
+
+    Valid parameter combinations and the returned types:
+        - similarity_matrix, species_order -> SimilarityFromMemory
+        - similarity_matrix_filepath -> SimilarityFromFile
+        - species_order, similarity_matrix_filepath,
+          similarity_function, features -> SimilarityFromFunction
+
+    Parameters
+    ----------
+    similarity_matrix: numpy.ndarray
+        Used by diversity.metacommunity.SimilarityFromMemory.
+    species_order: Iterable
+        Used by diversity.metacommunity.SimilarityFromMemory, or
+        diversity.metacommunity.SimilarityFromFunction.
+    similarity_matrix_filepath: str
+        Used by diversity.metacommunity.SimilarityFromFile, or
+        diversity.metacommunity.SimilarityFromFunction.
+    similarity_function: Callable
+        Used by diversity.metacommunity.SimilarityFromFunction.
+    features: numpy.ndarray
+        Used by diversity.metacommunity.SimilarityFromFunction.
+
+    Returns
+    -------
+    An object whose type is the implementation of the abstract base
+    Similarity according to parameter specification.
+    """
+    from_memory_parameters = (similarity_matrix, species_order)
+    from_function_parameters = (
         similarity_matrix_filepath,
         similarity_function,
         features,
         species_order,
     )
-    file_parameters = (similarity_matrix_filepath,)
+    from_file_parameters = (similarity_matrix_filepath,)
 
-    if all(p is not None for p in in_memory_parameters):
-        return SimilarityInMemoryStrategy(*in_memory_parameters)
-    elif all(p is not None for p in function_parameters):
-        return SimilarityFunctionStrategy(*function_parameters)
-    elif all(p is not None for p in file_parameters):
-        return SimilarityFileStrategy(*file_parameters)
+    if all(p is not None for p in from_memory_parameters):
+        return SimilarityFromMemory(*from_memory_parameters)
+    elif all(p is not None for p in from_function_parameters):
+        return SimilarityFromFunction(*from_function_parameters)
+    elif all(p is not None for p in from_file_parameters):
+        return SimilarityFromFile(*from_file_parameters)
     else:
         # FIXME need to refer to correct documentation
         raise Exception(
-            "Invalid argument combination. See the documentation for valid argument combinations"
+            "Invalid argument combination. See the documentation for"
+            " valid argument combinations."
         )
 
 
@@ -454,9 +488,43 @@ def make_metacommunity(
     features=None,
     species_order=None,
 ):
+    """Builds a Metacommunity object from specified parameters.
+
+    Valid parameter combinations and the corresponding Similarity
+    implementations used are:
+        - similarity_matrix, species_order -> SimilarityFromMemory
+        - similarity_matrix_filepath -> SimilarityFromFile
+        - species_order, similarity_matrix_filepath,
+          similarity_function, features -> SimilarityFromFunction
+
+    Parameters
+    ----------
+    counts: numpy.ndarray or pandas.DataFrame
+        See diversity.metacommunity.Abundance. I object is a
+        pandas.DataFrame, its to_numpy method should return the expected
+        numpy.ndarray.
+    similarity_matrix: numpy.ndarray
+        See diversity.metacommunity.SimilarityFromMemory.
+    similarity_matrix_filepath: str
+        See diversity.metacommunity.SimilarityFromFile, or
+        diversity.metacommunity.SimilarityFromFunction.
+    similarity_function: Callable
+        See diversity.metacommunity.SimilarityFromFunction.
+    features: numpy.ndarray
+        See diversity.metacommunity.SimilarityFromFunction.
+    species_order: Iterable
+        See diversity.metacommunity.SimilarityFromMemory, or
+        diversity.metacommunity.SimilarityFromFunction.
+
+    Returns
+    -------
+    A diversity.metacommunity.Metacommunity object build according to
+    parameter specification.
+    """
+
     if isinstance(similarity_matrix, DataFrame):
         similarity_matrix = similarity_matrix.to_numpy()
-    similarity = similarity_strategy_factory(
+    similarity = create_similarity(
         similarity_matrix,
         species_order,
         similarity_matrix_filepath,
