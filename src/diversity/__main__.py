@@ -1,3 +1,10 @@
+"""Main module for executing diversity on command-line.
+
+Functions
+---------
+main
+    Calculates diversities according to command-line specifications.
+"""
 from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger

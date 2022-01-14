@@ -2,6 +2,8 @@
 
 Functions
 ---------
+get_file_delimiter
+    Determines delimiter in datafile from file extension.
 power_mean
     Calculates weighted power means.
 unique_correspondence
@@ -14,6 +16,8 @@ MetacommunityError
     Base class for all custom metacommunity exceptions.
 InvalidArgumentError
     Raised when invalid argument is passed to a function.
+ArgumentWarning
+    Used for warnings of problematic argument choices.
 """
 from pathlib import Path
 from warnings import warn

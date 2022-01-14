@@ -2,16 +2,29 @@
 
 Classes
 -------
-
-Abundance:
+Abundance
     Species abundances in metacommunity.
-
-Similarity:
-    Species similarities weighted by relative abundance.
-
+Similarity
+    Abstract base class for relative abundance-weighed species
+    similarities.
+SimilarityFromFile
+    Implements Similarity by reading similarities from a file.
+SimilarityFromFunction
+    Implements Similarity by calculating similarities with a function.
+SimilarityFromMemory
+    Implements Similarity by storing similarities in memory.
 Metacommunity
     Represents a metacommunity made up of subcommunities and computes
     metacommunity subcommunity diversity measures.
+
+Functions
+---------
+create_similarity
+    Returns correct diversity.metacommunity.Similarity object fitting
+    parameter specification.
+make_metacommunity
+    Builds diversity.metacommunity.Metacommunity object according to
+    parameter specification.
 """
 from abc import ABC, abstractmethod
 from csv import reader
@@ -85,6 +98,14 @@ class Abundance:
         )
 
     def __pivot_table(self):
+        """Converts long to wide formatted counts.
+
+        Returns
+        -------
+        A numpy.ndarray where rows correspond to species, columns to
+        subcommunities and each element is the count of a species in a
+        specific subcommunity.
+        """
         table = zeros(
             (len(self.species_order), len(self.subcommunity_order)), dtype=float64
         )
@@ -149,14 +170,37 @@ class Abundance:
 
 
 class Similarity(ABC):
+    """Interface for classes computing weighted similarities."""
+
     @abstractmethod
-    def calculate_weighted_similarities(self):
-        """Abstract method."""
+    def calculate_weighted_similarities(self, relative_abundances):
+        """Calculates weighted sums of similarities to each species.
+
+        Parameters
+        ----------
+        relative_abundances: numpy.ndarray
+            Array of shape (n_species, n_communities), where rows
+            correspond to unique species, columns correspond to
+            (meta-/sub-)communities and each element is the relative
+            abundance of a species in a (meta-/sub-)community.
+
+        Returns
+        -------
+        A 2-d numpy.ndarray of shape (n_species, n_communities), where
+        rows correspond to unique species, columns correspond to
+        (meta-/sub-) communities and each element is a sum of
+        similarities to one species weighted by the similarities stored
+        in the similarities file.
+        """
+        pass
 
 
 class SimilarityFromFile(Similarity):
+    """Implements Similarity by using similarities stored in file."""
+
     def __init__(self, similarity_matrix_filepath):
-        """
+        """Initializes object.
+
         similarity_matrix_filepath: str
             Path to similarities file. If similarity_function is None
             the file must exist and contain a square matrix of
@@ -179,9 +223,11 @@ class SimilarityFromFile(Similarity):
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
-        Same as calculate_weighted_similarities, except that
-        similarities are read from similarities file referred to by
+        Similarities are read from similarities file referred to by
         object's similarity_matrix_filepath attribute.
+
+        See diversity.metacommunity.Similarity.calculate_weighted_similarities
+        for complete specification.
         """
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
         with open(self.similarity_matrix_filepath, "r") as file:
@@ -193,29 +239,29 @@ class SimilarityFromFile(Similarity):
 
 
 class SimilarityFromFunction(SimilarityFromFile):
+    """Implements Similarity using a similarity function."""
+
     def __init__(
         self, similarity_matrix_filepath, similarity_function, features, species_order
     ):
-        """
+        """Initializes object.
+
         Parameters
         ----------
+        similarity_matrix_filepath: str
+            Path to file in which to store calculated similarities.
         similarity_function: Callable
             Callable to determine similarity between species. Must take
-            two numpy.ndarray objects containing species features as
-            arguments and return a numeric similarity value. Must be
-            specified together with similarity_matrix_filepath, a path to a
-            non-existing filename to store similarities in, which will
-            be generated when needed.
+            two items from the features argument and return a numeric
+            similarity value.
         features: numpy.ndarray
-            A 2d numpy.ndarray where rows are species and columns
-            correspond to features. The order of features is inferred
-            from species_order.
-        species_order: numpy.ndarray
-            The unique species in desired order. Must be specified when
-            similarity_matrix, or similarity_function are provided. Must
-            not be specified, when similarity_matrix_filepath but not
-            similarity_function as provided. Row and column ordering in
-            similarity matrix calculations is determined by this
+            A numpy.ndarray where each item along axis 0 comprises the
+            features of a species that are passed to
+            similarity_function. The order of features is determined
+            by species_order.
+        species_order: Iterable
+            The unique species in desired order. Row and column ordering
+            in similarity matrix calculations is determined by this
             argument.
         """
         super().__init__(similarity_matrix_filepath)
@@ -231,11 +277,11 @@ class SimilarityFromFunction(SimilarityFromFile):
         """Writes species similarity matrix into file.
 
         The matrix is computed using the object's similarity_function
-        attribute applied to the object's features attribute. The result
-        is written into file referred to by object's
-        similarity_matrix_filepath attribute together with a header
-        establishing row and column ordering. Any existing contents are
-        overwritten.
+        attribute applied to pairs of items from the object's features
+        attribute. The result is written into the file referred to by
+        object's similarity_matrix_filepath attribute together with a
+        header establishing row and column ordering. Any existing
+        contents are overwritten.
         """
         row_i = empty(len(self.species_order), dtype=float64)
         with open(self.similarity_matrix_filepath, "w") as file:
@@ -247,20 +293,31 @@ class SimilarityFromFunction(SimilarityFromFile):
                 file.write(formatted_row_i)
 
     def calculate_weighted_similarities(self, relative_abundances):
+        """Calculates weighted sums of similarities to each species.
+
+        Similarities are calculated using object's similarity_function
+        attribute and stored in similarities file referred to by
+        object's similarity_matrix_filepath attribute.
+
+        See diversity.metacommunity.Similarity.calculate_weighted_similarities
+        for complete specification.
+        """
         if not self.similarity_matrix_filepath.is_file():
             self.__write_similarity_matrix()
         return super().calculate_weighted_similarities(relative_abundances)
 
 
 class SimilarityFromMemory(Similarity):
+    """Implements Similarity using similarities stored in memory."""
+
     def __init__(self, similarity_matrix, species_order):
-        """
+        """Initializes object.
+
         similarity_matrix: numpy.ndarray
-            2-d array of similarities between species. Must be specified
-            together with species_order, which establishes row and
-            column ordering. If None, a similarity function or a file
-            containing similarities must be specified via the
-            similarity_matrix_filepath and similarity_function parameters.
+            2-d array of similarities between species. Ordering of rows
+            and columns must correspond to species_order argument.
+        species_order: Iterable
+            The unique species in desired order.
         """
         self.similarity_matrix = similarity_matrix
         self.species_order = species_order
@@ -268,8 +325,11 @@ class SimilarityFromMemory(Similarity):
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
-        Same as calculate_weighted_similarities, except that the object's
-        similarity_matrix attribute is used.
+        Similarities are calculated using object's similarity_matrix
+        attribute.
+
+        See diversity.metacommunity.Similarity.calculate_weighted_similarities
+        for complete specification.
         """
         return dot(self.similarity_matrix, relative_abundances)
 
@@ -333,7 +393,12 @@ def create_similarity(
 
 
 class Metacommunity:
-    """Class for metacommunities and calculating their diversity."""
+    """Class for metacommunities and calculating their diversity.
+
+    All diversities computed by objects of this class are
+    similarity-sensitive. See https://arxiv.org/abs/1404.6520 for
+    precise definitions of the various diversity measures.
+    """
 
     def __init__(self, similarity, abundance):
         """Initializes object.
@@ -371,9 +436,35 @@ class Metacommunity:
         )
 
     def subcommunity_alpha(self, viewpoint):
+        """Calculates alpha class diversities of subcommunities.
+
+        Corresponds roughly to the diversities of subcommunities
+        relative to the metacommunity.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__subcommunity_measure(viewpoint, 1, self.__subcommunity_similarity)
 
     def subcommunity_rho(self, viewpoint):
+        """Calculates rho class diversities of subcommunities.
+
+        Corresponds roughly to how redundant each subcommunity's classes
+        are in the metacommunity.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__subcommunity_measure(
             viewpoint,
             self.__metacommunity_similarity,
@@ -381,9 +472,35 @@ class Metacommunity:
         )
 
     def subcommunity_beta(self, viewpoint):
+        """Calculates beta class diversities of subcommunities.
+
+        Corresponds roughly to how distinct each subcommunity's classes
+        are from all classes in metacommunity.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only
+            the most frequent species.
+        """
         return 1 / self.subcommunity_rho(viewpoint)
 
     def subcommunity_gamma(self, viewpoint):
+        """Calculates gamma class diversities of subcommunities.
+
+        Corresponds roughly to how much each subcommunity contributes
+        towards the metacommunity diversity.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only
+            the most frequent species.
+        """
         denominator = broadcast_to(
             self.__metacommunity_similarity,
             self.abundance.normalized_subcommunity_abundance.shape,
@@ -391,11 +508,36 @@ class Metacommunity:
         return self.__subcommunity_measure(viewpoint, 1, denominator)
 
     def normalized_subcommunity_alpha(self, viewpoint):
+        """Calculates normalized alpha class diversities of subcommunities.
+
+        Corresponds roughly to the diversities of subcommunities in
+        isolation.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__subcommunity_measure(
             viewpoint, 1, self.__normalized_subcommunity_similarity
         )
 
     def normalized_subcommunity_rho(self, viewpoint):
+        """Calculates normalized rho class diversities of subcommunities.
+
+        Corresponds roughly to the representativeness of subcommunities.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__subcommunity_measure(
             viewpoint,
             self.__metacommunity_similarity,
@@ -403,34 +545,139 @@ class Metacommunity:
         )
 
     def normalized_subcommunity_beta(self, viewpoint):
+        """Calculates normalized rho class diversities of subcommunities.
+
+        Corresponds roughly to average diversity of subcommunities in
+        the metacommunity.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return 1 / self.normalized_subcommunity_rho(viewpoint)
 
     def metacommunity_alpha(self, viewpoint):
+        """Calculates alpha class diversity of metacommunity.
+
+        Corresponds roughly to the average diversity of subcommunities
+        relative to the metacommunity.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__metacommunity_measure(viewpoint, self.subcommunity_alpha)
 
     def metacommunity_rho(self, viewpoint):
+        """Calculates rho class diversitiy of metacommunity.
+
+        Corresponds roughly to the average redundancy of subcommunities
+        in the metacommunity.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__metacommunity_measure(viewpoint, self.subcommunity_rho)
 
     def metacommunity_beta(self, viewpoint):
+        """Calculates beta class diversity of metacommunity.
+
+        Corresponds roughly to the average distinctness of
+        subcommunities within the metacommunity.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__metacommunity_measure(viewpoint, self.subcommunity_beta)
 
     def metacommunity_gamma(self, viewpoint):
+        """Calculates gamma class diversity of metacommunity.
+
+        Corresponds roughly to the class diversity of the unpartitioned
+        metacommunity.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__metacommunity_measure(viewpoint, self.subcommunity_gamma)
 
     def normalized_metacommunity_alpha(self, viewpoint):
+        """Calculates alpha class diversity of metacommunity.
+
+        Corresponds roughly to the average diversity of subcommunities
+        in isolation.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__metacommunity_measure(
             viewpoint, self.normalized_subcommunity_alpha
         )
 
     def normalized_metacommunity_rho(self, viewpoint):
+        """Calculates rho class diversitiy of metacommunity.
+
+        Corresponds roughly to the average representativeness of
+        subcommunities.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__metacommunity_measure(viewpoint, self.normalized_subcommunity_rho)
 
     def normalized_metacommunity_beta(self, viewpoint):
+        """Calculates beta class diversity of metacommunity.
+
+        Corresponds roughly to the effective number of distinct
+        subcommunities.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return self.__metacommunity_measure(
             viewpoint, self.normalized_subcommunity_beta
         )
 
     def __subcommunity_measure(self, viewpoint, numerator, denominator):
+        """Calculates subcommunity diversity measures."""
         similarities = divide(
             numerator, denominator, out=zeros(denominator.shape), where=denominator != 0
         )
@@ -441,6 +688,7 @@ class Metacommunity:
         )
 
     def __metacommunity_measure(self, viewpoint, subcommunity_function):
+        """Calculates metcommunity diversity measures."""
         subcommunity_measure = subcommunity_function(viewpoint)
         return power_mean(
             1 - viewpoint,
@@ -449,6 +697,16 @@ class Metacommunity:
         )
 
     def subcommunities_to_dataframe(self, viewpoint):
+        """Table containing all subcommunity diversity values.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species.
+        """
         return DataFrame(
             {
                 "community": self.abundance.subcommunity_order,
@@ -464,6 +722,15 @@ class Metacommunity:
         )
 
     def metacommunity_to_dataframe(self, viewpoint):
+        """Table containing all metacommunity diversity values.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Non-negative number. Can be interpreted as the degree of
+            ignorance towards rare species, where 0 treats rare species
+            the same as frequent species, and infinity considers only the
+            most frequent species."""
         return DataFrame(
             {
                 "community": "metacommunity",

@@ -1,16 +1,14 @@
-"""Module for Metacommunity's argument parser configuration.
+"""Module for diversity's argument parser configuration.
 
 Classes
 -------
-ArgumentWarning
-    Warning category for problematic arguments.
 ValidateViewpoint
     Validator for -viewpoint parameter.
 
 Functions
 ---------
 configure_arguments
-    Creates argument parser.
+    Creates argument parser for .
 """
 from argparse import Action, ArgumentParser
 from sys import stdout, stdin
