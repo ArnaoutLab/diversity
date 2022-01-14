@@ -15,6 +15,7 @@ MetacommunityError
 InvalidArgumentError
     Raised when invalid argument is passed to a function.
 """
+from pathlib import Path
 from numpy import (
     array,
     isclose,
@@ -40,6 +41,14 @@ class InvalidArgumentError(MetacommunityError):
     """Raised when a function receives an invalid argument."""
 
     pass
+
+
+def get_file_delimiter(filepath):
+    suffix = Path(filepath).suffix
+    if suffix == ".csv":
+        return ","
+    elif suffix == ".tsv":
+        return "\t"
 
 
 def power_mean(order, weights, items, atol=1e-9):

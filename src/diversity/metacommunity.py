@@ -22,7 +22,7 @@ from warnings import warn
 from pandas import DataFrame
 from numpy import dot, array, empty, zeros, broadcast_to, divide, float64
 
-from diversity.utilities import power_mean, unique_correspondence
+from diversity.utilities import get_file_delimiter, power_mean, unique_correspondence
 
 
 class Abundance:
@@ -168,11 +168,7 @@ class SimilarityFileStrategy(SimilarityStrategy):
             soon as it is needed in subsequent computations.
         """
         self.similarity_matrix_filepath = Path(similarity_matrix_filepath)
-        self.file_suffix = self.similarity_matrix_filepath.suffix
-        if self.file_suffix == ".csv":
-            self.delimiter = ","
-        elif self.file_suffix == ".tsv":
-            self.delimiter = "\t"
+        self.delimiter = get_file_delimiter(self.similarity_matrix_filepath)
         with open(self.similarity_matrix_filepath, "r") as file:
             self.species_order = array(next(reader(file, delimiter=self.delimiter)))
 
@@ -252,7 +248,7 @@ class SimilarityFunctionStrategy(SimilarityFileStrategy):
 
 
 class SimilarityInMemoryStrategy(SimilarityStrategy):
-    def __init__(self, similarity_matrix):
+    def __init__(self, similarity_matrix, species_order):
         """
         similarity_matrix: numpy.ndarray
             2-d array of similarities between species. Must be specified
@@ -262,7 +258,7 @@ class SimilarityInMemoryStrategy(SimilarityStrategy):
             similarity_matrix_filepath and similarity_function parameters.
         """
         self.similarity_matrix = similarity_matrix
-        self.species_order = self.similarity_matrix[0, :]
+        self.species_order = species_order
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -275,12 +271,12 @@ class SimilarityInMemoryStrategy(SimilarityStrategy):
 
 def similarity_strategy_factory(
     similarity_matrix=None,
+    species_order=None,
     similarity_matrix_filepath=None,
     similarity_function=None,
     features=None,
-    species_order=None,
 ):
-    in_memory_parameters = (similarity_matrix,)
+    in_memory_parameters = (similarity_matrix, species_order)
     function_parameters = (
         similarity_matrix_filepath,
         similarity_function,
@@ -289,11 +285,11 @@ def similarity_strategy_factory(
     )
     file_parameters = (similarity_matrix_filepath,)
 
-    if None not in in_memory_parameters:
+    if all(p is not None for p in in_memory_parameters):
         return SimilarityInMemoryStrategy(*in_memory_parameters)
-    elif None not in function_parameters:
+    elif all(p is not None for p in function_parameters):
         return SimilarityFunctionStrategy(*function_parameters)
-    elif None not in file_parameters:
+    elif all(p is not None for p in file_parameters):
         return SimilarityFileStrategy(*file_parameters)
     else:
         # FIXME need to refer to correct documentation
@@ -307,11 +303,6 @@ class Metacommunity:
 
     Attributes
     ----------
-    counts: numpy.ndarray
-    viewpoint: float
-    similarity_matrix_filepath: str
-    similarity_function: Callable
-    features: np.ndarray
     abundance: Abundance
     similarity: Similarity
     """
@@ -319,14 +310,6 @@ class Metacommunity:
     def __init__(self, similarity, abundance):
         self.similarity = similarity
         self.abundance = abundance
-        if not all(self.similarity.species_order == self.abundance.species_order):
-            self.abundance.species_order = self.similarity.species_order
-            warn(
-                "similarity and abundance must have same species order"
-                " attribute. species_order attribute of abundance is"
-                " set to the value of the species_order attribute of"
-                " similarity."
-            )
 
     @cached_property
     def metacommunity_similarity(self):
@@ -469,12 +452,16 @@ def make_metacommunity(
     features=None,
     species_order=None,
 ):
+    if isinstance(similarity_matrix, DataFrame):
+        similarity_matrix = similarity_matrix.to_numpy()
     similarity = similarity_strategy_factory(
         similarity_matrix,
+        species_order,
         similarity_matrix_filepath,
         similarity_function,
         features,
-        species_order,
     )
+    if isinstance(counts, DataFrame):
+        counts = counts.to_numpy()
     abundance = Abundance(counts, similarity.species_order)
     return Metacommunity(similarity, abundance)

@@ -1,14 +1,13 @@
-from collections import defaultdict
-from json import load
 from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger
 
-from pandas import read_csv, concat, DataFrame
+from pandas import read_csv, concat
 
 from diversity.metacommunity import make_metacommunity
 from diversity.parameters import configure_arguments
 from diversity.log import LOG_HANDLER, LOGGER
+from diversity.utilities import get_file_delimiter
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
@@ -26,8 +25,8 @@ def main():
     LOGGER.info(" ".join([f"python{python_version()}", *argv]))
     LOGGER.debug(f"args: {args}")
 
-    species_counts = read_csv(args.input_file, sep=",").to_numpy()
-    print(species_counts)
+    delimiter = get_file_delimiter(args.input_file)
+    species_counts = read_csv(args.input_file, sep=delimiter)
 
     LOGGER.debug(f"data: {species_counts}")
 
