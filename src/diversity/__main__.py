@@ -15,11 +15,16 @@ getLogger("py.warnings").addHandler(LOG_HANDLER)
 ########################################################################
 
 
-def main():
-    # Parse and validate arguments
-    parser = configure_arguments()
-    args = parser.parse_args()
+def main(args):
+    """Calculates diversity from species counts and similarities.
 
+    Parameters
+    ----------
+    args: argparse.Namespace
+        Return object of argparse.ArgumentParser object created by
+        diversity.parameters.configure_arguments and applied to command
+        line arguments.
+    """
     LOGGER.setLevel(args.log_level)
     LOGGER.info(" ".join([f"python{python_version()}", *argv]))
     LOGGER.debug(f"args: {args}")
@@ -28,7 +33,7 @@ def main():
 
     LOGGER.debug(f"data: {species_counts}")
 
-    features = x  # FIXME read features in separately
+    # features = x  # FIXME read features in separately
 
     similarity = Similarity(similarities_filepath=args.similarity_matrix_file)
     abundance = Abundance(
@@ -42,6 +47,9 @@ def main():
         community_views.append(meta.metacommunity_to_dataframe(view))
 
     community_views = concat(community_views, ignore_index=True)
+    community_views.viewpoint = community_views.viewpoint.map(
+        lambda v: format(v, ".2f")
+    )
     community_views.to_csv(args.output_file, sep="\t", float_format="%.4f", index=False)
 
     LOGGER.info("Done!")
@@ -49,4 +57,6 @@ def main():
 
 ########################################################################
 if __name__ == "__main__":
-    main()
+    parser = configure_arguments()
+    args = parse.parse_args()
+    main(args)
