@@ -1482,10 +1482,11 @@ class TestMakeMetacommunity:
     @mark.parametrize("test_case", MAKE_METACOMMUNITY_TEST_CASES)
     def test_create_similarity(self, test_case, tmp_path):
         """Tests make_metacommunity test cases."""
-        if test_case["expected_similarity_type"] == SimilarityFromFile:
+        if test_case["similarity_matrix_filepath"] is not None:
             test_case["similarity_matrix_filepath"] = (
                 tmp_path / test_case["similarity_matrix_filepath"]
             )
+        if test_case["expected_similarity_type"] == SimilarityFromFile:
             with open(test_case["similarity_matrix_filepath"], "w") as file:
                 if isinstance(test_case["counts"], ndarray):
                     unique_species = unique(test_case["counts"][:, 1])

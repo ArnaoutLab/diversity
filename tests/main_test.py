@@ -97,12 +97,11 @@ class TestMain:
     @mark.parametrize("test_case", MAIN_TEST_CASES)
     def test_main(self, test_case, tmp_path):
         """Tests __main__.main."""
-        for filepath in [
-            test_case["args"].input_filepath,
-            test_case["args"].similarity_matrix_filepath,
-            test_case["args"].output_filepath,
-        ]:
-            filepath = f"{tmp_path}/{filepath}"
+        test_case["args"].input_filepath = tmp_path / test_case["args"].input_filepath
+        test_case["args"].similarity_matrix_filepath = (
+            tmp_path / test_case["args"].similarity_matrix_filepath
+        )
+        test_case["args"].output_filepath = tmp_path / test_case["args"].output_filepath
 
         self.write_file(
             test_case["args"].input_filepath,

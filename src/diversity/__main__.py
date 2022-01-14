@@ -55,5 +55,5 @@ def main(args):
 
 if __name__ == "__main__":
     parser = configure_arguments()
-    args = parse.parse_args()
+    args = parser.parse_args()
     main(args)
