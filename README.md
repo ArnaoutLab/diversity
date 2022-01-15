@@ -20,14 +20,20 @@ discussion can be found in the [background section](#background).
 
 ## Installation
 
-```bash
-pip install diversity
-```
-
 **Dependencies:**
 - pytest >= 6.2.5
 - numpy >= 1.22.0
 - pandas >= 1.3.5
+
+To install, run:
+```bash
+pip install diversity
+```
+
+To run tests, execute:
+```bash
+pytest --pyargs metacommunity
+```
 
 ## Usage and Examples
 
@@ -35,10 +41,10 @@ pip install diversity
 
 ### Diversity indices
 
-A **community** is a collection of elements called **individuals**, each
-of which is assigned a label called its **species**, where multiple
-individuals may have the same species. A **diversity index** is a
-statistic associated with a community, which describes how much the
+A ***community*** is a collection of elements called ***individuals***,
+each of which is assigned a label called its ***species***, where
+multiple individuals may have the same species. A ***diversity index***
+is a statistic associated with a community, which describes how much the
 species of its individuals vary. For example, a community of many
 individuals of the same species has a very low diversity whereas a
 community with multiple species and the same amount of individuals per
@@ -46,11 +52,11 @@ species has a high diversity.
 
 Additionally, some diversity indices compare the diversities of subsets
 of a community with respect to the overall community. The subsets are
-called **subcommunities**, while the overall community is called a
-**metacommunity**. For example, two communities with the same frequency
-distribution across two disjoint sets of the same number of unique
-species each comprise half of the combined metacommunity diversity.
-Examples of interpretations of some indices include: the
+called ***subcommunities***, while the overall community is called a
+***metacommunity***. For example, two communities with the same
+frequency distribution across two disjoint sets of the same number of
+unique species each comprise half of the combined metacommunity
+diversity. Examples of interpretations of some indices include: the
 "representativeness" of a subcommunity of its metacommunity, and the
 "contribution" of a subcommunity to its metacommunity's diversity. 
 
@@ -58,18 +64,18 @@ Examples of interpretations of some indices include: the
 
 [In 1973, Hill introduced a framework](https://doi.org/10.2307/1934352)
 which unifies commonly used diversity indices into a single parametrized
-family of diversity measures. The parameter, called the **viewpoint
-parameter** can be thought of as the sensitivity of each of the
+family of diversity measures. The parameter, called the ***viewpoint
+parameter*** can be thought of as the sensitivity of each of the
 diversity measures to rare species. At one end of the spectrum, when the
 viewpoint parameter is set to 0, species frequency is ignored entirely,
 and only the number of distinct species matters, while at the other end
-of the spectrum, when the viewpoint parameter is set to $\infty$, only
+of the spectrum, when the viewpoint parameter is set to ∞, only
 the highest frequency species in a community is considered by the
 corresponding diversity measure. Common diversity measures such as
-**species richness**, **Shannon entropy**, the **Gini-Simpson index**,
-and the **Berger-Parker index** have simple and natural relationships
-with Hill's indices at different values for the viewpoint parameter (0,
-1, 2, $\infty$, respectively).
+***species richness***, ***Shannon entropy***, the ***Gini-Simpson
+index***, and the ***Berger-Parker index*** have simple and natural
+relationships with Hill's indices at different values for the viewpoint
+parameter (0, 1, 2, ∞, respectively).
 
 ### Similarity-sensitive diversity
 
