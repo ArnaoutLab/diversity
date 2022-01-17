@@ -94,7 +94,11 @@ general mathematically rigorous way of incorporating similarity measures
 into Hill's framework. The result is a family of similarity-sensitive
 diversity indices parameterized by the same viewpoint parameter as well
 as the similarity function used for the species in the meta- or
-subcommunities of interest.
+subcommunities of interest. As opposed to accounting for distinct
+species and their frequency, these similarity-sensitive diversity
+measures can be interpreted as accounting for different possibly
+overlapping clusters of mutually similar species and their combined
+frequencies.
 
 ### One package to calculate them all
 
