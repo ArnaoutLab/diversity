@@ -684,7 +684,6 @@ class TestSimilarityFromFile:
 SIMILARITY_FROM_FUNCTION_TEST_CASES = [
     {
         "description": "similarity function; 2 communities; tsv similarities file",
-        "similarity_matrix_filepath": "similarities_file_.tsv",
         "similarity_function": lambda a, b: 1 / sum(a * b),
         "features": array([[1, 2], [3, 5], [7, 11]]),
         "species_order": array(["species_3", "species_1", "species_2"]),
@@ -695,20 +694,17 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
             "species_2": array([10, 100]),
         },
         "species_to_weighted_similarities": {
-            "species_3": array([0.352692, 3.52692]),
-            "species_1": array([0.13461792, 1.3461792]),
-            "species_2": array([0.06017048, 0.6017048]),
+            "species_3": array([0.35271989, 3.52719894]),
+            "species_1": array([0.13459705, 1.34597047]),
+            "species_2": array([0.0601738, 0.60173802]),
         },
-        "similarities_filecontents": (
-            "species_3\tspecies_1\tspecies_2\n"
-            "2.000e-01\t7.692e-02\t3.448e-02\n"  # [0.2       , 0.07692308, 0.03448276]
-            "7.692e-02\t2.941e-02\t1.316e-02\n"  # [0.07692308, 0.02941176, 0.01315789]
-            "3.448e-02\t1.316e-02\t5.882e-03\n"  # [0.03448276, 0.01315789, 0.00588235]
-        ),
+        # similarity matrix
+        # [0.2          , 0.07692307692, 0.03448275862]
+        # [0.07692307692, 0.02941176471, 0.01315789474]
+        # [0.03448275862, 0.01315789474, 0.005882352941]
     },
     {
         "description": "similarity function; 2 communities; csv similarities file",
-        "similarity_matrix_filepath": "similarities_file_.csv",
         "similarity_function": lambda a, b: 1 / sum(a * b),
         "features": array([[1, 2], [3, 5], [7, 11]]),
         "species_order": array(["species_3", "species_1", "species_2"]),
@@ -719,20 +715,17 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
             "species_2": array([10, 100]),
         },
         "species_to_weighted_similarities": {
-            "species_3": array([0.352692, 3.52692]),
-            "species_1": array([0.13461792, 1.3461792]),
-            "species_2": array([0.06017048, 0.6017048]),
+            "species_3": array([0.35271989, 3.52719894]),
+            "species_1": array([0.13459705, 1.34597047]),
+            "species_2": array([0.0601738, 0.60173802]),
         },
-        "similarities_filecontents": (
-            "species_3,species_1,species_2\n"
-            "2.000e-01,7.692e-02,3.448e-02\n"  # [0.2       , 0.07692308, 0.03448276]
-            "7.692e-02,2.941e-02,1.316e-02\n"  # [0.07692308, 0.02941176, 0.01315789]
-            "3.448e-02,1.316e-02,5.882e-03\n"  # [0.03448276, 0.01315789, 0.00588235]
-        ),
+        # similarity matrix
+        # [0.2          , 0.07692307692, 0.03448275862]
+        # [0.07692307692, 0.02941176471, 0.01315789474]
+        # [0.03448275862, 0.01315789474, 0.005882352941]
     },
     {
         "description": "similarity function; 1 community; similarities file without extension",
-        "similarity_matrix_filepath": "similarities_file_",
         "similarity_function": lambda a, b: 1 / sum(a * b),
         "features": array([[1, 2], [3, 5], [7, 11]]),
         "species_order": array(["species_3", "species_1", "species_2"]),
@@ -743,16 +736,14 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
             "species_2": array([10]),
         },
         "species_to_weighted_similarities": {
-            "species_3": array([0.352692]),
-            "species_1": array([0.13461792]),
-            "species_2": array([0.06017048]),
+            "species_3": array([0.35271989]),
+            "species_1": array([0.13459705]),
+            "species_2": array([0.0601738]),
         },
-        "similarities_filecontents": (
-            "species_3\tspecies_1\tspecies_2\n"
-            "2.000e-01\t7.692e-02\t3.448e-02\n"  # [0.2       , 0.07692308, 0.03448276]
-            "7.692e-02\t2.941e-02\t1.316e-02\n"  # [0.07692308, 0.02941176, 0.01315789]
-            "3.448e-02\t1.316e-02\t5.882e-03\n"  # [0.03448276, 0.01315789, 0.00588235]
-        ),
+        # similarity matrix
+        # [0.2          , 0.07692307692, 0.03448275862]
+        # [0.07692307692, 0.02941176471, 0.01315789474]
+        # [0.03448275862, 0.01315789474, 0.005882352941]
     },
 ]
 
@@ -763,35 +754,21 @@ class TestSimilarityFromFunction:
     @mark.parametrize("test_case", SIMILARITY_FROM_FUNCTION_TEST_CASES)
     def test_init(self, test_case, tmp_path):
         """Tests initializer."""
-        test_case["similarity_matrix_filepath"] = (
-            tmp_path / test_case["similarity_matrix_filepath"]
-        )
-        if test_case["similarity_matrix_filepath"].suffix == "":
-            filterwarnings("ignore", category=ArgumentWarning)
         similarity = SimilarityFromFunction(
-            similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
             similarity_function=test_case["similarity_function"],
             features=test_case["features"],
             species_order=test_case["species_order"],
         )
-        resetwarnings()
         assert (similarity.species_order == test_case["expected_species_order"]).all()
 
     @mark.parametrize("test_case", SIMILARITY_FROM_FUNCTION_TEST_CASES)
     def test_calculate_weighted_similarities(self, test_case, tmp_path):
         """Tests .calculate_weighted_similarities."""
-        test_case["similarity_matrix_filepath"] = (
-            tmp_path / test_case["similarity_matrix_filepath"]
-        )
-        if test_case["similarity_matrix_filepath"].suffix == "":
-            filterwarnings("ignore", category=ArgumentWarning)
         similarity = SimilarityFromFunction(
-            similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
             similarity_function=test_case["similarity_function"],
             features=test_case["features"],
             species_order=test_case["species_order"],
         )
-        resetwarnings()
         relative_abundances = arrange_values(
             test_case["expected_species_order"],
             test_case["species_to_relative_abundances"],
@@ -805,9 +782,6 @@ class TestSimilarityFromFunction:
         )
         assert weighted_similarities.shape == relative_abundances.shape
         assert allclose(weighted_similarities, expected_weighted_similarities)
-        with open(test_case["similarity_matrix_filepath"], "r") as file:
-            similarities_filecontents = file.read()
-        assert similarities_filecontents == test_case["similarities_filecontents"]
 
 
 SIMILARITY_FROM_MEMORY_TEST_CASES = [
