@@ -190,7 +190,7 @@ POWER_MEAN_TEST_CASES = [
             ]
         ),
         "atol": 1e-8,
-        "expected_result": array([0.0, 0.0, 0.0]),
+        "expected_result": array([1.0, 1.0, 1.0]),
     },
     {
         "description": "No zero weights; order < -100; 2-d data.",
