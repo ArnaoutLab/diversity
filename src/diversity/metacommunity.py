@@ -741,14 +741,13 @@ def make_metacommunity(
     Parameters
     ----------
     counts: numpy.ndarray or pandas.DataFrame
-        See diversity.metacommunity.Abundance. I object is a
+        See diversity.metacommunity.Abundance. If the object is a
         pandas.DataFrame, its to_numpy method should return the expected
         numpy.ndarray.
     similarity_matrix: numpy.ndarray
         See diversity.metacommunity.SimilarityFromMemory.
     similarity_matrix_filepath: str
-        See diversity.metacommunity.SimilarityFromFile, or
-        diversity.metacommunity.SimilarityFromFunction.
+        See diversity.metacommunity.SimilarityFromFile
     similarity_function: Callable
         See diversity.metacommunity.SimilarityFromFunction.
     features: numpy.ndarray
@@ -763,8 +762,9 @@ def make_metacommunity(
     parameter specification.
     """
 
-    if isinstance(similarity_matrix, DataFrame):
-        similarity_matrix = similarity_matrix.to_numpy()
+    if_dataframe_to_numpy = lambda x: x.to_numpy() if isinstance(x, DataFrame) else x
+    similarity_matrix = if_dataframe_to_numpy(similarity_matrix)
+    features = if_dataframe_to_numpy(features)
     similarity = make_similarity(
         similarity_matrix,
         species_order,
@@ -772,7 +772,6 @@ def make_metacommunity(
         similarity_function,
         features,
     )
-    if isinstance(counts, DataFrame):
-        counts = counts.to_numpy()
+    counts = if_dataframe_to_numpy(counts)
     abundance = Abundance(counts, similarity.species_order)
     return Metacommunity(similarity, abundance)

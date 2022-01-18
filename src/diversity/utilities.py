@@ -61,7 +61,7 @@ def get_file_delimiter(filepath):
     Parameters
     ----------
     filepath: str
-        The filepath whose delimiter to determine.
+        The filepath whose delimiter is to be determine.
 
     Returns
     -------
@@ -105,9 +105,9 @@ def __validate_power_mean_args(weights, items, atol, weight_is_nonzero):
     if len(weights.shape) == 1:
         all_0_column = [not (weight_is_nonzero).any()]
     elif len(weights.shape) == 2:
-        all_0_column = []
-        for col in range(weights.shape[1]):
-            all_0_column.append(not (weight_is_nonzero[:, col]).any())
+        all_0_column = [
+            not (weight_is_nonzero[:, col]).any() for col in range(weights.shape[1])
+        ]
     if any(all_0_column):
         raise InvalidArgumentError(
             "power_mean expects at least one zero weight. Weights are"
