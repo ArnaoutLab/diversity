@@ -5,7 +5,7 @@ Classes
 Abundance
     Species abundances in metacommunity.
 Similarity
-    Abstract base class for relative abundance-weighed species
+    Abstract base class for relative abundance-weighted species
     similarities.
 SimilarityFromFile
     Implements Similarity by reading similarities from a file.
@@ -19,7 +19,7 @@ Metacommunity
 
 Functions
 ---------
-create_similarity
+make_similarity
     Returns correct diversity.metacommunity.Similarity object fitting
     parameter specification.
 make_metacommunity
@@ -238,18 +238,14 @@ class SimilarityFromFile(Similarity):
         return weighted_similarities
 
 
-class SimilarityFromFunction(SimilarityFromFile):
+class SimilarityFromFunction(Similarity):
     """Implements Similarity using a similarity function."""
 
-    def __init__(
-        self, similarity_matrix_filepath, similarity_function, features, species_order
-    ):
+    def __init__(self, similarity_function, features, species_order):
         """Initializes object.
 
         Parameters
         ----------
-        similarity_matrix_filepath: str
-            Path to file in which to store calculated similarities.
         similarity_function: Callable
             Callable to determine similarity between species. Must take
             two items from the features argument and return a numeric
@@ -264,47 +260,26 @@ class SimilarityFromFunction(SimilarityFromFile):
             in similarity matrix calculations is determined by this
             argument.
         """
-        super().__init__(similarity_matrix_filepath)
         self.similarity_function = similarity_function
         self.features = features
         self.species_order = species_order
-
-    def __format_row(self, row):
-        """Formats row to a string of delimited data."""
-        return self._delimiter.join(map(lambda x: format(x, ".3e"), row)) + "\n"
-
-    def __write_similarity_matrix(self):
-        """Writes species similarity matrix into file.
-
-        The matrix is computed using the object's similarity_function
-        attribute applied to pairs of items from the object's features
-        attribute. The result is written into the file referred to by
-        object's similarity_matrix_filepath attribute together with a
-        header establishing row and column ordering. Any existing
-        contents are overwritten.
-        """
-        row_i = empty(len(self.species_order), dtype=float64)
-        with open(self.similarity_matrix_filepath, "w") as file:
-            file.write(self._delimiter.join(self.species_order) + "\n")
-            for features_i in self.features:
-                for j, features_j in enumerate(self.features):
-                    row_i[j] = self.similarity_function(features_i, features_j)
-                formatted_row_i = self.__format_row(row_i)
-                file.write(formatted_row_i)
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
 
         Similarities are calculated using object's similarity_function
-        attribute and stored in similarities file referred to by
-        object's similarity_matrix_filepath attribute.
+        attribute.
 
         See diversity.metacommunity.Similarity.calculate_weighted_similarities
         for complete specification.
         """
-        if not self.similarity_matrix_filepath.is_file():
-            self.__write_similarity_matrix()
-        return super().calculate_weighted_similarities(relative_abundances)
+        weighted_similarities = empty(relative_abundances.shape, dtype=float64)
+        similarities_row = empty(len(self.species_order), dtype=float64)
+        for j, species_j in enumerate(self.features):
+            for i, species_i in enumerate(self.features):
+                similarities_row[j] = self.similarity_function(species_i, species_j)
+            weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
+        return weighted_similarities
 
 
 class SimilarityFromMemory(Similarity):
@@ -334,7 +309,7 @@ class SimilarityFromMemory(Similarity):
         return dot(self.similarity_matrix, relative_abundances)
 
 
-def create_similarity(
+def make_similarity(
     similarity_matrix=None,
     species_order=None,
     similarity_matrix_filepath=None,
@@ -371,7 +346,6 @@ def create_similarity(
     """
     from_memory_parameters = (similarity_matrix, species_order)
     from_function_parameters = (
-        similarity_matrix_filepath,
         similarity_function,
         features,
         species_order,
@@ -791,7 +765,7 @@ def make_metacommunity(
 
     if isinstance(similarity_matrix, DataFrame):
         similarity_matrix = similarity_matrix.to_numpy()
-    similarity = create_similarity(
+    similarity = make_similarity(
         similarity_matrix,
         species_order,
         similarity_matrix_filepath,

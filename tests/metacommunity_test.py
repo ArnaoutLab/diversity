@@ -9,7 +9,7 @@ from pytest import mark
 
 from diversity.metacommunity import (
     Abundance,
-    create_similarity,
+    make_similarity,
     make_metacommunity,
     Metacommunity,
     SimilarityFromFile,
@@ -965,7 +965,7 @@ class TestCreateSimilarity:
     @mark.parametrize("test_case", CREATE_SIMILARITY_TEST_CASES)
     def test_create_similarity(self, test_case):
         """Tests create_similarity test cases."""
-        similarity_object = create_similarity(
+        similarity_object = make_similarity(
             similarity_matrix=test_case["similarity_matrix"],
             species_order=test_case["species_order"],
             similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
