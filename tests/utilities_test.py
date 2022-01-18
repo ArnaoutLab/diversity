@@ -2,9 +2,9 @@
 from copy import deepcopy
 
 from numpy import allclose, array, inf
-from pytest import mark
+from pytest import mark, raises
 
-from diversity.utilities import power_mean, unique_correspondence
+from diversity.utilities import InvalidArgumentError, power_mean, unique_correspondence
 
 
 POWER_MEAN_TEST_CASES = [
@@ -27,6 +27,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.32955284, 0.06034367, 0.39917668]),
+        "expect_raise": False,
     },
     {
         "description": "No zero weights; nonzero order; -100 <= order <= 100; 2-d data.",
@@ -47,6 +48,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.07100004, 0.01300007, 0.08600006]),
+        "expect_raise": False,
     },
     {
         "description": "No zero weights; nonzero order; -100 <= order <= 100; 2-d data.",
@@ -67,6 +69,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.35246927, 0.13302809, 0.62156143]),
+        "expect_raise": False,
     },
     {
         "description": "Some zero weights; nonzero order; -100 <= order <= 100; 2-d data.",
@@ -74,11 +77,11 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 [1.0e-09, 1.0e-09, 1.0e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-01, 1.0e-01, 1.0e-01],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [1.0e-07, 1.0e-07, 1.0e-04],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-08, 2.0e-08, 4.0e-08],
+                [1.0e-01, 1.0e-01, 2.0e-01],
             ]
         ),
         "items": array(
@@ -92,19 +95,20 @@ POWER_MEAN_TEST_CASES = [
             ]
         ),
         "atol": 1e-8,
-        "expected_result": array([0.22452176, 0.04111019, 0.27195594]),
+        "expected_result": array([0.22452176, 0.04111019, 0.3846402231]),
+        "expect_raise": False,
     },
     {
-        "description": "All zero weights; nonzero order; -100 <= order <= 100; 2-d data.",
+        "description": "Zero weight column; nonzero order; -100 <= order <= 100; 2-d data.",
         "order": 2,
         "weights": array(
             [
-                [1.0e-09, 1.0e-09, 1.0e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-10, 1.0e-10, 1.0e-10],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-11, 2.0e-11, 2.0e-11],
-                [0.5e-08, 0.5e-08, 0.5e-08],
+                [1.0e-09, 1.0e-09, 1.0e-02],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [1.0e-10, 1.0e-10, 1.0e-02],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-11, 2.0e-11, 2.0e-02],
+                [0.5e-08, 0.5e-08, 0.5e-01],
             ]
         ),
         "items": array(
@@ -118,7 +122,8 @@ POWER_MEAN_TEST_CASES = [
             ]
         ),
         "atol": 1e-8,
-        "expected_result": array([0.0, 0.0, 0.0]),
+        "expected_result": None,
+        "expect_raise": True,
     },
     {
         "description": "No zero weights; zero order; 2-d data.",
@@ -139,6 +144,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.96633071, 0.8154443, 0.9850308]),
+        "expect_raise": False,
     },
     {
         "description": "Some zero weights; zero order; 2-d data.",
@@ -146,11 +152,11 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 [1.0e-09, 1.0e-09, 1.0e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-01, 1.0e-01, 1.0e-01],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [1.0e-07, 1.0e-07, 1.0e-04],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-08, 2.0e-08, 4.0e-08],
+                [1.0e-01, 1.0e-01, 2.0e-01],
             ]
         ),
         "items": array(
@@ -164,7 +170,8 @@ POWER_MEAN_TEST_CASES = [
             ]
         ),
         "atol": 1e-8,
-        "expected_result": array([0.96633071, 0.8154443, 0.9850308]),
+        "expected_result": array([0.96633071, 0.8154443, 0.9702242087]),
+        "expect_raise": False,
     },
     {
         "description": "All zero weights; zero order; 2-d data.",
@@ -172,9 +179,9 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 [1.0e-09, 1.0e-09, 1.0e-09],
-                [0.0e00, 0.0e00, 0.0e00],
+                [0.0e-00, 0.0e-00, 0.0e-00],
                 [1.0e-10, 1.0e-10, 1.0e-10],
-                [0.0e00, 0.0e00, 0.0e00],
+                [0.0e-00, 0.0e-00, 0.0e-00],
                 [2.0e-11, 2.0e-11, 2.0e-11],
                 [0.5e-08, 0.5e-08, 0.5e-08],
             ]
@@ -190,7 +197,8 @@ POWER_MEAN_TEST_CASES = [
             ]
         ),
         "atol": 1e-8,
-        "expected_result": array([1.0, 1.0, 1.0]),
+        "expected_result": None,
+        "expect_raise": True,
     },
     {
         "description": "No zero weights; order < -100; 2-d data.",
@@ -211,6 +219,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.30, 0.13, 0.53]),
+        "expect_raise": False,
     },
     {
         "description": "Some zero weights; order == -inf; 2-d data.",
@@ -218,11 +227,11 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 [1.0e-09, 1.0e-09, 1.0e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-01, 1.0e-01, 1.0e-01],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [1.0e-07, 1.0e-07, 1.0e-04],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-08, 2.0e-08, 4.0e-08],
+                [1.0e-01, 1.0e-01, 2.0e-01],
             ]
         ),
         "items": array(
@@ -237,18 +246,19 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.30, 0.13, 0.53]),
+        "expect_raise": False,
     },
     {
-        "description": "All zero weights; order < -100; 2-d data.",
+        "description": "Zero weight columns; order < -100; 2-d data.",
         "order": -382,
         "weights": array(
             [
-                [1.0e-09, 1.0e-09, 1.0e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-10, 1.0e-10, 1.0e-10],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-11, 2.0e-11, 2.0e-11],
-                [0.5e-08, 0.5e-08, 0.5e-08],
+                [1.0e-03, 1.0e-01, 1.0e-09],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [1.0e-00, 1.0e-00, 1.0e-10],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-01, 2.0e-01, 2.0e-11],
+                [0.5e-00, 0.5e-02, 0.5e-08],
             ]
         ),
         "items": array(
@@ -262,7 +272,8 @@ POWER_MEAN_TEST_CASES = [
             ]
         ),
         "atol": 1e-8,
-        "expected_result": array([0.0, 0.0, 0.0]),
+        "expected_result": None,
+        "expect_raise": True,
     },
     {
         "description": "No zero weights; order > 100; 2-d data.",
@@ -283,6 +294,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.74, 0.69, 0.86]),
+        "expect_raise": False,
     },
     {
         "description": "Some zero weights; order == inf; 2-d data.",
@@ -290,11 +302,11 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 [1.0e-09, 1.0e-09, 1.0e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-01, 1.0e-01, 1.0e-01],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [1.0e-07, 1.0e-07, 1.0e-04],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-08, 2.0e-08, 4.0e-08],
+                [1.0e-01, 1.0e-01, 2.0e-01],
             ]
         ),
         "items": array(
@@ -309,6 +321,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.74, 0.69, 0.86]),
+        "expect_raise": False,
     },
     {
         "description": "All zero weights; order > 100; 2-d data.",
@@ -316,9 +329,9 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 [1.0e-09, 1.0e-09, 1.0e-09],
-                [0.0e00, 0.0e00, 0.0e00],
+                [0.0e-00, 0.0e-00, 0.0e-00],
                 [1.0e-10, 1.0e-10, 1.0e-10],
-                [0.0e00, 0.0e00, 0.0e00],
+                [0.0e-00, 0.0e-00, 0.0e-00],
                 [2.0e-11, 2.0e-11, 2.0e-11],
                 [0.5e-08, 0.5e-08, 0.5e-08],
             ]
@@ -334,7 +347,8 @@ POWER_MEAN_TEST_CASES = [
             ]
         ),
         "atol": 1e-8,
-        "expected_result": array([0.0, 0.0, 0.0]),
+        "expected_result": None,
+        "expect_raise": True,
     },
     {
         "description": "Some zero weights; nonzero order; -100 <= order <= 100; 1-d data",
@@ -342,9 +356,9 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 1.0e-09,
-                0.0e00,
+                0.0e-00,
                 1.0e-07,
-                0.0e00,
+                0.0e-00,
                 2.0e-08,
                 1.0e-01,
             ]
@@ -361,6 +375,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.22452176]),
+        "expect_raise": False,
     },
     {
         "description": "Some zero weights; zero order; 1-d data.",
@@ -368,9 +383,9 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 1.0e-09,
-                0.0e00,
+                0.0e-00,
                 1.0e-07,
-                0.0e00,
+                0.0e-00,
                 2.0e-08,
                 1.0e-01,
             ]
@@ -387,6 +402,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.96633071]),
+        "expect_raise": False,
     },
     {
         "description": "Some zero weights; order == -inf; 1-d data.",
@@ -394,9 +410,9 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 1.0e-09,
-                0.0e00,
+                0.0e-00,
                 1.0e-07,
-                0.0e00,
+                0.0e-00,
                 2.0e-08,
                 1.0e-01,
             ]
@@ -413,6 +429,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.30]),
+        "expect_raise": False,
     },
     {
         "description": "Some zero weights; order == inf; 1-d data.",
@@ -420,9 +437,9 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 1.0e-09,
-                0.0e00,
+                0.0e-00,
                 1.0e-07,
-                0.0e00,
+                0.0e-00,
                 2.0e-08,
                 1.0e-01,
             ]
@@ -439,6 +456,34 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-8,
         "expected_result": array([0.74]),
+        "expect_raise": False,
+    },
+    {
+        "description": "Zero weights; nonzero order; -100 <= order <= 100; 1-d data",
+        "order": 2,
+        "weights": array(
+            [
+                1.0e-09,
+                0.0e-00,
+                1.0e-10,
+                0.0e-00,
+                0.5e-08,
+                1.0e-09,
+            ]
+        ),
+        "items": array(
+            [
+                0.52,
+                0.56,
+                0.30,
+                0.65,
+                0.74,
+                0.71,
+            ]
+        ),
+        "atol": 1e-8,
+        "expected_result": None,
+        "expect_raise": True,
     },
     {
         "description": "Some zero weights; nonzero order; -100 <= order <= 100; 2-d data; atol == 1e-9.",
@@ -446,11 +491,11 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 [1.1e-09, 1.1e-09, 1.1e-09],
-                [0.0e00, 0.0e00, 0.0e00],
+                [0.0e-00, 0.0e-00, 0.0e-00],
                 [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-06, 1.0e-06, 1.0e-06],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-08, 2.0e-08, 4.0e-08],
+                [1.0e-06, 1.0e-06, 2.0e-06],
             ]
         ),
         "items": array(
@@ -464,19 +509,20 @@ POWER_MEAN_TEST_CASES = [
             ]
         ),
         "atol": 1e-9,
-        "expected_result": array([0.0007241198, 0.0002559066, 0.0008798311]),
+        "expected_result": array([0.0007241198, 0.0002559066, 0.001232607298]),
+        "expect_raise": False,
     },
     {
-        "description": "Some zero weights; zero order; 2-d data; atol == 1e-9.",
+        "description": "Some zero weights; zero order; 2-d data; atol == 1e-2.",
         "order": 0,
         "weights": array(
             [
-                [1.1e-09, 1.1e-09, 1.1e-09],
-                [0.0e00, 0.0e00, 0.0e00],
-                [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-06, 1.0e-06, 1.0e-06],
+                [1.1e-02, 1.1e-02, 1.1e-02],
+                [0.0e-00, 0.0e-00, 1.0e-3],
+                [1.0e-01, 1.0e-01, 1.0e-01],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [4.0e-02, 4.0e-01, 4.0e-01],
+                [2.0e-01, 2.0e-02, 2.0e-02],
             ]
         ),
         "items": array(
@@ -489,10 +535,9 @@ POWER_MEAN_TEST_CASES = [
                 [0.71, 0.13, 0.86],
             ]
         ),
-        "atol": 1e-8,
-        "expected_result": array(
-            [0.9999995303711, 0.9999978830066052, 0.9999997728129726]
-        ),
+        "atol": 1e-2,
+        "expected_result": array([0.8120992339, 0.4198668065, 0.7245218911]),
+        "expect_raise": False,
     },
     {
         "description": "Some zero weights; order == -inf; 2-d data; atol == 1e-9.",
@@ -500,11 +545,11 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 [1.1e-09, 1.1e-09, 1.1e-09],
-                [0.0e00, 0.0e00, 0.0e00],
+                [0.0e-00, 0.0e-00, 0.0e-00],
                 [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-01, 1.0e-01, 1.0e-01],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-08, 2.0e-08, 4.0e-08],
+                [1.0e-01, 1.0e-01, 2.0e-06],
             ]
         ),
         "items": array(
@@ -519,6 +564,7 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-9,
         "expected_result": array([0.28, 0.10, 0.51]),
+        "expect_raise": False,
     },
     {
         "description": "Some zero weights; order == inf; 2-d data; atol == 1e-9.",
@@ -526,11 +572,11 @@ POWER_MEAN_TEST_CASES = [
         "weights": array(
             [
                 [1.1e-09, 1.1e-09, 1.1e-09],
-                [0.0e00, 0.0e00, 0.0e00],
+                [0.0e-00, 0.0e-00, 0.0e-00],
                 [1.0e-07, 1.0e-07, 1.0e-07],
-                [0.0e00, 0.0e00, 0.0e00],
-                [2.0e-08, 2.0e-08, 2.0e-08],
-                [1.0e-01, 1.0e-01, 1.0e-01],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-08, 2.0e-08, 4.0e-08],
+                [1.0e-01, 1.0e-01, 2.0e-06],
             ]
         ),
         "items": array(
@@ -545,6 +591,136 @@ POWER_MEAN_TEST_CASES = [
         ),
         "atol": 1e-9,
         "expected_result": array([0.99, 0.79, 0.90]),
+        "expect_raise": False,
+    },
+    {
+        "description": "Some zero weights; nonzero order; -100 <= order <= 100; 2-d data; mismatching number of rows.",
+        "order": 2,
+        "weights": array(
+            [
+                [1.1e-09, 1.1e-09, 1.1e-09],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [1.0e-07, 1.0e-07, 1.0e-07],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-08, 2.0e-08, 4.0e-08],
+                [1.0e-06, 1.0e-06, 2.0e-06],
+                [2.0e-05, 1.2e-02, 4.5e-07],
+            ]
+        ),
+        "items": array(
+            [
+                [0.52, 0.73, 0.85],
+                [0.56, 0.28, 0.99],
+                [0.30, 0.69, 0.53],
+                [0.65, 0.65, 0.65],
+                [0.74, 0.14, 0.53],
+                [0.71, 0.13, 0.86],
+            ]
+        ),
+        "atol": 1e-8,
+        "expected_result": None,
+        "expect_raise": True,
+    },
+    {
+        "description": "Some zero weights; nonzero order; -100 <= order <= 100; 2-d data; mismatching number of columns.",
+        "order": 2,
+        "weights": array(
+            [
+                [1.1e-09, 1.1e-09, 1.1e-09],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [1.0e-07, 1.0e-07, 1.0e-07],
+                [0.0e-00, 0.0e-00, 0.0e-00],
+                [2.0e-08, 2.0e-08, 4.0e-08],
+                [1.0e-06, 1.0e-06, 2.0e-06],
+            ]
+        ),
+        "items": array(
+            [
+                [0.52, 0.73, 0.85, 1.23],
+                [0.56, 0.28, 0.99, 4.56],
+                [0.30, 0.69, 0.53, 7.89],
+                [0.65, 0.65, 0.65, 0.12],
+                [0.74, 0.14, 0.53, 3.45],
+                [0.71, 0.13, 0.86, 6.78],
+            ]
+        ),
+        "atol": 1e-8,
+        "expected_result": None,
+        "expect_raise": True,
+    },
+    {
+        "description": "Some zero weights; nonzero order; -100 <= order <= 100; 1/2-d data; mismatching dimensions.",
+        "order": 2,
+        "weights": array(
+            [
+                1.1e-09,
+                0.0e-00,
+                1.0e-07,
+                0.0e-00,
+                2.0e-08,
+                1.0e-06,
+            ]
+        ),
+        "items": array(
+            [
+                [0.52, 0.73, 0.85],
+                [0.56, 0.28, 0.99],
+                [0.30, 0.69, 0.53],
+                [0.65, 0.65, 0.65],
+                [0.74, 0.14, 0.53],
+                [0.71, 0.13, 0.86],
+            ]
+        ),
+        "atol": 1e-8,
+        "expected_result": None,
+        "expect_raise": True,
+    },
+    {
+        "description": "Some zero weights; nonzero order; -100 <= order <= 100; 1-d data; mismatching number of rows.",
+        "order": 2,
+        "weights": array(
+            [
+                1.1e-09,
+                0.0e-00,
+                1.0e-07,
+                0.0e-00,
+                2.0e-08,
+                1.0e-06,
+                2.0e-05,
+            ]
+        ),
+        "items": array(
+            [
+                0.52,
+                0.56,
+                0.30,
+                0.65,
+                0.74,
+                0.71,
+            ]
+        ),
+        "atol": 1e-8,
+        "expected_result": None,
+        "expect_raise": True,
+    },
+    {
+        "description": "Some zero weights; nonzero order; -100 <= order <= 100; >2-d.",
+        "order": 2,
+        "weights": array(
+            [
+                [[1.1e-09, 2.2e-08], [3.3e-07, 4.4e-06]],
+                [[5.5e-06, 6.6e-05], [7.7e-04, 8.8e-03]],
+            ]
+        ),
+        "items": array(
+            [
+                [[1.1e-09, 2.2e-08], [3.3e-07, 4.4e-06]],
+                [[5.5e-06, 6.6e-05], [7.7e-04, 8.8e-03]],
+            ]
+        ),
+        "atol": 1e-8,
+        "expected_result": None,
+        "expect_raise": True,
     },
 ]
 
@@ -555,14 +731,23 @@ class TestPowerMean:
     @mark.parametrize("test_case", POWER_MEAN_TEST_CASES)
     def test_power_mean(self, test_case):
         """Tests power_mean test cases."""
-        actual_result = power_mean(
-            order=test_case["order"],
-            weights=test_case["weights"],
-            items=test_case["items"],
-            atol=test_case["atol"],
-        )
-        assert allclose(actual_result, test_case["expected_result"])
-        assert allclose(test_case["expected_result"], actual_result)
+        if test_case["expect_raise"]:
+            with raises(InvalidArgumentError):
+                power_mean(
+                    order=test_case["order"],
+                    weights=test_case["weights"],
+                    items=test_case["items"],
+                    atol=test_case["atol"],
+                )
+        else:
+            actual_result = power_mean(
+                order=test_case["order"],
+                weights=test_case["weights"],
+                items=test_case["items"],
+                atol=test_case["atol"],
+            )
+            assert allclose(actual_result, test_case["expected_result"])
+            assert allclose(test_case["expected_result"], actual_result)
 
 
 UNIQUE_CORRESPONDENCE_TEST_CASES = [
