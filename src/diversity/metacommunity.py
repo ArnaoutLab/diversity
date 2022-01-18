@@ -275,8 +275,8 @@ class SimilarityFromFunction(Similarity):
         """
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
         similarities_row = empty(len(self.species_order), dtype=float64)
-        for j, species_j in enumerate(self.features):
-            for i, species_i in enumerate(self.features):
+        for i, species_i in enumerate(self.features):
+            for j, species_j in enumerate(self.features):
                 similarities_row[j] = self.similarity_function(species_i, species_j)
             weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
         return weighted_similarities
