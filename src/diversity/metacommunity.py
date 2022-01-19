@@ -283,7 +283,7 @@ class SimilarityFromFunction(Similarity):
         for complete specification.
         """
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
-        similarities_row = empty(len(self.species_order), dtype=float64)
+        similarities_row = empty(relative_abundances.shape[0], dtype=float64)
         for i, species_i in enumerate(self.features):
             for j, species_j in enumerate(self.features):
                 similarities_row[j] = self.similarity_function(species_i, species_j)
@@ -744,8 +744,7 @@ def make_metacommunity(
     implementations used are:
         - similarity_matrix, species_order -> SimilarityFromMemory
         - similarity_matrix_filepath -> SimilarityFromFile
-        - species_order, similarity_matrix_filepath,
-          similarity_function, features -> SimilarityFromFunction
+        - species_order, similarity_function, features -> SimilarityFromFunction
 
     Parameters
     ----------
