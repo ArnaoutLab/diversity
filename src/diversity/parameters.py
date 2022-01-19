@@ -14,6 +14,8 @@ from argparse import Action, ArgumentParser
 from sys import stdout, stdin
 from warnings import warn
 
+from numpy import inf
+
 from diversity.utilities import ArgumentWarning
 
 
@@ -26,7 +28,7 @@ class ValidateViewpoint(Action):
         Warns if arguments larger than 100 are passed, reminding that
         they are treated as infinity in the diversity calculation.
         """
-        if any([viewpoint > 100 for viewpoint in values]):
+        if any([viewpoint > 100 and viewpoint != inf for viewpoint in values]):
             warn(
                 "viewpoints > 100.0 defaults to the analytical formula"
                 " for viewpoint = infinity.",
@@ -48,10 +50,10 @@ def configure_arguments():
         "-i",
         "--input_filepath",
         help=(
-            "A tsv file where the first 3 columns of the file are the"
-            " species name, its count, and subcommunity name, and all"
-            " following columns are features of that species that"
-            " will be used to calculate similarity between species."
+            "A csv or tsv file where the first 3 columns of the file"
+            " contain subcommunity name, species name, and the count"
+            " (the number of appearances of the species in the"
+            " subcommunity)."
         ),
     )
     parser.add_argument(
@@ -68,28 +70,28 @@ def configure_arguments():
         "-o",
         "--output_filepath",
         default=stdout,
-        help=("A filepath to where the program's output will be saved"),
+        help="A filepath to where the program's output will be saved",
     )
     parser.add_argument(
         "-s",
         "--similarity_matrix_filepath",
         help=(
-            "The filepath to a tsv file containing a symmetric"
-            " similarity matrix. If the file does not exist, one will"
-            " be created with the user defined similarity function."
+            "The filepath to a csv or tsv file containing a similarity"
+            " for the species in the input file. The file must have a"
+            " header listing the species names corresponding to each"
+            " column, and column and row ordering must be the same."
         ),
-    )
-    parser.add_argument(
-        "-t",
-        "--store_similarity_matrix",
-        help="Do not delete similarity matrix if generated via similarity function.",
     )
     parser.add_argument(
         "-v",
         "--viewpoint",
         nargs="+",
         type=float,
-        help="A list of viewpoint parameters.",
+        help=(
+            "A list of viewpoint parameters. Any non-negative number"
+            " (including inf) is valid, but viewpoint parameters"
+            " greater than 100 are treated like inf."
+        ),
         action=ValidateViewpoint,
     )
     return parser
