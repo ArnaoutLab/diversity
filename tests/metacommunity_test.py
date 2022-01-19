@@ -888,6 +888,7 @@ CREATE_SIMILARITY_TEST_CASES = [
         "similarity_matrix_filepath": None,
         "similarity_function": None,
         "features": None,
+        "similarity_matrix_file_content": None,
         "expected_type": SimilarityFromMemory,
     },
     {
@@ -899,6 +900,7 @@ CREATE_SIMILARITY_TEST_CASES = [
         "features": array(
             [[3.2, 5.3, 1.2, 9.4], [4.2, 7.4, 9.5, 7.3], [4.2, 6.2, 6.4, 7.3]]
         ),
+        "similarity_matrix_file_content": None,
         "expected_type": SimilarityFromMemory,
     },
     {
@@ -910,6 +912,7 @@ CREATE_SIMILARITY_TEST_CASES = [
         "features": array(
             [[3.2, 5.3, 1.2, 9.4], [4.2, 7.4, 9.5, 7.3], [4.2, 6.2, 6.4, 7.3]]
         ),
+        "similarity_matrix_file_content": None,
         "expected_type": SimilarityFromFunction,
     },
     {
@@ -919,15 +922,17 @@ CREATE_SIMILARITY_TEST_CASES = [
         "similarity_matrix_filepath": "foo_similarities.tsv",
         "similarity_function": None,
         "features": None,
+        "similarity_matrix_file_content": "s3\ts1\ts2\n",
         "expected_type": SimilarityFromFile,
     },
     {
-        "description": "from memory; with additional ignored parameters",
+        "description": "from file; with additional ignored parameters",
         "similarity_matrix": None,
         "species_order": array(["species_1", "species_2", "species_3"]),
         "similarity_matrix_filepath": "foo_similarities.tsv",
         "similarity_function": None,
         "features": None,
+        "similarity_matrix_file_content": "s3\ts1\ts2\n",
         "expected_type": SimilarityFromFile,
     },
 ]
@@ -937,8 +942,13 @@ class TestCreateSimilarity:
     """Tests metacommunity.create_similarity."""
 
     @mark.parametrize("test_case", CREATE_SIMILARITY_TEST_CASES)
-    def test_create_similarity(self, test_case):
+    def test_create_similarity(self, test_case, tmp_path):
         """Tests create_similarity test cases."""
+        if test_case["expected_type"] == SimilarityFromFile:
+            absolute_path = tmp_path / test_case["similarity_matrix_filepath"]
+            with open(absolute_path, "w") as file:
+                file.write(test_case["similarity_matrix_file_content"])
+            test_case["similarity_matrix_filepath"] = absolute_path
         similarity_object = make_similarity(
             similarity_matrix=test_case["similarity_matrix"],
             species_order=test_case["species_order"],
