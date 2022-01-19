@@ -32,7 +32,7 @@ from functools import cached_property
 from pathlib import Path
 
 from pandas import DataFrame
-from numpy import dot, array, empty, zeros, broadcast_to, divide, float64
+from numpy import array, empty, zeros, broadcast_to, divide, float64
 
 from diversity.utilities import get_file_delimiter, power_mean, unique_correspondence
 
@@ -234,7 +234,7 @@ class SimilarityFromFile(Similarity):
             next(reader(file, delimiter=self._delimiter))
             for i, row in enumerate(reader(file, delimiter=self._delimiter)):
                 similarities_row = array(row, dtype=float64)
-                weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
+                weighted_similarities[i, :] = similarities_row @ relative_abundances
         return weighted_similarities
 
 
@@ -278,7 +278,7 @@ class SimilarityFromFunction(Similarity):
         for i, species_i in enumerate(self.features):
             for j, species_j in enumerate(self.features):
                 similarities_row[j] = self.similarity_function(species_i, species_j)
-            weighted_similarities[i, :] = dot(similarities_row, relative_abundances)
+            weighted_similarities[i, :] = similarities_row @ relative_abundances
         return weighted_similarities
 
 
@@ -306,7 +306,7 @@ class SimilarityFromMemory(Similarity):
         See diversity.metacommunity.Similarity.calculate_weighted_similarities
         for complete specification.
         """
-        return dot(self.similarity_matrix, relative_abundances)
+        return self.similarity_matrix @ relative_abundances
 
 
 def make_similarity(
