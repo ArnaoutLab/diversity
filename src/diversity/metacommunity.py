@@ -34,7 +34,12 @@ from pathlib import Path
 from pandas import DataFrame
 from numpy import dot, array, empty, zeros, broadcast_to, divide, float64
 
-from diversity.utilities import get_file_delimiter, power_mean, unique_correspondence
+from diversity.utilities import (
+    InvalidArgumentError,
+    get_file_delimiter,
+    power_mean,
+    unique_correspondence,
+)
 
 
 class Abundance:
@@ -172,6 +177,9 @@ class Abundance:
 class Similarity(ABC):
     """Interface for classes computing weighted similarities."""
 
+    def __init__(self, species_order):
+        self.species_order = species_order
+
     @abstractmethod
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -212,13 +220,13 @@ class SimilarityFromFile(Similarity):
         """
         self.similarity_matrix_filepath = Path(similarity_matrix_filepath)
         self._delimiter = get_file_delimiter(self.similarity_matrix_filepath)
+        self.species_order = self.__get_species_order()
 
-    @cached_property
-    def species_order(self):
+    def __get_species_order(self):
         """The species ordering used in similarity matrix file."""
         with open(self.similarity_matrix_filepath, "r") as file:
-            species_order_ = array(next(reader(file, delimiter=self._delimiter)))
-        return species_order_
+            species_order = array(next(reader(file, delimiter=self._delimiter)))
+        return species_order
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -260,9 +268,10 @@ class SimilarityFromFunction(Similarity):
             in similarity matrix calculations is determined by this
             argument.
         """
+
         self.similarity_function = similarity_function
         self.features = features
-        self.species_order = species_order
+        super().__init__(species_order)
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -295,7 +304,7 @@ class SimilarityFromMemory(Similarity):
             The unique species in desired order.
         """
         self.similarity_matrix = similarity_matrix
-        self.species_order = species_order
+        super().__init__(species_order)
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -352,15 +361,15 @@ def make_similarity(
     )
     from_file_parameters = (similarity_matrix_filepath,)
 
-    if all(p is not None for p in from_memory_parameters):
+    are_all_not_none = lambda parameters: all(p is not None for p in parameters)
+    if are_all_not_none(from_memory_parameters):
         return SimilarityFromMemory(*from_memory_parameters)
-    elif all(p is not None for p in from_function_parameters):
+    elif are_all_not_none(from_function_parameters):
         return SimilarityFromFunction(*from_function_parameters)
-    elif all(p is not None for p in from_file_parameters):
+    elif are_all_not_none(from_file_parameters):
         return SimilarityFromFile(*from_file_parameters)
     else:
-        # FIXME need to refer to correct documentation
-        raise Exception(
+        raise InvalidArgumentError(
             "Invalid argument combination. See the documentation for"
             " valid argument combinations."
         )
