@@ -2,9 +2,9 @@ name: diversity CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ OOP ]
   pull_request:
-    branches: [ main ]
+    branches: [ OOP ]
   workflow_dispatch:
 
 jobs:
