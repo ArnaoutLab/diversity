@@ -51,7 +51,7 @@ from pandas import read_csv
 from numpy.linalg import norm
 from scipy.spatial.distance import pdist, squareform
 ```
-The data for the following examples can be found at this [Gist](https://gist.github.com/Elliot-D-Hill/b6613ca167511ee18637616e2fcdb299).
+The data for the following examples can be found at this [Gist](https://gist.github.com/Elliot-D-Hill/1200c74c83a4be1f63f9ef56b333bb99).
 
 ```python
 gist_url = 'https://gist.github.com/Elliot-D-Hill/1200c74c83a4be1f63f9ef56b333bb99/raw/71e2c2f026b9a495023e6e71ee1dcc545cb53972/'
