@@ -590,7 +590,7 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 
 ### Command line interface
 
-For calculating diversity indices from the command line, we will need the following files, which can be downloaded from this [Gist](https://gist.github.com/Elliot-D-Hill/b6613ca167511ee18637616e2fcdb299).
+For calculating diversity indices from the command line, we will need the following files, which can be downloaded from this [Gist](https://gist.github.com/Elliot-D-Hill/1200c74c83a4be1f63f9ef56b333bb99).
 
 `metagenome_counts.csv`
 ```
