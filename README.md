@@ -508,7 +508,7 @@ def euclidean_similarity(a, b):
 
 
 ```python
-iris_metacommunity = make_metacommunity(
+penguin_metacommunity = make_metacommunity(
     penguin_counts, 
     species_order=species_order, 
     similarity_function=euclidean_similarity, 
@@ -518,7 +518,7 @@ iris_metacommunity = make_metacommunity(
 
 
 ```python
-iris_metacommunity.subcommunities_to_dataframe(viewpoint=0)
+penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 ```
 
 
