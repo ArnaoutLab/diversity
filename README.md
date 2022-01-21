@@ -1,6 +1,6 @@
 # diversity: similarity-sensitive diversity indices
 
-![Tests](https://github.com/Elliot-D-Hill/diversity/actions/workflows/Tests/badge.svg)
+![Tests](https://github.com/Elliot-D-Hill/diversity/actions/workflows/tests.yml/badge.svg)
 [![Python 3.8](https://img.shields.io/badge/python-3.8-blue.svg)](https://www.python.org/downloads/release/python-380/)
 
 * [About](#about)
