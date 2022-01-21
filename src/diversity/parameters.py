@@ -115,4 +115,11 @@ def configure_arguments():
         ),
         action=ValidateViewpoint,
     )
+    parser.add_argument(
+        "-z",
+        "--chunk_size",
+        type=int,
+        help="Number of rows to read at a time from the similarities matrix.",
+        default=1,
+    )
     return parser

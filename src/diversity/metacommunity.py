@@ -27,19 +27,13 @@ make_metacommunity
     parameter specification.
 """
 from abc import ABC, abstractmethod
-from csv import reader
 from functools import cached_property
 from pathlib import Path
 
-from pandas import DataFrame
+from pandas import DataFrame, read_csv
 from numpy import array, empty, zeros, broadcast_to, divide, float64
 
-from diversity.utilities import (
-    InvalidArgumentError,
-    get_file_delimiter,
-    power_mean,
-    unique_correspondence,
-)
+from diversity.utilities import get_file_delimiter, power_mean, unique_correspondence
 
 
 class Abundance:
@@ -177,9 +171,6 @@ class Abundance:
 class Similarity(ABC):
     """Interface for classes computing weighted similarities."""
 
-    def __init__(self, species_order):
-        self.species_order = species_order
-
     @abstractmethod
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -206,7 +197,7 @@ class Similarity(ABC):
 class SimilarityFromFile(Similarity):
     """Implements Similarity by using similarities stored in file."""
 
-    def __init__(self, similarity_matrix_filepath):
+    def __init__(self, similarity_matrix_filepath, chunk_size=1):
         """Initializes object.
 
         similarity_matrix_filepath: str
@@ -217,16 +208,25 @@ class SimilarityFromFile(Similarity):
             column ordering. If similarity_function is also specified,
             the file must not exist, but will instead be generated as
             soon as it is needed in subsequent computations.
+        chunk_size: int
+            Number of rows to read from similarity matrix at a time.
         """
         self.similarity_matrix_filepath = Path(similarity_matrix_filepath)
-        self._delimiter = get_file_delimiter(self.similarity_matrix_filepath)
-        self.species_order = self.__get_species_order()
+        self.__delimiter = get_file_delimiter(self.similarity_matrix_filepath)
+        self.__chunk_size = chunk_size
 
-    def __get_species_order(self):
+    @cached_property
+    def species_order(self):
         """The species ordering used in similarity matrix file."""
-        with open(self.similarity_matrix_filepath, "r") as file:
-            species_order = array(next(reader(file, delimiter=self._delimiter)))
-        return species_order
+        # with open(self.similarity_matrix_filepath, "r") as file:
+        with read_csv(
+            self.similarity_matrix_filepath,
+            delimiter=self.__delimiter,
+            chunksize=1,
+            nrows=1,
+        ) as similarity_matrix_chunks:
+            species_order_ = array(next(similarity_matrix_chunks).columns)
+        return species_order_
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -238,11 +238,18 @@ class SimilarityFromFile(Similarity):
         for complete specification.
         """
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
-        with open(self.similarity_matrix_filepath, "r") as file:
-            next(reader(file, delimiter=self._delimiter))
-            for i, row in enumerate(reader(file, delimiter=self._delimiter)):
-                similarities_row = array(row, dtype=float64)
-                weighted_similarities[i, :] = similarities_row @ relative_abundances
+
+        with read_csv(
+            self.similarity_matrix_filepath,
+            delimiter=self.__delimiter,
+            chunksize=self.__chunk_size,
+        ) as similarity_matrix_chunks:
+            i = 0
+            for chunk in similarity_matrix_chunks:
+                weighted_similarities[i : i + self.__chunk_size, :] = (
+                    chunk.to_numpy() @ relative_abundances
+                )
+                i += self.__chunk_size
         return weighted_similarities
 
 
@@ -268,10 +275,9 @@ class SimilarityFromFunction(Similarity):
             in similarity matrix calculations is determined by this
             argument.
         """
-
         self.similarity_function = similarity_function
         self.features = features
-        super().__init__(species_order)
+        self.species_order = species_order
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -283,7 +289,7 @@ class SimilarityFromFunction(Similarity):
         for complete specification.
         """
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
-        similarities_row = empty(relative_abundances.shape[0], dtype=float64)
+        similarities_row = empty(len(self.species_order), dtype=float64)
         for i, species_i in enumerate(self.features):
             for j, species_j in enumerate(self.features):
                 similarities_row[j] = self.similarity_function(species_i, species_j)
@@ -304,7 +310,7 @@ class SimilarityFromMemory(Similarity):
             The unique species in desired order.
         """
         self.similarity_matrix = similarity_matrix
-        super().__init__(species_order)
+        self.species_order = species_order
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -324,6 +330,7 @@ def make_similarity(
     similarity_matrix_filepath=None,
     similarity_function=None,
     features=None,
+    chunk_size=1,
 ):
     """Creates a Similarity object from specified parameter combination.
 
@@ -347,6 +354,8 @@ def make_similarity(
         Used by diversity.metacommunity.SimilarityFromFunction.
     features: numpy.ndarray
         Used by diversity.metacommunity.SimilarityFromFunction.
+    chunk_size: int
+        Optionally used by diversity.metacommunity.SimilarityFromFile.
 
     Returns
     -------
@@ -361,15 +370,15 @@ def make_similarity(
     )
     from_file_parameters = (similarity_matrix_filepath,)
 
-    are_all_not_none = lambda parameters: all(p is not None for p in parameters)
-    if are_all_not_none(from_memory_parameters):
+    if all(p is not None for p in from_memory_parameters):
         return SimilarityFromMemory(*from_memory_parameters)
-    elif are_all_not_none(from_function_parameters):
+    elif all(p is not None for p in from_function_parameters):
         return SimilarityFromFunction(*from_function_parameters)
-    elif are_all_not_none(from_file_parameters):
-        return SimilarityFromFile(*from_file_parameters)
+    elif all(p is not None for p in from_file_parameters):
+        return SimilarityFromFile(*from_file_parameters, chunk_size=chunk_size)
     else:
-        raise InvalidArgumentError(
+        # FIXME need to refer to correct documentation
+        raise Exception(
             "Invalid argument combination. See the documentation for"
             " valid argument combinations."
         )
@@ -737,6 +746,7 @@ def make_metacommunity(
     similarity_function=None,
     features=None,
     species_order=None,
+    chunk_size=1,
 ):
     """Builds a Metacommunity object from specified parameters.
 
@@ -744,7 +754,8 @@ def make_metacommunity(
     implementations used are:
         - similarity_matrix, species_order -> SimilarityFromMemory
         - similarity_matrix_filepath -> SimilarityFromFile
-        - species_order, similarity_function, features -> SimilarityFromFunction
+        - species_order, similarity_matrix_filepath,
+          similarity_function, features -> SimilarityFromFunction
 
     Parameters
     ----------
@@ -763,6 +774,8 @@ def make_metacommunity(
     species_order: Iterable
         See diversity.metacommunity.SimilarityFromMemory, or
         diversity.metacommunity.SimilarityFromFunction.
+    chunk_size: int
+        Optional. See diversity.metacommunity.SimilarityFromFile.
 
     Returns
     -------
@@ -779,6 +792,7 @@ def make_metacommunity(
         similarity_matrix_filepath,
         similarity_function,
         features,
+        chunk_size=chunk_size,
     )
     counts = if_dataframe_to_numpy(counts)
     abundance = Abundance(counts, similarity.species_order)
