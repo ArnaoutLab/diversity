@@ -47,6 +47,12 @@ def configure_arguments():
     """
     parser = ArgumentParser()
     parser.add_argument(
+        "-c",
+        "--count_column",
+        help="Header of the column containing the counts.",
+        default="count",
+    )
+    parser.add_argument(
         "-i",
         "--input_filepath",
         help=(
@@ -73,6 +79,12 @@ def configure_arguments():
         help="A filepath to where the program's output will be saved",
     )
     parser.add_argument(
+        "-p",
+        "--species_column",
+        help="Header of the column containing the species names.",
+        default="species",
+    )
+    parser.add_argument(
         "-s",
         "--similarity_matrix_filepath",
         help=(
@@ -81,6 +93,12 @@ def configure_arguments():
             " header listing the species names corresponding to each"
             " column, and column and row ordering must be the same."
         ),
+    )
+    parser.add_argument(
+        "-u",
+        "--subcommunity_column",
+        help="Header for the column containing the subcommunity names.",
+        default="subcommunity",
     )
     parser.add_argument(
         "-v",
