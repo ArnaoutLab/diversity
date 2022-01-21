@@ -47,13 +47,22 @@ def configure_arguments():
     """
     parser = ArgumentParser()
     parser.add_argument(
+        "-c",
+        "--count_column",
+        help="Header of the column containing the counts.",
+        default="count",
+    )
+    parser.add_argument(
         "-i",
         "--input_filepath",
         help=(
-            "A csv or tsv file where the first 3 columns of the file"
-            " contain subcommunity name, species name, and the count"
-            " (the number of appearances of the species in the"
-            " subcommunity)."
+            "A csv or tsv file containing one column for subcommunity"
+            " names (with header 'subcommunity', or specified via -u),"
+            " one column for species names (with header 'species', or"
+            " specified via -p), and one column of counts, which"
+            " contains the number of individuals of the row's species"
+            " in the row's subcommunity (with header 'count', or"
+            " specified via -c)."
         ),
     )
     parser.add_argument(
@@ -73,6 +82,12 @@ def configure_arguments():
         help="A filepath to where the program's output will be saved",
     )
     parser.add_argument(
+        "-p",
+        "--species_column",
+        help="Header of the column containing the species names.",
+        default="species",
+    )
+    parser.add_argument(
         "-s",
         "--similarity_matrix_filepath",
         help=(
@@ -81,6 +96,12 @@ def configure_arguments():
             " header listing the species names corresponding to each"
             " column, and column and row ordering must be the same."
         ),
+    )
+    parser.add_argument(
+        "-u",
+        "--subcommunity_column",
+        help="Header for the column containing the subcommunity names.",
+        default="subcommunity",
     )
     parser.add_argument(
         "-v",
