@@ -1,6 +1,7 @@
-# diversity
+# diversity: similarity-sensitive diversity indices
 
-A package for calculating similarity-sensitive diversity indices.
+![Tests](https://github.com/Elliot-D-Hill/diversity/actions/workflows/tests.yml/badge.svg)
+[![Python 3.8](https://img.shields.io/badge/python-3.8-blue.svg)](https://www.python.org/downloads/release/python-380/)
 
 * [About](#about)
 * [Installation](#installation)
@@ -34,11 +35,6 @@ pip install diversity
 - pytest >= 6.2.5
 - numpy >= 1.22.0
 - pandas >= 1.3.5
-
-To run tests, execute:
-```bash
-pytest --pyargs metacommunity
-```
 
 ## Usage and Examples
 
