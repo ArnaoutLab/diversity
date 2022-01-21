@@ -36,7 +36,11 @@ def main(args):
     LOGGER.debug(f"args: {args}")
 
     delimiter = get_file_delimiter(args.input_filepath)
-    species_counts = read_csv(args.input_filepath, sep=delimiter)
+    species_counts = read_csv(
+        args.input_filepath,
+        sep=delimiter,
+        usecols=[args.subcommunity_column, args.species_column, args.count_column],
+    )[[args.subcommunity_column, args.species_column, args.count_column]]
 
     LOGGER.debug(f"data: {species_counts}")
 

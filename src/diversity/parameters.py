@@ -56,10 +56,13 @@ def configure_arguments():
         "-i",
         "--input_filepath",
         help=(
-            "A csv or tsv file where the first 3 columns of the file"
-            " contain subcommunity name, species name, and the count"
-            " (the number of appearances of the species in the"
-            " subcommunity)."
+            "A csv or tsv file containing one column for subcommunity"
+            " names (with header 'subcommunity', or specified via -u),"
+            " one column for species names (with header 'species', or"
+            " specified via -p), and one column of counts, which"
+            " contains the number of individuals of the row's species"
+            " in the row's subcommunity (with header 'count', or"
+            " specified via -c)."
         ),
     )
     parser.add_argument(
