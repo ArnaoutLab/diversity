@@ -19,7 +19,7 @@ from numpy import inf
 from diversity.utilities import ArgumentWarning
 
 
-class ValidateViewpoint(Action):
+class __ValidateViewpoint(Action):
     """Validator for -viewpoint parameter."""
 
     def __call__(self, parser, args, values, option_string=None):
@@ -113,7 +113,7 @@ def configure_arguments():
             " (including inf) is valid, but viewpoint parameters"
             " greater than 100 are treated like inf."
         ),
-        action=ValidateViewpoint,
+        action=__ValidateViewpoint,
     )
     parser.add_argument(
         "-z",
