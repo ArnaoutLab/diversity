@@ -51,7 +51,7 @@ from pandas import read_csv
 from numpy.linalg import norm
 from scipy.spatial.distance import pdist, squareform
 ```
-The data for the following examples can be found at this [Gist](https://gist.github.com/Elliot-D-Hill/b6613ca167511ee18637616e2fcdb299).
+The data for the following examples can be found at this [Gist](https://gist.github.com/Elliot-D-Hill/1200c74c83a4be1f63f9ef56b333bb99).
 
 ```python
 gist_url = 'https://gist.github.com/Elliot-D-Hill/1200c74c83a4be1f63f9ef56b333bb99/raw/71e2c2f026b9a495023e6e71ee1dcc545cb53972/'
@@ -73,19 +73,6 @@ penguin_features.head()
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -141,19 +128,7 @@ penguin_counts.head()
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
 
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -211,9 +186,6 @@ penguin_similarity_matrix = 1 / (1  + penguin_distance_matrix)
 penguin_similarity_matrix
 ```
 
-
-
-
     array([[1.00000000e+00, 3.30156918e-02, 7.21626767e-04],
            [3.30156918e-02, 1.00000000e+00, 7.35991958e-04],
            [7.21626767e-04, 7.35991958e-04, 1.00000000e+00]])
@@ -236,23 +208,8 @@ We can calculate all diviersty measures at once for a given viewpoint.
 penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 ```
 
-
-
-
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
 
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -318,23 +275,8 @@ We can change the viewpoint parameter and recalculate diversity measures.
 penguin_metacommunity.subcommunities_to_dataframe(viewpoint=2)
 ```
 
-
-
-
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
 
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -400,23 +342,8 @@ We can also compute all metacommunity diversity measures at once.
 penguin_metacommunity.metacommunity_to_dataframe(viewpoint=0)
 ```
 
-
-
-
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
 
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -458,9 +385,6 @@ If we only want to compute a single measure, we call them individually.
 penguin_metacommunity.subcommunity_alpha(viewpoint=0)
 ```
 
-
-
-
     array([4.06863173, 5.25377155, 7.10638298])
 
 
@@ -501,19 +425,6 @@ metagenome.subcommunities_to_dataframe(viewpoint=0)
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -597,7 +508,7 @@ def euclidean_similarity(a, b):
 
 
 ```python
-iris_metacommunity = make_metacommunity(
+penguin_metacommunity = make_metacommunity(
     penguin_counts, 
     species_order=species_order, 
     similarity_function=euclidean_similarity, 
@@ -607,26 +518,13 @@ iris_metacommunity = make_metacommunity(
 
 
 ```python
-iris_metacommunity.subcommunities_to_dataframe(viewpoint=0)
+penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 ```
 
 
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -692,7 +590,7 @@ iris_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 
 ### Command line interface
 
-For calculating diversity indices from the command line, we will need the following files, which can be downloaded from this [Gist](https://gist.github.com/Elliot-D-Hill/b6613ca167511ee18637616e2fcdb299).
+For calculating diversity indices from the command line, we will need the following files, which can be downloaded from this [Gist](https://gist.github.com/Elliot-D-Hill/1200c74c83a4be1f63f9ef56b333bb99).
 
 `metagenome_counts.csv`
 ```
