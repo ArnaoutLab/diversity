@@ -9,11 +9,11 @@ jobs:
     runs-on: ${{ matrix.os}}
     strategy:
       matrix:
-        os: [osx-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: ['3.8', '3.9', '3.10']
 
     steps:
-    - uses: action/checkout@v2
+    - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:

@@ -60,7 +60,7 @@ gist_url = 'https://gist.github.com/Elliot-D-Hill/1200c74c83a4be1f63f9ef56b333bb
 
 #### Similarity from array or dataframe
 
-First we load the [Palmer penguins dataset](https://github.com/allisonhorst/palmerpenguins) (see [Gorman, Williams, and Fraser, 2014](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0090081) for more details). To simplify our examples, we have preprocessed the dataset to include only four features for the three penguin species (Adelie, Chinstrap, and Gentoo).
+First we load the [Palmer penguins dataset](https://github.com/allisonhorst/palmerpenguins) (see [Gorman, Williams, and Fraser, 2014](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0090081) for more details). To simplify our examples, we have preprocessed the dataset to include only the means of four features for the three penguin species (Adelie, Chinstrap, and Gentoo).
 
 
 ```python
