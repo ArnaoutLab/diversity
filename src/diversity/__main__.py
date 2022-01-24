@@ -45,7 +45,9 @@ def main(args):
     LOGGER.debug(f"data: {species_counts}")
 
     meta = make_metacommunity(
-        species_counts, similarity_matrix_filepath=args.similarity_matrix_filepath
+        species_counts,
+        similarity_matrix_filepath=args.similarity_matrix_filepath,
+        chunk_size=args.chunk_size,
     )
 
     community_views = []
