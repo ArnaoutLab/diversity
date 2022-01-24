@@ -8,16 +8,10 @@ LOGGER: logging.Logger
     Multiprocessing-safe logger.
 """
 from logging import (
-    CRITICAL,
-    DEBUG,
-    ERROR,
     Formatter,
-    INFO,
     StreamHandler,
-    WARNING,
 )
 from multiprocessing import get_logger
-from time import gmtime, strftime
 
 date_format = "%Y-%m-%dT%H:%M:%S%z"
 logging_format = (

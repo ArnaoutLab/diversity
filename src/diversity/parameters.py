@@ -11,7 +11,7 @@ configure_arguments
     Creates argument parser for .
 """
 from argparse import Action, ArgumentParser
-from sys import stdout, stdin
+from sys import stdout
 from warnings import warn
 
 from numpy import inf

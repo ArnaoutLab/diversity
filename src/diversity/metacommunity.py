@@ -370,14 +370,14 @@ def make_similarity(
     )
     from_file_parameters = (similarity_matrix_filepath,)
 
-    if all(p is not None for p in from_memory_parameters):
+    all_are_not_none = lambda parameters: all(p is not None for p in parameters)
+    if all_are_not_none(from_memory_parameters):
         return SimilarityFromMemory(*from_memory_parameters)
-    elif all(p is not None for p in from_function_parameters):
+    elif all_are_not_none(from_function_parameters):
         return SimilarityFromFunction(*from_function_parameters)
-    elif all(p is not None for p in from_file_parameters):
+    elif all_are_not_none(from_file_parameters):
         return SimilarityFromFile(*from_file_parameters, chunk_size=chunk_size)
     else:
-        # FIXME need to refer to correct documentation
         raise Exception(
             "Invalid argument combination. See the documentation for"
             " valid argument combinations."
