@@ -28,12 +28,21 @@ make_metacommunity
 """
 from abc import ABC, abstractmethod
 from functools import cached_property
+from multiprocessing import cpu_count, Pool
 from pathlib import Path
 
 from pandas import DataFrame, read_csv
-from numpy import array, empty, zeros, broadcast_to, divide, float64
+from numpy import array, empty, zeros, broadcast_to, dtype, divide, float64, vectorize
 
-from diversity.utilities import get_file_delimiter, power_mean, unique_correspondence
+from diversity.utilities import (
+    get_file_delimiter,
+    partition_range,
+    power_mean,
+    SharedArray,
+    SharedArraySpec,
+    unique_correspondence,
+    WeaklySharedArray,
+)
 
 
 class Abundance:
@@ -125,9 +134,11 @@ class Abundance:
         in the subcommunity relative to the total metacommunity size.
         The row ordering is established by the species_to_row attribute.
         """
-        metacommunity_counts = self.__pivot_table()
-        total_abundance = metacommunity_counts.sum()
-        return metacommunity_counts / total_abundance
+        counts = self.__pivot_table()
+        total_abundance = counts.sum()
+        relative_abundances = SharedArray(shape=counts.shape, dtype=dtype("f8"))
+        relative_abundances.array[:] = counts / total_abundance
+        return relative_abundances
 
     @cached_property
     def metacommunity_abundance(self):
@@ -140,7 +151,9 @@ class Abundance:
         of the species in the metacommunity. The row ordering is
         established by the species_to_row attribute.
         """
-        return self.subcommunity_abundance.sum(axis=1, keepdims=True)
+        return SharedArray.from_array(
+            self.subcommunity_abundance.array.sum(axis=1, keepdims=True)
+        )
 
     @cached_property
     def subcommunity_normalizing_constants(self):
@@ -151,7 +164,7 @@ class Abundance:
         A numpy.ndarray of shape (n_subcommunities,), with the fraction
         of each subcommunity's size of the metacommunity.
         """
-        return self.subcommunity_abundance.sum(axis=0)
+        return self.subcommunity_abundance.array.sum(axis=0)
 
     @cached_property
     def normalized_subcommunity_abundance(self):
@@ -165,7 +178,9 @@ class Abundance:
         in the subcommunity relative to the subcommunity size. The row
         ordering is established by the species_to_row attribute.
         """
-        return self.subcommunity_abundance / self.subcommunity_normalizing_constants
+        return SharedArray.from_array(
+            self.subcommunity_abundance.array / self.subcommunity_normalizing_constants
+        )
 
 
 class Similarity(ABC):
@@ -237,8 +252,9 @@ class SimilarityFromFile(Similarity):
         See diversity.metacommunity.Similarity.calculate_weighted_similarities
         for complete specification.
         """
-        weighted_similarities = empty(relative_abundances.shape, dtype=float64)
-
+        weighted_similarities = SharedArray(
+            shape=relative_abundances.shape, dtype=dtype("f8")
+        )
         with read_csv(
             self.similarity_matrix_filepath,
             delimiter=self.__delimiter,
@@ -246,11 +262,37 @@ class SimilarityFromFile(Similarity):
         ) as similarity_matrix_chunks:
             i = 0
             for chunk in similarity_matrix_chunks:
-                weighted_similarities[i : i + self.__chunk_size, :] = (
-                    chunk.to_numpy() @ relative_abundances
+                weighted_similarities.array[i : i + self.__chunk_size, :] = (
+                    chunk.to_numpy() @ relative_abundances.array
                 )
                 i += self.__chunk_size
         return weighted_similarities
+
+
+class ParallelizeSimilarityFunction:
+    def __init__(self, func):
+        self.func = func
+
+    def __call__(
+        self,
+        row_start,
+        row_stop,
+        weighted_similarities_spec,
+        features_spec,
+        relative_abundance_spec,
+    ):
+        weighted_similarities = WeaklySharedArray(weighted_similarities_spec)
+        features = WeaklySharedArray(features_spec)
+        relative_abundances = WeaklySharedArray(relative_abundance_spec)
+        similarities_row_i = empty(
+            shape=(weighted_similarities.array.shape[0],), dtype=float64
+        )
+        for i in range(row_start, row_stop):
+            for j in range(features.array.shape[0]):
+                similarities_row_i[j] = self.func(features.array[i], features.array[j])
+            weighted_similarities.array[i] = (
+                similarities_row_i @ relative_abundances.array
+            )
 
 
 class SimilarityFromFunction(Similarity):
@@ -276,7 +318,7 @@ class SimilarityFromFunction(Similarity):
             argument.
         """
         self.similarity_function = similarity_function
-        self.features = features
+        self.features = SharedArray.from_array(features)
         self.species_order = species_order
 
     def calculate_weighted_similarities(self, relative_abundances):
@@ -288,12 +330,30 @@ class SimilarityFromFunction(Similarity):
         See diversity.metacommunity.Similarity.calculate_weighted_similarities
         for complete specification.
         """
-        weighted_similarities = empty(relative_abundances.shape, dtype=float64)
-        similarities_row = empty(len(self.species_order), dtype=float64)
-        for i, species_i in enumerate(self.features):
-            for j, species_j in enumerate(self.features):
-                similarities_row[j] = self.similarity_function(species_i, species_j)
-            weighted_similarities[i, :] = similarities_row @ relative_abundances
+        weighted_similarities = SharedArray(
+            shape=relative_abundances.shape, dtype=dtype("f8")
+        )
+        weighted_similarities_spec = SharedArraySpec.from_shared_array(
+            weighted_similarities
+        )
+        features_spec = SharedArraySpec.from_shared_array(self.features)
+        relative_abundance_spec = SharedArraySpec.from_shared_array(relative_abundances)
+        num_processors = cpu_count()
+        row_chunks = partition_range(
+            range(relative_abundances.shape[0]), num_processors
+        )
+        args_list = [
+            (
+                chunk.start,
+                chunk.stop,
+                weighted_similarities_spec,
+                features_spec,
+                relative_abundance_spec,
+            )
+            for chunk in row_chunks
+        ]
+        with Pool(num_processors) as pool:
+            pool.starmap(self.similarity_function, args_list)
         return weighted_similarities
 
 
@@ -321,7 +381,9 @@ class SimilarityFromMemory(Similarity):
         See diversity.metacommunity.Similarity.calculate_weighted_similarities
         for complete specification.
         """
-        return self.similarity_matrix @ relative_abundances
+        return SharedArray.from_array(
+            self.similarity_matrix @ relative_abundances.array
+        )
 
 
 def make_similarity(
@@ -441,7 +503,9 @@ class Metacommunity:
             the same as frequent species, and infinity considers only the
             most frequent species.
         """
-        return self.__subcommunity_measure(viewpoint, 1, self.__subcommunity_similarity)
+        return self.__subcommunity_measure(
+            viewpoint, 1, self.__subcommunity_similarity.array
+        )
 
     def subcommunity_rho(self, viewpoint):
         """Calculates rho class diversities of subcommunities.
@@ -459,8 +523,8 @@ class Metacommunity:
         """
         return self.__subcommunity_measure(
             viewpoint,
-            self.__metacommunity_similarity,
-            self.__subcommunity_similarity,
+            self.__metacommunity_similarity.array,
+            self.__subcommunity_similarity.array,
         )
 
     def subcommunity_beta(self, viewpoint):
@@ -494,7 +558,7 @@ class Metacommunity:
             the most frequent species.
         """
         denominator = broadcast_to(
-            self.__metacommunity_similarity,
+            self.__metacommunity_similarity.array,
             self.abundance.normalized_subcommunity_abundance.shape,
         )
         return self.__subcommunity_measure(viewpoint, 1, denominator)
@@ -514,7 +578,7 @@ class Metacommunity:
             most frequent species.
         """
         return self.__subcommunity_measure(
-            viewpoint, 1, self.__normalized_subcommunity_similarity
+            viewpoint, 1, self.__normalized_subcommunity_similarity.array
         )
 
     def normalized_subcommunity_rho(self, viewpoint):
@@ -532,8 +596,8 @@ class Metacommunity:
         """
         return self.__subcommunity_measure(
             viewpoint,
-            self.__metacommunity_similarity,
-            self.__normalized_subcommunity_similarity,
+            self.__metacommunity_similarity.array,
+            self.__normalized_subcommunity_similarity.array,
         )
 
     def normalized_subcommunity_beta(self, viewpoint):
@@ -675,7 +739,7 @@ class Metacommunity:
         )
         return power_mean(
             1 - viewpoint,
-            self.abundance.normalized_subcommunity_abundance,
+            self.abundance.normalized_subcommunity_abundance.array,
             similarities,
         )
 
