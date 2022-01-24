@@ -689,9 +689,7 @@ def sim_func(a, b):
 SIMILARITY_FROM_FUNCTION_TEST_CASES = [
     {
         "description": "similarity function; 2 communities; tsv similarities file",
-        "similarity_function": ParallelizeSimilarityFunction(
-            sim_func
-        ),  # lambda a, b: 1 / sum(a * b),
+        "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b),
         "features": array([[1, 2], [3, 5], [7, 11]]),
         "species_order": array(["species_3", "species_1", "species_2"]),
         "expected_species_order": array(["species_3", "species_1", "species_2"]),
@@ -712,9 +710,7 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
     },
     {
         "description": "similarity function; 2 communities; csv similarities file",
-        "similarity_function": ParallelizeSimilarityFunction(
-            sim_func
-        ),  # lambda a, b: 1 / sum(a * b),
+        "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b),
         "features": array([[1, 2], [3, 5], [7, 11]]),
         "species_order": array(["species_3", "species_1", "species_2"]),
         "expected_species_order": array(["species_3", "species_1", "species_2"]),
@@ -735,9 +731,7 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
     },
     {
         "description": "similarity function; 1 community; similarities file without extension",
-        "similarity_function": ParallelizeSimilarityFunction(
-            sim_func
-        ),  # lambda a, b: 1 / sum(a * b),
+        "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b),
         "features": array([[1, 2], [3, 5], [7, 11]]),
         "species_order": array(["species_3", "species_1", "species_2"]),
         "expected_species_order": array(["species_3", "species_1", "species_2"]),

@@ -317,7 +317,7 @@ class SimilarityFromFunction(Similarity):
             in similarity matrix calculations is determined by this
             argument.
         """
-        self.similarity_function = similarity_function
+        self.similarity_function = ParallelizeSimilarityFunction(similarity_function)
         self.features = SharedArray.from_array(features)
         self.species_order = species_order
 
