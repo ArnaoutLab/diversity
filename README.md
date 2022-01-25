@@ -45,73 +45,18 @@ pip install diversity
 from diversity.metacommunity import make_metacommunity
 from pandas import read_csv
 from numpy.linalg import norm
-from scipy.spatial.distance import pdist, squareform
-```
-The data for the following examples can be found at this [Gist](https://gist.github.com/Elliot-D-Hill/1200c74c83a4be1f63f9ef56b333bb99).
-
-```python
-gist_url = 'https://gist.github.com/Elliot-D-Hill/1200c74c83a4be1f63f9ef56b333bb99/raw/71e2c2f026b9a495023e6e71ee1dcc545cb53972/'
 ```
 
-
-#### Similarity from array or dataframe
-
-First we load the [Palmer penguins dataset](https://github.com/allisonhorst/palmerpenguins) (see [Gorman, Williams, and Fraser, 2014](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0090081) for more details). To simplify our examples, we have preprocessed the dataset to include only the means of four features for the three penguin species (Adelie, Chinstrap, and Gentoo).
+The data for the following examples will be loaded from this [Gist](https://gist.github.com/Elliot-D-Hill/f6e9db0aebe561a363e8758c72a0acfc)
 
 
 ```python
-penguin_features_filepath = gist_url + 'penguin_features.csv'
-penguin_features = read_csv(penguin_features_filepath)
-penguin_features.head()
+gist_url = 'https://gist.githubusercontent.com/Elliot-D-Hill/f6e9db0aebe561a363e8758c72a0acfc/raw/ef29ba813d2b0b8a09c245175e96c9828693f25d/'
 ```
 
+# Similarity from an array or dataframe
 
-
-
-<div>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>species</th>
-      <th>culmen_length_mm</th>
-      <th>culmen_depth_mm</th>
-      <th>flipper_length_mm</th>
-      <th>body_mass_g</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>Adelie</td>
-      <td>38.823973</td>
-      <td>18.347260</td>
-      <td>190.102740</td>
-      <td>3706.164384</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>Chinstrap</td>
-      <td>48.833824</td>
-      <td>18.420588</td>
-      <td>195.823529</td>
-      <td>3733.088235</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>Gentoo</td>
-      <td>47.542500</td>
-      <td>15.002500</td>
-      <td>217.233333</td>
-      <td>5090.625000</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-Next, we load in the penguin subcommunity-species counts data.
+First we load the [Palmer penguins dataset](https://github.com/allisonhorst/palmerpenguins). We have aggregated this dataset into subcommunity-by-species counts.
 
 
 ```python
@@ -124,7 +69,19 @@ penguin_counts.head()
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
 
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -171,23 +128,17 @@ penguin_counts.head()
 
 
 
-First, we generate a similarity matrix from the penguin features by taking the euclidean distance between each row in the dataset. Then, we convert the distances to similarities by scaling between 0 and 1.
+Next, we load a similiarty matrix as a pandas dataframe (but it could also be a numpy array).
 
 
 ```python
-species_order = penguin_features.pop('species')
-distances = pdist(penguin_features)
-penguin_distance_matrix = squareform(distances)
-penguin_similarity_matrix = 1 / (1  + penguin_distance_matrix)
-penguin_similarity_matrix
+penguin_similarity_matrix_filepath = gist_url + 'penguin_similarity_matrix.csv'
+penguin_similarity_matrix = read_csv(penguin_similarity_matrix_filepath)
+species_order = penguin_similarity_matrix.columns
 ```
 
-    array([[1.00000000e+00, 3.30156918e-02, 7.21626767e-04],
-           [3.30156918e-02, 1.00000000e+00, 7.35991958e-04],
-           [7.21626767e-04, 7.35991958e-04, 1.00000000e+00]])
+Finally, we create a Metacommunity object.
 
-
-Last, we create a metacommunity object from the counts, spcecies order, and similarity matrix.
 
 ```python
 penguin_metacommunity = make_metacommunity(
@@ -197,15 +148,30 @@ penguin_metacommunity = make_metacommunity(
 )
 ```
 
-We can calculate all diviersty measures at once for a given viewpoint.
+Metacommunty objects have convenience functions for calculating all diviersty measures at once for a given viewpoint.
 
 
 ```python
 penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 ```
 
-<div>
 
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -226,37 +192,37 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
       <th>0</th>
       <td>Biscoe</td>
       <td>0</td>
-      <td>4.068632</td>
-      <td>1.635146</td>
-      <td>0.611566</td>
-      <td>2.638069</td>
-      <td>1.997771</td>
-      <td>0.802886</td>
-      <td>1.245507</td>
+      <td>3.149044</td>
+      <td>1.703508</td>
+      <td>0.587024</td>
+      <td>1.892887</td>
+      <td>1.546237</td>
+      <td>0.836453</td>
+      <td>1.195525</td>
     </tr>
     <tr>
       <th>1</th>
       <td>Dream</td>
       <td>0</td>
-      <td>5.253772</td>
-      <td>1.735989</td>
-      <td>0.576041</td>
-      <td>3.539491</td>
-      <td>1.934772</td>
-      <td>0.639301</td>
-      <td>1.564208</td>
+      <td>4.019417</td>
+      <td>2.067072</td>
+      <td>0.483776</td>
+      <td>1.993902</td>
+      <td>1.480205</td>
+      <td>0.761227</td>
+      <td>1.313668</td>
     </tr>
     <tr>
       <th>2</th>
       <td>Torgersen</td>
       <td>0</td>
       <td>7.106383</td>
-      <td>3.155993</td>
-      <td>0.316858</td>
-      <td>2.251711</td>
+      <td>4.178339</td>
+      <td>0.239330</td>
+      <td>1.700768</td>
       <td>1.000000</td>
-      <td>0.444107</td>
-      <td>2.251711</td>
+      <td>0.587970</td>
+      <td>1.700768</td>
     </tr>
   </tbody>
 </table>
@@ -271,8 +237,23 @@ We can change the viewpoint parameter and recalculate diversity measures.
 penguin_metacommunity.subcommunities_to_dataframe(viewpoint=2)
 ```
 
-<div>
 
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -293,37 +274,37 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=2)
       <th>0</th>
       <td>Biscoe</td>
       <td>2</td>
-      <td>3.351522</td>
-      <td>1.233509</td>
-      <td>0.810695</td>
-      <td>2.615200</td>
-      <td>1.645657</td>
-      <td>0.605675</td>
-      <td>1.651050</td>
+      <td>2.930631</td>
+      <td>1.526693</td>
+      <td>0.655011</td>
+      <td>1.885246</td>
+      <td>1.438992</td>
+      <td>0.749634</td>
+      <td>1.333985</td>
     </tr>
     <tr>
       <th>1</th>
       <td>Dream</td>
       <td>2</td>
-      <td>5.202916</td>
-      <td>1.424577</td>
-      <td>0.701963</td>
-      <td>3.132199</td>
-      <td>1.916044</td>
-      <td>0.524620</td>
-      <td>1.906143</td>
+      <td>4.009001</td>
+      <td>1.997261</td>
+      <td>0.500686</td>
+      <td>1.958037</td>
+      <td>1.476369</td>
+      <td>0.735518</td>
+      <td>1.359586</td>
     </tr>
     <tr>
       <th>2</th>
       <td>Torgersen</td>
       <td>2</td>
       <td>7.106383</td>
-      <td>3.155993</td>
-      <td>0.316858</td>
-      <td>2.251711</td>
+      <td>4.178339</td>
+      <td>0.239330</td>
+      <td>1.700768</td>
       <td>1.000000</td>
-      <td>0.444107</td>
-      <td>2.251711</td>
+      <td>0.587970</td>
+      <td>1.700768</td>
     </tr>
   </tbody>
 </table>
@@ -331,15 +312,30 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=2)
 
 
 
-We can also compute all metacommunity diversity measures at once. 
+We can also compute all metacommunity measures at once. 
 
 
 ```python
 penguin_metacommunity.metacommunity_to_dataframe(viewpoint=0)
 ```
 
-<div>
 
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -360,13 +356,13 @@ penguin_metacommunity.metacommunity_to_dataframe(viewpoint=0)
       <th>0</th>
       <td>metacommunity</td>
       <td>0</td>
-      <td>4.932543</td>
-      <td>1.886294</td>
-      <td>0.557012</td>
-      <td>2.915662</td>
-      <td>1.834166</td>
-      <td>0.692157</td>
-      <td>1.504464</td>
+      <td>4.026442</td>
+      <td>2.18565</td>
+      <td>0.500075</td>
+      <td>1.903052</td>
+      <td>1.445054</td>
+      <td>0.773784</td>
+      <td>1.31013</td>
     </tr>
   </tbody>
 </table>
@@ -374,141 +370,29 @@ penguin_metacommunity.metacommunity_to_dataframe(viewpoint=0)
 
 
 
-If we only want to compute a single measure, we call them individually.
+We can also calculate diveristy measures individually for subcommunities or metacommunties.
 
 
 ```python
-penguin_metacommunity.subcommunity_alpha(viewpoint=0)
+penguin_metacommunity.normalized_subcommunity_alpha(viewpoint=0)
 ```
 
-    array([4.06863173, 5.25377155, 7.10638298])
 
 
 
-#### Similarity from file
+    array([1.54623705, 1.48020455, 1.        ])
+
+
+
+# Similarity from file
 
 For large datasets, the similarity matrix may not fit in RAM. To avoid loading the entire matrix into RAM, use the similarity_matrix_filepath argument to read a file from a hard disk drive.
-
-This example calculates diversity indices for the gut microbiomes of four cyclists. For our example, we use a subsample of this dataset. The full dataset can be found [here](https://trace.ncbi.nlm.nih.gov/Traces/sra/?study=SRP219106). See [Peterson, et al., 2017](https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-017-0320-4) for more details.
-
-
-```python
-# read the files from gist
-metagenome_similarity_filepath = gist_url + 'metagenome_similarity_matrix.csv'
-metagenome_counts_filepath = gist_url + 'metagenome_counts.csv'
-metagenome_similarity = read_csv(metagenome_similarity_filepath)
-metagenome_counts = read_csv(metagenome_counts_filepath)
-
-# save the similarity matrix file locally
-similarity_filepath = 'metagenome_similarity_matrix.csv'
-metagenome_similarity.to_csv(similarity_filepath, index=None)
-```
-
-
-```python
-metagenome = make_metacommunity(
-    metagenome_counts, 
-    similarity_matrix_filepath=similarity_filepath
-)
-```
-
-
-```python
-metagenome.subcommunities_to_dataframe(viewpoint=0)
-```
-
-
-
-
-<div>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>community</th>
-      <th>viewpoint</th>
-      <th>alpha</th>
-      <th>rho</th>
-      <th>beta</th>
-      <th>gamma</th>
-      <th>normalized_alpha</th>
-      <th>normalized_rho</th>
-      <th>normalized_beta</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>Breezer</td>
-      <td>0</td>
-      <td>5.620958</td>
-      <td>3.878248</td>
-      <td>0.257848</td>
-      <td>1.452272</td>
-      <td>1.404630</td>
-      <td>0.969142</td>
-      <td>1.031841</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>Commencal</td>
-      <td>0</td>
-      <td>5.765467</td>
-      <td>3.971145</td>
-      <td>0.251817</td>
-      <td>1.452311</td>
-      <td>1.441604</td>
-      <td>0.992950</td>
-      <td>1.007101</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>IronHorse</td>
-      <td>0</td>
-      <td>5.613436</td>
-      <td>3.934638</td>
-      <td>0.254153</td>
-      <td>1.426263</td>
-      <td>1.403254</td>
-      <td>0.983586</td>
-      <td>1.016688</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>Scott</td>
-      <td>0</td>
-      <td>5.398303</td>
-      <td>3.821598</td>
-      <td>0.261671</td>
-      <td>1.410603</td>
-      <td>1.350040</td>
-      <td>0.955728</td>
-      <td>1.046323</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-#### Similarity from function
-
-If the similarity matrix file doesn't fit in RAM and we don't have a precomputed similarity matrix, we can define a custom similarity function to generate the similarity matrix on the fly. If the matrix is large or the similarity function is computationally expensive, then this approach can take a long time.
-
-
-```python
-def euclidean_similarity(a, b):
-    euclidean_distance = norm(a - b)
-    return 1 / (1 + euclidean_distance)
-```
 
 
 ```python
 penguin_metacommunity = make_metacommunity(
     penguin_counts, 
-    species_order=species_order, 
-    similarity_function=euclidean_similarity, 
-    features=penguin_features
+    similarity_matrix_filepath=penguin_similarity_matrix_filepath
 )
 ```
 
@@ -521,6 +405,19 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -541,37 +438,37 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
       <th>0</th>
       <td>Biscoe</td>
       <td>0</td>
-      <td>4.068632</td>
-      <td>1.635146</td>
-      <td>0.611566</td>
-      <td>2.638069</td>
-      <td>1.997771</td>
-      <td>0.802886</td>
-      <td>1.245507</td>
+      <td>3.149044</td>
+      <td>1.703508</td>
+      <td>0.587024</td>
+      <td>1.892887</td>
+      <td>1.546237</td>
+      <td>0.836453</td>
+      <td>1.195525</td>
     </tr>
     <tr>
       <th>1</th>
       <td>Dream</td>
       <td>0</td>
-      <td>5.253772</td>
-      <td>1.735989</td>
-      <td>0.576041</td>
-      <td>3.539491</td>
-      <td>1.934772</td>
-      <td>0.639301</td>
-      <td>1.564208</td>
+      <td>4.019417</td>
+      <td>2.067072</td>
+      <td>0.483776</td>
+      <td>1.993902</td>
+      <td>1.480205</td>
+      <td>0.761227</td>
+      <td>1.313668</td>
     </tr>
     <tr>
       <th>2</th>
       <td>Torgersen</td>
       <td>0</td>
       <td>7.106383</td>
-      <td>3.155993</td>
-      <td>0.316858</td>
-      <td>2.251711</td>
+      <td>4.178339</td>
+      <td>0.239330</td>
+      <td>1.700768</td>
       <td>1.000000</td>
-      <td>0.444107</td>
-      <td>2.251711</td>
+      <td>0.587970</td>
+      <td>1.700768</td>
     </tr>
   </tbody>
 </table>
@@ -579,70 +476,191 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 
 
 
+# Similarity from a function
+
+If the similarity matrix file doesn't fit in RAM and we don't have a precomputed similarity matrix, we can define a custom similarity function to generate the similarity matrix on the fly. If the matrix is large or the similarity function is computationally expensive, then this approach can take a long time.
+
+To simplify our examples, we have preprocessed the dataset to include only four features for the three penguin species (Adelie, Chinstrap, and Gentoo).
+
 
 ```python
-
+penguin_features_filepath = gist_url + 'penguin_features.csv'
+penguin_features = read_csv(penguin_features_filepath)
+penguin_features.head()
 ```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>species</th>
+      <th>culmen_length_mm</th>
+      <th>culmen_depth_mm</th>
+      <th>flipper_length_mm</th>
+      <th>body_mass_g</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Adelie</td>
+      <td>-0.946858</td>
+      <td>0.603067</td>
+      <td>-0.778212</td>
+      <td>-0.624838</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Chinstrap</td>
+      <td>0.886273</td>
+      <td>0.640329</td>
+      <td>-0.370231</td>
+      <td>-0.591386</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Gentoo</td>
+      <td>0.649789</td>
+      <td>-1.096585</td>
+      <td>1.156622</td>
+      <td>1.095339</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+First, we define a similarity function which calculates the euclidean distance between each species in the dataset then converts the distances to similarities by scaling them between 0 and 1.
+
+
+```python
+def euclidean_similarity(a, b):
+    euclidean_distance = norm(a - b)
+    return 1 / (1 + euclidean_distance)
+```
+
+
+```python
+species_order = penguin_features.pop('species')
+
+penguin_metacommunity = make_metacommunity(
+    penguin_counts, 
+    species_order=species_order, 
+    similarity_function=euclidean_similarity, 
+    features=penguin_features
+)
+```
+
+
+```python
+penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>community</th>
+      <th>viewpoint</th>
+      <th>alpha</th>
+      <th>rho</th>
+      <th>beta</th>
+      <th>gamma</th>
+      <th>normalized_alpha</th>
+      <th>normalized_rho</th>
+      <th>normalized_beta</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Biscoe</td>
+      <td>0</td>
+      <td>3.149044</td>
+      <td>1.703508</td>
+      <td>0.587024</td>
+      <td>1.892887</td>
+      <td>1.546237</td>
+      <td>0.836453</td>
+      <td>1.195525</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Dream</td>
+      <td>0</td>
+      <td>4.019417</td>
+      <td>2.067072</td>
+      <td>0.483776</td>
+      <td>1.993902</td>
+      <td>1.480205</td>
+      <td>0.761227</td>
+      <td>1.313668</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Torgersen</td>
+      <td>0</td>
+      <td>7.106383</td>
+      <td>4.178339</td>
+      <td>0.239330</td>
+      <td>1.700768</td>
+      <td>1.000000</td>
+      <td>0.587970</td>
+      <td>1.700768</td>
+    </tr>
+  </tbody>
+</table>
+</div>
 
 ### Command line interface
 
-For calculating diversity indices from the command line, we will need the following files, which can be downloaded from this [Gist](https://gist.github.com/Elliot-D-Hill/1200c74c83a4be1f63f9ef56b333bb99).
+For calculating diversity indices from the command line, we will need the following files, which can be downloaded from this [Gist](https://gist.github.com/Elliot-D-Hill/f6e9db0aebe561a363e8758c72a0acfc).
 
-`metagenome_counts.csv`
-```
-subcommunity,species,counts
-subcommunity_1,Akkermansia muciniphila,4394
-subcommunity_1,Faecalibacterium prausnitzii,1807
-...
-subcommunity_4,Blautia coccoides,1
-```
-
-and
-
-`metagenome_similarity_matrix.csv`
-```
-Akkermansia muciniphila,Faecalibacterium prausnitzii,...,Shigella dysenteriae
-1.0,0.6671415709437735,...,0.6093549494839958
-...
-0.6093549494839958,0.6185898023961985,...,1.0
-```
 
 Once the files are downloaded, execute
 ```bash
-python -m diversity -i metagenome_counts.csv -s metagenome_similarity_matrix.csv
+python -m diversity -i penguin_counts.csv -s penguin_similarity_matrix.csv
 ```
 
-This is what is printed to the terminal window:
-```
-2022-01-19T14:02:44-0500 (MainProcess, MainThread) INFO python3.9.4 /Users/jasper/diversity/src/diversity/__main__.py -i metagenome_counts.csv -s metagenome_similarity_matrix.csv -v 0 1 2 inf
-community viewpoint alpha rho beta gamma normalized_alpha normalized_rho normalized_beta
-subcommunity_1 0.00 5.6056 3.8792 0.2578 1.4479 1.4008 0.9694 1.0316
-subcommunity_2 0.00 5.7490 3.9715 0.2518 1.4480 1.4375 0.9930 1.0070
-subcommunity_3 0.00 5.5985 3.9352 0.2541 1.4222 1.3995 0.9837 1.0165
-subcommunity_4 0.00 5.3856 3.8230 0.2616 1.4068 1.3469 0.9561 1.0459
-metacommunity 0.00 5.5847 3.9022 0.2563 1.4312 1.3962 0.9756 1.0253
-subcommunity_1 1.00 5.6017 3.8719 0.2583 1.4468 1.3998 0.9675 1.0335
-subcommunity_2 1.00 5.7449 3.9703 0.2519 1.4470 1.4365 0.9927 1.0073
-subcommunity_3 1.00 5.5895 3.9347 0.2541 1.4206 1.3973 0.9836 1.0167
-subcommunity_4 1.00 5.3633 3.8167 0.2620 1.4052 1.3413 0.9545 1.0477
-metacommunity 1.00 5.5732 3.8980 0.2565 1.4298 1.3933 0.9745 1.0262
-subcommunity_1 2.00 5.5979 3.8646 0.2588 1.4456 1.3989 0.9657 1.0355
-subcommunity_2 2.00 5.7410 3.9692 0.2519 1.4459 1.4355 0.9925 1.0076
-subcommunity_3 2.00 5.5808 3.9342 0.2542 1.4189 1.3951 0.9835 1.0168
-subcommunity_4 2.00 5.3421 3.8106 0.2624 1.4037 1.3360 0.9530 1.0493
-metacommunity 2.00 5.5617 3.8937 0.2568 1.4283 1.3904 0.9734 1.0271
-subcommunity_1 inf 5.2934 3.5613 0.2808 1.3452 1.3228 0.8899 1.1237
-subcommunity_2 inf 5.4517 3.8544 0.2594 1.3452 1.3632 0.9638 1.0376
-subcommunity_3 inf 5.2445 3.8535 0.2595 1.3452 1.3110 0.9633 1.0381
-subcommunity_4 inf 4.9728 3.6221 0.2761 1.3452 1.2436 0.9058 1.1040
-metacommunity inf 4.9728 3.5613 0.2594 1.3452 1.2436 0.8899 1.0376
-2022-01-19T14:02:44-0500 (MainProcess, MainThread) INFO Done!
-2022-01-19T14:02:44-0500 (MainProcess, MainThread) INFO process shutting down
-```
 
 Notes:
 - you can use .csv or .tsv for input files, but output is tab-delimited
-- piping output will not include log statements
+- output can be piped (piping will not include log statements in the output)
 - for further options execute `python -m diversity -h`
 
 
