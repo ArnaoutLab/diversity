@@ -11,7 +11,7 @@
         + [Similarity from file](#similarity-from-file)
         + [Similarity from function](#similarity-from-function)
     + [Command line interface](#command-line-interface)
-        + [Metagenomics dataset](#metagenomics-dataset)
+        + [Penguin dataset](#penguin-dataset)
 * [Background](#background)
     + [Diversity indices](#diversity-indices)
     + [Partitioned diversity](#partitioned-diversity)
@@ -69,19 +69,6 @@ penguin_counts.head()
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -159,19 +146,6 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -241,19 +215,6 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=2)
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -323,19 +284,6 @@ penguin_metacommunity.metacommunity_to_dataframe(viewpoint=0)
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -405,19 +353,6 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -493,19 +428,6 @@ penguin_features.head()
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -578,19 +500,6 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 
 
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -648,6 +557,8 @@ penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
 </div>
 
 ### Command line interface
+
+#### Penguin dataset
 
 For calculating diversity indices from the command line, we will need the following files, which can be downloaded from this [Gist](https://gist.github.com/Elliot-D-Hill/f6e9db0aebe561a363e8758c72a0acfc).
 
