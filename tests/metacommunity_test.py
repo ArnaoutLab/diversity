@@ -503,7 +503,7 @@ class TestAbundance:
             enumerate(test_case["expected_subcommunity_order"]),
         ):
             assert isclose(
-                subcommunity_abundance.array[i, j],
+                subcommunity_abundance[i, j],
                 test_case["subcommunity_species_to_subcommunity_abundance"][
                     (subcommunity, species)
                 ],
@@ -519,7 +519,7 @@ class TestAbundance:
         metacommunity_abundance = abundance.metacommunity_abundance
         for i, species in enumerate(test_case["expected_species_order"]):
             assert isclose(
-                metacommunity_abundance.array[i, 0],
+                metacommunity_abundance[i, 0],
                 test_case["species_to_metacommunity_abundance"][species],
             ), f"\ni:{i};\nspecies: {species}."
 
@@ -546,7 +546,7 @@ class TestAbundance:
             enumerate(test_case["expected_subcommunity_order"]),
         ):
             assert isclose(
-                normalized_subcommunity_abundance.array[i, j],
+                normalized_subcommunity_abundance[i, j],
                 test_case["subcommunity_species_to_normalized_subcommunity_abundance"][
                     (subcommunity, species)
                 ],
@@ -669,14 +669,14 @@ class TestSimilarityFromFile:
             test_case["species_to_relative_abundances"],
         )
         weighted_similarities = similarity.calculate_weighted_similarities(
-            SharedArray.from_array(relative_abundances)
+            relative_abundances
         )
         expected_weighted_similarities = arrange_values(
             test_case["expected_species_order"],
             test_case["species_to_weighted_similarities"],
         )
         assert weighted_similarities.shape == relative_abundances.shape
-        assert allclose(weighted_similarities.array, expected_weighted_similarities)
+        assert allclose(weighted_similarities, expected_weighted_similarities)
         with open(test_case["similarity_matrix_filepath"], "r") as file:
             similarities_filecontents = file.read()
         assert similarities_filecontents == test_case["similarities_filecontents"]
@@ -779,14 +779,14 @@ class TestSimilarityFromFunction:
             test_case["species_to_relative_abundances"],
         )
         weighted_similarities = similarity.calculate_weighted_similarities(
-            SharedArray.from_array(relative_abundances)
+            relative_abundances
         )
         expected_weighted_similarities = arrange_values(
             test_case["expected_species_order"],
             test_case["species_to_weighted_similarities"],
         )
         assert weighted_similarities.shape == relative_abundances.shape
-        assert allclose(weighted_similarities.array, expected_weighted_similarities)
+        assert allclose(weighted_similarities, expected_weighted_similarities)
 
 
 SIMILARITY_FROM_MEMORY_TEST_CASES = [
@@ -875,14 +875,14 @@ class TestSimilarityFromMemory:
             test_case["species_to_relative_abundances"],
         )
         weighted_similarities = similarity.calculate_weighted_similarities(
-            SharedArray.from_array(relative_abundances)
+            relative_abundances
         )
         expected_weighted_similarities = self.arrange_values(
             test_case["expected_species_order"],
             test_case["species_to_weighted_similarities"],
         )
         assert weighted_similarities.shape == relative_abundances.shape
-        assert allclose(weighted_similarities.array, expected_weighted_similarities)
+        assert allclose(weighted_similarities, expected_weighted_similarities)
 
 
 CREATE_SIMILARITY_TEST_CASES = [

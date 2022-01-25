@@ -136,8 +136,8 @@ class Abundance:
         """
         counts = self.__pivot_table()
         total_abundance = counts.sum()
-        relative_abundances = SharedArray(shape=counts.shape, dtype=dtype("f8"))
-        relative_abundances.array[:] = counts / total_abundance
+        relative_abundances = empty(shape=counts.shape, dtype=float64)
+        relative_abundances[:] = counts / total_abundance
         return relative_abundances
 
     @cached_property
@@ -151,9 +151,7 @@ class Abundance:
         of the species in the metacommunity. The row ordering is
         established by the species_to_row attribute.
         """
-        return SharedArray.from_array(
-            self.subcommunity_abundance.array.sum(axis=1, keepdims=True)
-        )
+        return self.subcommunity_abundance.sum(axis=1, keepdims=True)
 
     @cached_property
     def subcommunity_normalizing_constants(self):
@@ -164,7 +162,7 @@ class Abundance:
         A numpy.ndarray of shape (n_subcommunities,), with the fraction
         of each subcommunity's size of the metacommunity.
         """
-        return self.subcommunity_abundance.array.sum(axis=0)
+        return self.subcommunity_abundance.sum(axis=0)
 
     @cached_property
     def normalized_subcommunity_abundance(self):
@@ -178,9 +176,7 @@ class Abundance:
         in the subcommunity relative to the subcommunity size. The row
         ordering is established by the species_to_row attribute.
         """
-        return SharedArray.from_array(
-            self.subcommunity_abundance.array / self.subcommunity_normalizing_constants
-        )
+        return self.subcommunity_abundance / self.subcommunity_normalizing_constants
 
 
 class Similarity(ABC):
@@ -252,7 +248,7 @@ class SimilarityFromFile(Similarity):
         See diversity.metacommunity.Similarity.calculate_weighted_similarities
         for complete specification.
         """
-        weighted_similarities = SharedArray(
+        weighted_similarities = empty(
             shape=relative_abundances.shape, dtype=dtype("f8")
         )
         with read_csv(
@@ -262,8 +258,8 @@ class SimilarityFromFile(Similarity):
         ) as similarity_matrix_chunks:
             i = 0
             for chunk in similarity_matrix_chunks:
-                weighted_similarities.array[i : i + self.__chunk_size, :] = (
-                    chunk.to_numpy() @ relative_abundances.array
+                weighted_similarities[i : i + self.__chunk_size, :] = (
+                    chunk.to_numpy() @ relative_abundances
                 )
                 i += self.__chunk_size
         return weighted_similarities
@@ -337,10 +333,13 @@ class SimilarityFromFunction(Similarity):
             weighted_similarities
         )
         features_spec = SharedArraySpec.from_shared_array(self.features)
-        relative_abundance_spec = SharedArraySpec.from_shared_array(relative_abundances)
+        shared_relative_abundance = SharedArray.from_array(relative_abundances)
+        relative_abundance_spec = SharedArraySpec.from_shared_array(
+            shared_relative_abundance
+        )
         num_processors = cpu_count()
         row_chunks = partition_range(
-            range(relative_abundances.shape[0]), num_processors
+            range(shared_relative_abundance.shape[0]), num_processors
         )
         args_list = [
             (
@@ -354,7 +353,8 @@ class SimilarityFromFunction(Similarity):
         ]
         with Pool(num_processors) as pool:
             pool.starmap(self.similarity_function, args_list)
-        return weighted_similarities
+        non_shared_weighted_similarities = weighted_similarities.array.copy()
+        return non_shared_weighted_similarities
 
 
 class SimilarityFromMemory(Similarity):
@@ -381,9 +381,7 @@ class SimilarityFromMemory(Similarity):
         See diversity.metacommunity.Similarity.calculate_weighted_similarities
         for complete specification.
         """
-        return SharedArray.from_array(
-            self.similarity_matrix @ relative_abundances.array
-        )
+        return self.similarity_matrix @ relative_abundances
 
 
 def make_similarity(
@@ -503,9 +501,7 @@ class Metacommunity:
             the same as frequent species, and infinity considers only the
             most frequent species.
         """
-        return self.__subcommunity_measure(
-            viewpoint, 1, self.__subcommunity_similarity.array
-        )
+        return self.__subcommunity_measure(viewpoint, 1, self.__subcommunity_similarity)
 
     def subcommunity_rho(self, viewpoint):
         """Calculates rho class diversities of subcommunities.
@@ -523,8 +519,8 @@ class Metacommunity:
         """
         return self.__subcommunity_measure(
             viewpoint,
-            self.__metacommunity_similarity.array,
-            self.__subcommunity_similarity.array,
+            self.__metacommunity_similarity,
+            self.__subcommunity_similarity,
         )
 
     def subcommunity_beta(self, viewpoint):
@@ -558,7 +554,7 @@ class Metacommunity:
             the most frequent species.
         """
         denominator = broadcast_to(
-            self.__metacommunity_similarity.array,
+            self.__metacommunity_similarity,
             self.abundance.normalized_subcommunity_abundance.shape,
         )
         return self.__subcommunity_measure(viewpoint, 1, denominator)
@@ -578,7 +574,7 @@ class Metacommunity:
             most frequent species.
         """
         return self.__subcommunity_measure(
-            viewpoint, 1, self.__normalized_subcommunity_similarity.array
+            viewpoint, 1, self.__normalized_subcommunity_similarity
         )
 
     def normalized_subcommunity_rho(self, viewpoint):
@@ -596,8 +592,8 @@ class Metacommunity:
         """
         return self.__subcommunity_measure(
             viewpoint,
-            self.__metacommunity_similarity.array,
-            self.__normalized_subcommunity_similarity.array,
+            self.__metacommunity_similarity,
+            self.__normalized_subcommunity_similarity,
         )
 
     def normalized_subcommunity_beta(self, viewpoint):
@@ -739,7 +735,7 @@ class Metacommunity:
         )
         return power_mean(
             1 - viewpoint,
-            self.abundance.normalized_subcommunity_abundance.array,
+            self.abundance.normalized_subcommunity_abundance,
             similarities,
         )
 
