@@ -26,9 +26,9 @@ make_metacommunity
     Builds diversity.metacommunity.Metacommunity object according to
     parameter specification.
 """
+
 from abc import ABC, abstractmethod
 from functools import cached_property
-from pathlib import Path
 
 from pandas import DataFrame, read_csv
 from numpy import array, empty, zeros, broadcast_to, divide, float64
@@ -211,22 +211,19 @@ class SimilarityFromFile(Similarity):
         chunk_size: int
             Number of rows to read from similarity matrix at a time.
         """
-        self.similarity_matrix_filepath = Path(similarity_matrix_filepath)
+        self.similarity_matrix_filepath = similarity_matrix_filepath
         self.__delimiter = get_file_delimiter(self.similarity_matrix_filepath)
         self.__chunk_size = chunk_size
 
     @cached_property
     def species_order(self):
         """The species ordering used in similarity matrix file."""
-        # with open(self.similarity_matrix_filepath, "r") as file:
         with read_csv(
             self.similarity_matrix_filepath,
             delimiter=self.__delimiter,
-            chunksize=1,
-            nrows=1,
-        ) as similarity_matrix_chunks:
-            species_order_ = array(next(similarity_matrix_chunks).columns)
-        return species_order_
+            chunksize=1
+            ) as similarity_matrix_chunks:
+            return array(next(similarity_matrix_chunks).columns)
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -238,12 +235,10 @@ class SimilarityFromFile(Similarity):
         for complete specification.
         """
         weighted_similarities = empty(relative_abundances.shape, dtype=float64)
-
         with read_csv(
             self.similarity_matrix_filepath,
             delimiter=self.__delimiter,
-            chunksize=self.__chunk_size,
-        ) as similarity_matrix_chunks:
+            chunksize=self.__chunk_size) as similarity_matrix_chunks:
             i = 0
             for chunk in similarity_matrix_chunks:
                 weighted_similarities[i : i + self.__chunk_size, :] = (
