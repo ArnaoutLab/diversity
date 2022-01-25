@@ -410,25 +410,3 @@ class WeaklySharedArray:
     def __del__(self):
         """Closes access to shared memory."""
         self.shared_memory.close()
-
-
-def parallelized_weighted_similarity_function(func):
-    vectorized_func = vectorize(func)
-
-    def parallelized_func(
-        row_start,
-        row_stop,
-        weighted_similarities_spec,
-        features_spec,
-        relative_abundance_spec,
-    ):
-        weighted_similarities = WeaklySharedArray(weighted_similarities_spec)
-        features = WeaklySharedArray(features_spec)
-        relative_abundances = WeaklySharedArray(relative_abundance_spec)
-        for i in range(row_start, row_stop):
-            weighted_similarities.array[i] = (
-                vectorized_func(features.array[i], features.array)
-                @ relative_abundances.array
-            )
-
-    return parallelized_func
