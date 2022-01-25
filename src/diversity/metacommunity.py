@@ -407,21 +407,21 @@ class Metacommunity:
         self.abundance = abundance
 
     @cached_property
-    def __metacommunity_similarity(self):
+    def metacommunity_similarity(self):
         """Sums of similarities weighted by metacommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
             self.abundance.metacommunity_abundance
         )
 
     @cached_property
-    def __subcommunity_similarity(self):
+    def subcommunity_similarity(self):
         """Sums of similarities weighted by subcommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
             self.abundance.subcommunity_abundance
         )
 
     @cached_property
-    def __normalized_subcommunity_similarity(self):
+    def normalized_subcommunity_similarity(self):
         """Sums of similarities weighted by the normalized subcommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
             self.abundance.normalized_subcommunity_abundance
@@ -441,7 +441,7 @@ class Metacommunity:
             the same as frequent species, and infinity considers only the
             most frequent species.
         """
-        return self.__subcommunity_measure(viewpoint, 1, self.__subcommunity_similarity)
+        return self.__subcommunity_measure(viewpoint, 1, self.subcommunity_similarity)
 
     def subcommunity_rho(self, viewpoint):
         """Calculates rho class diversities of subcommunities.
@@ -459,8 +459,8 @@ class Metacommunity:
         """
         return self.__subcommunity_measure(
             viewpoint,
-            self.__metacommunity_similarity,
-            self.__subcommunity_similarity,
+            self.metacommunity_similarity,
+            self.subcommunity_similarity,
         )
 
     def subcommunity_beta(self, viewpoint):
@@ -494,7 +494,7 @@ class Metacommunity:
             the most frequent species.
         """
         denominator = broadcast_to(
-            self.__metacommunity_similarity,
+            self.metacommunity_similarity,
             self.abundance.normalized_subcommunity_abundance.shape,
         )
         return self.__subcommunity_measure(viewpoint, 1, denominator)
@@ -514,7 +514,7 @@ class Metacommunity:
             most frequent species.
         """
         return self.__subcommunity_measure(
-            viewpoint, 1, self.__normalized_subcommunity_similarity
+            viewpoint, 1, self.normalized_subcommunity_similarity
         )
 
     def normalized_subcommunity_rho(self, viewpoint):
@@ -532,8 +532,8 @@ class Metacommunity:
         """
         return self.__subcommunity_measure(
             viewpoint,
-            self.__metacommunity_similarity,
-            self.__normalized_subcommunity_similarity,
+            self.metacommunity_similarity,
+            self.normalized_subcommunity_similarity,
         )
 
     def normalized_subcommunity_beta(self, viewpoint):
