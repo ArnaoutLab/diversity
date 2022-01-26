@@ -265,7 +265,17 @@ class SimilarityFromFile(ISimilarity):
 
 
 class SimilarityFromFunction(ISimilarity):
-    """Implements ISimilarity using a similarity function."""
+    """Implements ISimilarity using a similarity function.
+
+    Note
+    ----
+    An object of this class must be explicitly deleted, or run naturally
+    out of scope before the end of code execution. If not, a warning is
+    emitted complaining about leaked shared_memory objects. These
+    objects are cleaned up in their own destructors, and the warning is
+    False. In some IDEs, the warning will not be emitted, as the object
+    runs out of scope before termination of the code.
+    """
 
     class ApplySimilarityFunction:
         """Applies similarity function to a chunk of data."""
@@ -349,7 +359,7 @@ class SimilarityFromFunction(ISimilarity):
             argument.
         """
         self.similarity_function = self.ApplySimilarityFunction(similarity_function)
-        self.features = SharedArray.from_array(features)
+        self.features = features
         self.species_order = species_order
 
     def calculate_weighted_similarities(self, relative_abundances):
@@ -367,7 +377,8 @@ class SimilarityFromFunction(ISimilarity):
         weighted_similarities_spec = SharedArraySpec.from_shared_array(
             weighted_similarities
         )
-        features_spec = SharedArraySpec.from_shared_array(self.features)
+        features = SharedArray.from_array(self.features)
+        features_spec = SharedArraySpec.from_shared_array(features)
         shared_relative_abundance = SharedArray.from_array(relative_abundances)
         relative_abundance_spec = SharedArraySpec.from_shared_array(
             shared_relative_abundance
@@ -388,7 +399,10 @@ class SimilarityFromFunction(ISimilarity):
         ]
         with Pool(num_processors) as pool:
             pool.starmap(self.similarity_function, args_list)
+        del features
+        del shared_relative_abundance
         non_shared_weighted_similarities = weighted_similarities.data.copy()
+        del weighted_similarities
         return non_shared_weighted_similarities
 
 

@@ -1,9 +1,22 @@
 """Miscellaneous helper module for the metacommunity package.
 
+Classes
+-------
+SharedArraySpec
+    Description of how to locate and interpret shared array.
+ISharedArray
+    Abstract base class for shared arrays.
+SharedArray
+    Shared array owning the corresponding memory block.
+SharedArrayView
+    Shared array, not owning the corresponding memory block.
+
 Functions
 ---------
 get_file_delimiter
     Determines delimiter in datafile from file extension.
+partition_range
+    Splits range_ into evenly sized consecutive subranges.
 power_mean
     Calculates weighted power means.
 unique_correspondence
