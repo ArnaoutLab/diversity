@@ -4,10 +4,6 @@ from argparse import Namespace
 from numpy import inf
 from pytest import mark
 
-# from pandas import read_tsv, DataFrame
-# from pandas.testing import assert_frame_equal
-
-# from diversity.metacommunity import Abundance, Metacommunity, Similarity
 from diversity.__main__ import main
 
 MAIN_TEST_CASES = [
