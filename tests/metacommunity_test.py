@@ -1,11 +1,10 @@
 """Tests for diversity.metacommunity."""
 from copy import deepcopy
 from itertools import product
-from warnings import filterwarnings, resetwarnings
 
 from numpy import allclose, array, empty, float64, isclose, ndarray, unique, zeros
 from pandas import DataFrame
-from pytest import mark
+from pytest import mark, warns
 
 from diversity.metacommunity import (
     Abundance,
@@ -474,7 +473,7 @@ ABUNDANCE_TEST_CASES = [
 
 
 class TestAbundance:
-    """Tests diversity.metacommunity.Abundance."""
+    """Tests metacommunity.Abundance."""
 
     def make_abundance(self, test_case):
         """Simple initializer without modifying test_case."""
@@ -592,6 +591,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
             "0.1\t1\t0.5\n"
             "0.2\t0.5\t1\n"
         ),
+        "expect_warning": False,
     },
     {
         "description": "csv file; 2 communities",
@@ -610,6 +610,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
         "similarities_filecontents": (
             "species_3,species_1,species_2\n" "1,0.1,0.2\n" "0.1,1,0.5\n" "0.2,0.5,1\n"
         ),
+        "expect_warning": False,
     },
     {
         "description": "no file extension; 1 community",
@@ -631,6 +632,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
             "0.1\t1\t0.5\n"
             "0.2\t0.5\t1\n"
         ),
+        "expect_warning": True,
     },
 ]
 
@@ -638,7 +640,7 @@ PARALLELIZE_SIMILARITY_FUNCTION_TEST_CASES = []
 
 
 class TestSimilarityFromFile:
-    """Tests diversity.metacommunity.Similarity."""
+    """Tests metacommunity.Similarity."""
 
     @mark.parametrize("test_case", SIMILARITY_FROM_FILE_TEST_CASES)
     def test_init(self, test_case, tmp_path):
@@ -648,12 +650,15 @@ class TestSimilarityFromFile:
         )
         with open(test_case["similarity_matrix_filepath"], "w") as file:
             file.write(test_case["similarities_filecontents"])
-        if test_case["similarity_matrix_filepath"].suffix == "":
-            filterwarnings("ignore", category=ArgumentWarning)
-        similarity = SimilarityFromFile(
-            similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
-        )
-        resetwarnings()
+        if test_case["expect_warning"]:
+            with warns(ArgumentWarning):
+                similarity = SimilarityFromFile(
+                    similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
+                )
+        else:
+            similarity = SimilarityFromFile(
+                similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
+            )
         assert (similarity.species_order == test_case["expected_species_order"]).all()
 
     @mark.parametrize("test_case", SIMILARITY_FROM_FILE_TEST_CASES)
@@ -664,12 +669,15 @@ class TestSimilarityFromFile:
         )
         with open(test_case["similarity_matrix_filepath"], "w") as file:
             file.write(test_case["similarities_filecontents"])
-        if test_case["similarity_matrix_filepath"].suffix == "":
-            filterwarnings("ignore", category=ArgumentWarning)
-        similarity = SimilarityFromFile(
-            similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
-        )
-        resetwarnings()
+        if test_case["expect_warning"]:
+            with warns(ArgumentWarning):
+                similarity = SimilarityFromFile(
+                    similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
+                )
+        else:
+            similarity = SimilarityFromFile(
+                similarity_matrix_filepath=test_case["similarity_matrix_filepath"],
+            )
         relative_abundances = arrange_values(
             test_case["expected_species_order"],
             test_case["species_to_relative_abundances"],
@@ -760,7 +768,7 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
 
 
 class TestSimilarityFromFunction:
-    """Tests diversity.metacommunity.Similarity."""
+    """Tests metacommunity.Similarity."""
 
     @mark.parametrize("test_case", SIMILARITY_FROM_FUNCTION_TEST_CASES)
     def test_init(self, test_case, tmp_path):
@@ -994,7 +1002,7 @@ class TestSimilarityFromFunctionApplysimilarityFunction:
         apply_similarity_function = SimilarityFromFunction.ApplySimilarityFunction(
             test_case["func"]
         )
-        print(test_case["shared_weighted_similarities"].array)
+        print(test_case["shared_weighted_similarities"].data)
         apply_similarity_function(
             test_case["row_start"],
             test_case["row_stop"],
@@ -1005,7 +1013,7 @@ class TestSimilarityFromFunctionApplysimilarityFunction:
             SharedArraySpec.from_shared_array(test_case["relative_abundances"]),
         )
         assert allclose(
-            test_case["shared_weighted_similarities"].array,
+            test_case["shared_weighted_similarities"].data,
             test_case["weighted_similarities"],
         )
 

@@ -41,7 +41,7 @@ from diversity.utilities import (
     SharedArray,
     SharedArraySpec,
     unique_correspondence,
-    WeaklySharedArray,
+    SharedArrayView,
 )
 
 
@@ -314,19 +314,19 @@ class SimilarityFromFunction(ISimilarity):
               for more information on the exact contents of the features
               array.
             """
-            weighted_similarities = WeaklySharedArray(weighted_similarities_spec)
-            features = WeaklySharedArray(features_spec)
-            relative_abundances = WeaklySharedArray(relative_abundance_spec)
+            weighted_similarities = SharedArrayView(weighted_similarities_spec)
+            features = SharedArrayView(features_spec)
+            relative_abundances = SharedArrayView(relative_abundance_spec)
             similarities_row_i = empty(
-                shape=(weighted_similarities.array.shape[0],), dtype=float64
+                shape=(weighted_similarities.data.shape[0],), dtype=float64
             )
             for i in range(row_start, row_stop):
-                for j in range(features.array.shape[0]):
+                for j in range(features.data.shape[0]):
                     similarities_row_i[j] = self.func(
-                        features.array[i], features.array[j]
+                        features.data[i], features.data[j]
                     )
-                weighted_similarities.array[i] = (
-                    similarities_row_i @ relative_abundances.array
+                weighted_similarities.data[i] = (
+                    similarities_row_i @ relative_abundances.data
                 )
 
     def __init__(self, similarity_function, features, species_order):
@@ -388,7 +388,7 @@ class SimilarityFromFunction(ISimilarity):
         ]
         with Pool(num_processors) as pool:
             pool.starmap(self.similarity_function, args_list)
-        non_shared_weighted_similarities = weighted_similarities.array.copy()
+        non_shared_weighted_similarities = weighted_similarities.data.copy()
         return non_shared_weighted_similarities
 
 
