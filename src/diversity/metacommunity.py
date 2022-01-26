@@ -179,7 +179,7 @@ class Abundance:
         return self.subcommunity_abundance / self.subcommunity_normalizing_constants
 
 
-class Similarity(ABC):
+class ISimilarity(ABC):
     """Interface for classes computing weighted similarities."""
 
     @abstractmethod
@@ -205,8 +205,8 @@ class Similarity(ABC):
         pass
 
 
-class SimilarityFromFile(Similarity):
-    """Implements Similarity by using similarities stored in file."""
+class SimilarityFromFile(ISimilarity):
+    """Implements ISimilarity by using similarities stored in file."""
 
     def __init__(self, similarity_matrix_filepath, chunk_size=1):
         """Initializes object.
@@ -229,7 +229,6 @@ class SimilarityFromFile(Similarity):
     @cached_property
     def species_order(self):
         """The species ordering used in similarity matrix file."""
-        # with open(self.similarity_matrix_filepath, "r") as file:
         with read_csv(
             self.similarity_matrix_filepath,
             delimiter=self.__delimiter,
@@ -245,7 +244,7 @@ class SimilarityFromFile(Similarity):
         Similarities are read from similarities file referred to by
         object's similarity_matrix_filepath attribute.
 
-        See diversity.metacommunity.Similarity.calculate_weighted_similarities
+        See diversity.metacommunity.ISimilarity.calculate_weighted_similarities
         for complete specification.
         """
         weighted_similarities = empty(
@@ -265,34 +264,70 @@ class SimilarityFromFile(Similarity):
         return weighted_similarities
 
 
-class ParallelizeSimilarityFunction:
-    def __init__(self, func):
-        self.func = func
+class SimilarityFromFunction(ISimilarity):
+    """Implements ISimilarity using a similarity function."""
 
-    def __call__(
-        self,
-        row_start,
-        row_stop,
-        weighted_similarities_spec,
-        features_spec,
-        relative_abundance_spec,
-    ):
-        weighted_similarities = WeaklySharedArray(weighted_similarities_spec)
-        features = WeaklySharedArray(features_spec)
-        relative_abundances = WeaklySharedArray(relative_abundance_spec)
-        similarities_row_i = empty(
-            shape=(weighted_similarities.array.shape[0],), dtype=float64
-        )
-        for i in range(row_start, row_stop):
-            for j in range(features.array.shape[0]):
-                similarities_row_i[j] = self.func(features.array[i], features.array[j])
-            weighted_similarities.array[i] = (
-                similarities_row_i @ relative_abundances.array
+    class ApplySimilarityFunction:
+        """Applies similarity function to a chunk of data."""
+
+        def __init__(self, func):
+            """Initialized parallelized version of func.
+
+            Parameters
+            ----------
+            func: Callable
+                The similarity function to parallelize.
+            """
+            self.func = func
+
+        def __call__(
+            self,
+            row_start,
+            row_stop,
+            weighted_similarities_spec,
+            features_spec,
+            relative_abundance_spec,
+        ):
+            """Computes pairwise weighted similarities for a data chunk.
+
+            Parameters
+            ----------
+            row_start, row_stop: int
+                Right-exclusive start and end indices of the rows in the
+                weighted similarities array to populate.
+            weighted_similarities_spec: SharedArraySpec
+                The specification for the memory block into which the
+                weighted similarities are inserted.
+            features_spec: SharedArraySpec
+                The specification of the memory block in which the
+                features of species are listed.
+            relative_abundance_spec: SharedArraySpec
+                The specification for the memory block containing the
+                relative abundances of species (per community).
+
+            Notes
+            -----
+            - See diversity.metacommunity.ISimilarity.calculate_weighted_similarities
+              for more information on the exact contents of the
+              weighted_similarities and relative abundance arrays.
+            - See diversity.metacommunity.SimilarityFromFunction.__init__
+              for more information on the exact contents of the features
+              array.
+            """
+            weighted_similarities = WeaklySharedArray(weighted_similarities_spec)
+            features = WeaklySharedArray(features_spec)
+            relative_abundances = WeaklySharedArray(relative_abundance_spec)
+            similarities_row_i = empty(
+                shape=(weighted_similarities.array.shape[0],), dtype=float64
             )
-
-
-class SimilarityFromFunction(Similarity):
-    """Implements Similarity using a similarity function."""
+            for i in range(row_start, row_stop):
+                for j in range(features.array.shape[0]):
+                    similarities_row_i[j] = self.func(
+                        features.array[i], features.array[j]
+                    )
+                weighted_similarities.array[i] = (
+                    similarities_row_i @ relative_abundances.array
+                )
 
     def __init__(self, similarity_function, features, species_order):
         """Initializes object.
@@ -313,7 +348,7 @@ class SimilarityFromFunction(Similarity):
             in similarity matrix calculations is determined by this
             argument.
         """
-        self.similarity_function = ParallelizeSimilarityFunction(similarity_function)
+        self.similarity_function = self.ApplySimilarityFunction(similarity_function)
         self.features = SharedArray.from_array(features)
         self.species_order = species_order
 
@@ -323,7 +358,7 @@ class SimilarityFromFunction(Similarity):
         Similarities are calculated using object's similarity_function
         attribute.
 
-        See diversity.metacommunity.Similarity.calculate_weighted_similarities
+        See diversity.metacommunity.ISimilarity.calculate_weighted_similarities
         for complete specification.
         """
         weighted_similarities = SharedArray(
@@ -357,8 +392,8 @@ class SimilarityFromFunction(Similarity):
         return non_shared_weighted_similarities
 
 
-class SimilarityFromMemory(Similarity):
-    """Implements Similarity using similarities stored in memory."""
+class SimilarityFromMemory(ISimilarity):
+    """Implements ISimilarity using similarities stored in memory."""
 
     def __init__(self, similarity_matrix, species_order):
         """Initializes object.
@@ -378,7 +413,7 @@ class SimilarityFromMemory(Similarity):
         Similarities are calculated using object's similarity_matrix
         attribute.
 
-        See diversity.metacommunity.Similarity.calculate_weighted_similarities
+        See diversity.metacommunity.ISimilarity.calculate_weighted_similarities
         for complete specification.
         """
         return self.similarity_matrix @ relative_abundances
