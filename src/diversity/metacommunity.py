@@ -9,8 +9,6 @@ Similarity
     similarities.
 SimilarityFromFile
     Implements Similarity by reading similarities from a file.
-SimilarityFromFunction
-    Implements Similarity by calculating similarities with a function.
 SimilarityFromMemory
     Implements Similarity by storing similarities in memory.
 Metacommunity
@@ -19,9 +17,6 @@ Metacommunity
 
 Functions
 ---------
-make_similarity
-    Returns correct diversity.metacommunity.Similarity object fitting
-    parameter specification.
 make_metacommunity
     Builds diversity.metacommunity.Metacommunity object according to
     parameter specification.
@@ -33,7 +28,12 @@ from functools import cached_property
 from pandas import DataFrame, read_csv
 from numpy import array, empty, zeros, broadcast_to, divide, float64
 
-from diversity.utilities import get_file_delimiter, power_mean, unique_correspondence
+from diversity.utilities import (
+    get_file_delimiter,
+    InvalidArgumentError,
+    power_mean,
+    unique_correspondence,
+)
 
 
 class Abundance:
@@ -51,9 +51,9 @@ class Abundance:
         counts,
         species_order=None,
         subcommunity_order=None,
-        subcommunity_column=0,
-        species_column=1,
-        count_column=2,
+        subcommunity_column="subcommunity",
+        species_column="species",
+        count_column="count",
     ):
         """Initializes object.
 
@@ -88,11 +88,11 @@ class Abundance:
         self.species_column = species_column
         self.count_column = count_column
         self.species_order, self.__species_unique_pos = unique_correspondence(
-            items=self.counts[:, self.species_column],
+            items=self.counts[self.species_column].to_numpy(),
             ordered_unique_items=species_order,
         )
         self.subcommunity_order, self.__subcommunity_unique_pos = unique_correspondence(
-            items=self.counts[:, self.subcommunity_column],
+            items=self.counts[self.subcommunity_column].to_numpy(),
             ordered_unique_items=subcommunity_order,
         )
 
@@ -108,9 +108,9 @@ class Abundance:
         table = zeros(
             (len(self.species_order), len(self.subcommunity_order)), dtype=float64
         )
-        table[self.__species_unique_pos, self.__subcommunity_unique_pos] = self.counts[
-            :, self.count_column
-        ].astype(float64)
+        table[self.__species_unique_pos, self.__subcommunity_unique_pos] = (
+            self.counts[self.count_column].to_numpy().astype(float64)
+        )
         return table
 
     @cached_property
@@ -170,6 +170,7 @@ class Abundance:
 
 class Similarity(ABC):
     """Interface for classes computing weighted similarities."""
+
     def __init__(self, similarity_matrix):
         self.similarity_matrix = similarity_matrix
 
@@ -216,16 +217,16 @@ class SimilarityFromFile(Similarity):
         super().__init__(similarity_matrix)
         self.__delimiter = get_file_delimiter(self.similarity_matrix)
         self.__chunk_size = chunk_size
+        self.species_order = self.get_species_order()
 
-    @cached_property
-    def species_order(self):
+    # @cached_property
+    def get_species_order(self):
         """The species ordering used in similarity matrix file."""
         with read_csv(
-            self.similarity_matrix,
-            delimiter=self.__delimiter,
-            chunksize=1
-            ) as similarity_matrix_chunks:
-            return array(next(similarity_matrix_chunks).columns)
+            self.similarity_matrix, delimiter=self.__delimiter, chunksize=1
+        ) as similarity_matrix_chunks:
+            species_order_ = array(next(similarity_matrix_chunks).columns)
+        return species_order_
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -240,7 +241,8 @@ class SimilarityFromFile(Similarity):
         with read_csv(
             self.similarity_matrix,
             delimiter=self.__delimiter,
-            chunksize=self.__chunk_size) as similarity_matrix_chunks:
+            chunksize=self.__chunk_size,
+        ) as similarity_matrix_chunks:
             i = 0
             for chunk in similarity_matrix_chunks:
                 weighted_similarities[i : i + self.__chunk_size, :] = (
@@ -259,11 +261,9 @@ class SimilarityFromMemory(Similarity):
         similarity_matrix: numpy.ndarray
             2-d array of similarities between species. Ordering of rows
             and columns must correspond to species_order argument.
-        species_order: Iterable
-            The unique species in desired order.
         """
         super().__init__(similarity_matrix)
-        self.species_order = similarity_matrix.columns
+        self.species_order = array(similarity_matrix.columns)
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -274,7 +274,7 @@ class SimilarityFromMemory(Similarity):
         See diversity.metacommunity.Similarity.calculate_weighted_similarities
         for complete specification.
         """
-        return self.similarity_matrix @ relative_abundances
+        return self.similarity_matrix.to_numpy() @ relative_abundances
 
 
 class Metacommunity:
@@ -636,13 +636,11 @@ def make_metacommunity(
     counts,
     similarity_matrix,
     chunk_size=1,
+    subcommunity_column="subcommunity",
+    species_column="species",
+    count_column="count",
 ):
     """Builds a Metacommunity object from specified parameters.
-
-    Valid parameter combinations and the corresponding Similarity
-    implementations used are:
-        - counts, similarity_matrix -> SimilarityFromMemory
-        - counts, similarity_matrix -> SimilarityFromFile
 
     Parameters
     ----------
@@ -650,24 +648,35 @@ def make_metacommunity(
         See diversity.metacommunity.Abundance. If the object is a
         pandas.DataFrame, its to_numpy method should return the expected
         numpy.ndarray.
-    similarity_matrix: numpy.ndarray, pandas.DataFrame, or filepath
-        See diversity.metacommunity.SimilarityFromMemory or
-        diversity.metacommunity.SimilarityFromFile
-    species_order: Iterable
-        See diversity.metacommunity.SimilarityFromMemory
+    similarity_matrix: pandas.DataFrame, or str
+        For data frame, see diversity.metacommunity.SimilarityFromMemory,
+        and for str, see diversity.metacommunity.SimilarityFromFile.
     chunk_size: int
         Optional. See diversity.metacommunity.SimilarityFromFile.
 
     Returns
     -------
-    A diversity.metacommunity.Metacommunity object build according to
+    A diversity.metacommunity.Metacommunity object built according to
     parameter specification.
     """
-    # FIXME could probably use some type checking validation here
-    similarity_from = {
-        DataFrame: SimilarityFromMemory(similarity_matrix),
-        str: SimilarityFromFile(similarity_matrix, chunk_size)
+    if type(similarity_matrix) not in {DataFrame, str}:
+        raise InvalidArgumentError(
+            "similarity_matrix must be a str or a pandas.DataFrame, but"
+            f"was: {type(similarity_matrix)}."
+        )
+    similarity_from = {DataFrame: SimilarityFromMemory, str: SimilarityFromFile}
+    similarity_arguments = {
+        DataFrame: (similarity_matrix,),
+        str: (similarity_matrix, chunk_size),
     }
-    similarity = similarity_from[type(similarity_matrix)]
-    abundance = Abundance(counts, similarity.species_order)
+    similarity_type = similarity_from[type(similarity_matrix)]
+    initializer_arguments = similarity_arguments[type(similarity_matrix)]
+    similarity = similarity_type(*initializer_arguments)
+    abundance = Abundance(
+        counts,
+        similarity.species_order,
+        subcommunity_column=subcommunity_column,
+        species_column=species_column,
+        count_column=count_column,
+    )
     return Metacommunity(similarity, abundance)

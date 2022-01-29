@@ -40,14 +40,17 @@ def main(args):
         args.input_filepath,
         sep=delimiter,
         usecols=[args.subcommunity_column, args.species_column, args.count_column],
-    )[[args.subcommunity_column, args.species_column, args.count_column]]
+    )
 
     LOGGER.debug(f"data: {species_counts}")
 
     meta = make_metacommunity(
         species_counts,
-        similarity_matrix_filepath=args.similarity_matrix_filepath,
+        similarity_matrix=args.similarity_matrix_filepath,
         chunk_size=args.chunk_size,
+        subcommunity_column=args.subcommunity_column,
+        species_column=args.species_column,
+        count_column=args.count_column,
     )
 
     community_views = []
