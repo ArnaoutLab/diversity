@@ -220,6 +220,10 @@ def power_mean(order, weights, items, atol=1e-9):
     weights or a column of weights (in the 2-d case) are all too close
     to 0.
     """
+    print(f"order: {order}")
+    print(f"weights: {weights}")
+    print(f"items: {items}")
+    print(f"atol: {atol}")
     weight_is_nonzero = abs(weights) >= atol
     __validate_power_mean_args(weights, items, atol, weight_is_nonzero)
     if isclose(order, 0):
