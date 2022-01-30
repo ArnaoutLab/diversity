@@ -47,6 +47,21 @@ def configure_arguments():
     """
     parser = ArgumentParser()
     parser.add_argument(
+        "-b",
+        "--subcommunities",
+        help=(
+            "Names of subcommunities to include. Effectively makes"
+            " diversity ignore all rows and columns in input file and"
+            " similarity matrix file corresponing to subcommunities"
+            " not in this list and to species not found in any of"
+            " theses subcommunities. The subcommunity names must"
+            " correspond to names in the subcommunity column in input"
+            " file. If unspecified, all subcommunities are included."
+        ),
+        nargs="*",
+        default=None,
+    )
+    parser.add_argument(
         "-c",
         "--count_column",
         help="Header of the column containing the counts.",
@@ -73,7 +88,7 @@ def configure_arguments():
             " WARNING, ERROR, CRITICAL (listed in decreasing"
             " verbosity)."
         ),
-        default="INFO",
+        default="WARNING",
     )
     parser.add_argument(
         "-o",

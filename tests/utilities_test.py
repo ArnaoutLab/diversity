@@ -1,18 +1,15 @@
 """Tests for diversity.utilities."""
 from copy import deepcopy
 
-from numpy import all as numpy_all, allclose, array, dtype, inf, ndarray
+from numpy import allclose, array, inf
 from pytest import mark, raises, warns
 
 from diversity.utilities import (
     ArgumentWarning,
     get_file_delimiter,
+    isin,
     InvalidArgumentError,
-    partition_range,
     power_mean,
-    SharedArray,
-    SharedArraySpec,
-    SharedArrayView,
     unique_correspondence,
 )
 
@@ -94,95 +91,176 @@ class TestGetFileDelimiter:
         assert delimiter == test_case["delimiter"]
 
 
-PARTITION_RANGE_TEST_CASES = [
+ISIN_TEST_CASES = [
     {
-        "description": "Evenly divisible range.",
-        "range_": range(10),
-        "num_chunks": 5,
-        "expected_ranges": [
-            range(0, 2),
-            range(2, 4),
-            range(4, 6),
-            range(6, 8),
-            range(8, 10),
-        ],
+        "description": "1-d items; subset test_set",
+        "items": array(["a", "b", "c", "b", "c", "a", "d"]),
+        "test_set": {"b", "d"},
+        "index": array([False, True, False, True, False, False, True]),
         "expect_raise": False,
     },
     {
-        "description": "Unevenly divisible range.",
-        "range_": range(10),
-        "num_chunks": 3,
-        "expected_ranges": [
-            range(0, 3),
-            range(3, 6),
-            range(6, 10),
-        ],
+        "description": "1-d items; overlap test_set",
+        "items": array(["a", "b", "c", "b", "c", "a", "d"]),
+        "test_set": {"b", "c", "e"},
+        "index": array([False, True, True, True, True, False, False]),
         "expect_raise": False,
     },
     {
-        "description": "More chunks than range.",
-        "range_": range(5),
-        "num_chunks": 6,
-        "expected_ranges": [
-            range(0, 0),
-            range(0, 1),
-            range(1, 2),
-            range(2, 3),
-            range(3, 4),
-            range(4, 5),
-        ],
+        "description": "1-d items; equal test_set",
+        "items": array(["a", "b", "c", "b", "c", "a", "d"]),
+        "test_set": {"a", "b", "c", "d"},
+        "index": array([True, True, True, True, True, True, True]),
         "expect_raise": False,
     },
     {
-        "description": "0 chunks, non-empty range.",
-        "range_": range(10),
-        "num_chunks": 0,
-        "expected_ranges": None,
-        "expect_raise": True,
-    },
-    {
-        "description": "0 chunks, empty range.",
-        "range_": range(0, 0),
-        "num_chunks": 0,
-        "expected_ranges": None,
-        "expect_raise": True,
-    },
-    {
-        "description": "Negative chunks, non-empty range.",
-        "range_": range(10),
-        "num_chunks": -1,
-        "expected_ranges": None,
-        "expect_raise": True,
-    },
-    {
-        "description": "Negative chunks, empty range.",
-        "range_": range(5, 5),
-        "num_chunks": -13,
-        "expected_ranges": None,
-        "expect_raise": True,
-    },
-    {
-        "description": "Non-zero chunks, empty range.",
-        "range_": range(10, 10),
-        "num_chunks": 3,
-        "expected_ranges": [range(10, 10), range(10, 10), range(10, 10)],
+        "description": "1-d items; superset test_set",
+        "items": array(["a", "b", "c", "b", "c", "a", "d"]),
+        "test_set": {"a", "b", "c", "d", "e"},
+        "index": array([True, True, True, True, True, True, True]),
         "expect_raise": False,
+    },
+    {
+        "description": "1-d items; empty test_set",
+        "items": array(["a", "b", "c", "b", "c", "a", "d"]),
+        "test_set": set(),
+        "index": array([False, False, False, False, False, False, False]),
+        "expect_raise": False,
+    },
+    {
+        "description": "1-d items; disjoint test_set",
+        "items": array(["a", "b", "c", "b", "c", "a", "d"]),
+        "test_set": {"e", "f"},
+        "index": array([False, False, False, False, False, False, False]),
+        "expect_raise": False,
+    },
+    {
+        "description": "2-d items; subset test_set",
+        "items": array(
+            [["a", "b", "c", "b", "c", "a", "d"], ["d", "b", "a", "a", "c", "d", "e"]]
+        ),
+        "test_set": {"b", "d", "e"},
+        "index": array(
+            [
+                [False, True, False, True, False, False, True],
+                [True, True, False, False, False, True, True],
+            ]
+        ),
+        "expect_raise": False,
+    },
+    {
+        "description": "2-d items; overlap test_set",
+        "items": array(
+            [["a", "b", "c", "b", "c", "a", "d"], ["d", "b", "a", "a", "c", "d", "e"]]
+        ),
+        "test_set": {"b", "d", "e", "f"},
+        "index": array(
+            [
+                [False, True, False, True, False, False, True],
+                [True, True, False, False, False, True, True],
+            ]
+        ),
+        "expect_raise": False,
+    },
+    {
+        "description": "2-d items; equal test_set",
+        "items": array(
+            [["a", "b", "c", "b", "c", "a", "d"], ["d", "b", "a", "a", "c", "d", "e"]]
+        ),
+        "test_set": {"a", "b", "c", "d", "e"},
+        "index": array(
+            [
+                [True, True, True, True, True, True, True],
+                [True, True, True, True, True, True, True],
+            ]
+        ),
+        "expect_raise": False,
+    },
+    {
+        "description": "2-d items; superset test_set",
+        "items": array(
+            [["a", "b", "c", "b", "c", "a", "d"], ["d", "b", "a", "a", "c", "d", "e"]]
+        ),
+        "test_set": {"a", "b", "c", "d", "e", "f"},
+        "index": array(
+            [
+                [True, True, True, True, True, True, True],
+                [True, True, True, True, True, True, True],
+            ]
+        ),
+        "expect_raise": False,
+    },
+    {
+        "description": "2-d items; empty test_set",
+        "items": array(
+            [["a", "b", "c", "b", "c", "a", "d"], ["d", "b", "a", "a", "c", "d", "e"]]
+        ),
+        "test_set": set(),
+        "index": array(
+            [
+                [False, False, False, False, False, False, False],
+                [False, False, False, False, False, False, False],
+            ]
+        ),
+        "expect_raise": False,
+    },
+    {
+        "description": "2-d items; disjoint test_set",
+        "items": array(
+            [["a", "b", "c", "b", "c", "a", "d"], ["d", "b", "a", "a", "c", "d", "e"]]
+        ),
+        "test_set": {"f", "g", "j"},
+        "index": array(
+            [
+                [False, False, False, False, False, False, False],
+                [False, False, False, False, False, False, False],
+            ]
+        ),
+        "expect_raise": False,
+    },
+    {
+        "description": "1-d empty items; empty test_set",
+        "items": array([]),
+        "test_set": set(),
+        "index": None,
+        "expect_raise": True,
+    },
+    {
+        "description": "1-d empty items; disjoint test_set",
+        "items": array([]),
+        "test_set": {"a", "c"},
+        "index": None,
+        "expect_raise": True,
+    },
+    {
+        "description": "2-d empty items; empty test_set",
+        "items": array([[], []]),
+        "test_set": set(),
+        "index": None,
+        "expect_raise": True,
+    },
+    {
+        "description": "2-d empty items; disjoint test_set",
+        "items": array([[], []]),
+        "test_set": {"a", "c"},
+        "index": None,
+        "expect_raise": True,
     },
 ]
 
 
-class TestPartitionRange:
-    """Tests utilities.partition_range."""
+class TestIsin:
+    """Tests utilities.isin."""
 
-    @mark.parametrize("test_case", PARTITION_RANGE_TEST_CASES)
-    def test_partition_range(self, test_case):
-        """Tests partition_range."""
+    @mark.parametrize("test_case", ISIN_TEST_CASES)
+    def test_isin(self, test_case):
+        """Tests isin test cases."""
         if test_case["expect_raise"]:
             with raises(InvalidArgumentError):
-                partition_range(test_case["range_"], test_case["num_chunks"])
+                isin(items=test_case["items"], test_set=test_case["test_set"])
         else:
-            ranges = partition_range(test_case["range_"], test_case["num_chunks"])
-            assert ranges == test_case["expected_ranges"]
+            index = isin(items=test_case["items"], test_set=test_case["test_set"])
+            assert (index == test_case["index"]).all()
 
 
 POWER_MEAN_TEST_CASES = [
@@ -1010,138 +1088,3 @@ class TestUniqueCorrespondence:
             assert item == result_unique_items[unique_pos]
         if original_ordered_unique_items is not None:
             assert all(result_unique_items == original_ordered_unique_items)
-
-
-SHARED_ARRAY_TEST_CASES = [
-    {
-        "description": "1-d character array.",
-        "shape": (10,),
-        "dtype": dtype("<U1"),
-        "data": array(["f", "r", "u", "i", "t", "l", "o", "o", "p", "s"]),
-        "modify_coordinates": (4,),
-        "original_value": "t",
-        "modified_value": "x",
-    },
-    {
-        "description": "3-d integer array.",
-        "shape": (2, 3, 2),
-        "dtype": dtype("i8"),
-        "data": array([[[1, 2], [3, 4], [5, 6]], [[7, 8], [9, 10], [11, 12]]]),
-        "modify_coordinates": (1, 1, 1),
-        "original_value": 10,
-        "modified_value": -100,
-    },
-]
-
-
-class TestSharedArray:
-    """Tests utilities.SharedArray."""
-
-    @mark.parametrize("test_case", SHARED_ARRAY_TEST_CASES)
-    def test_from_array(self, test_case):
-        """Tests .from_array factory."""
-        shared_array = SharedArray.from_array(test_case["data"])
-        assert numpy_all(shared_array.data == test_case["data"])
-        del shared_array
-
-    @mark.parametrize("test_case", SHARED_ARRAY_TEST_CASES)
-    def test_init(self, test_case):
-        """Tests .__init__."""
-        shared_array = SharedArray(test_case["shape"], test_case["dtype"])
-        shared_array.data[:] = test_case["data"]
-        assert numpy_all(shared_array.data == test_case["data"])
-        del shared_array
-
-    @mark.parametrize("test_case", SHARED_ARRAY_TEST_CASES)
-    def test_modify(self, test_case):
-        """Tests that the shared memory points to exact same data."""
-        shared_array = SharedArray(test_case["shape"], test_case["dtype"])
-        shared_array.data[:] = test_case["data"]
-        data = ndarray(
-            shape=test_case["shape"],
-            dtype=test_case["dtype"],
-            buffer=shared_array.shared_memory.buf,
-        )
-        assert data[test_case["modify_coordinates"]] == test_case["original_value"]
-        assert (
-            shared_array.data[test_case["modify_coordinates"]]
-            == test_case["original_value"]
-        )
-        data[test_case["modify_coordinates"]] = test_case["modified_value"]
-        assert data[test_case["modify_coordinates"]] == test_case["modified_value"]
-        assert (
-            shared_array.data[test_case["modify_coordinates"]]
-            == test_case["modified_value"]
-        )
-
-
-SHARED_ARRAY_VIEW_TEST_CASES = [
-    {
-        "description": "1-d character array.",
-        "shape": (10,),
-        "dtype": dtype("<U1"),
-        "shared_array": SharedArray.from_array(
-            array(["f", "r", "u", "i", "t", "l", "o", "o", "p", "s"])
-        ),
-        "modify_coordinates": (4,),
-        "original_value": "t",
-        "modified_value": "x",
-    },
-    {
-        "description": "3-d integer array.",
-        "shape": (2, 3, 2),
-        "dtype": dtype("i8"),
-        "shared_array": SharedArray.from_array(
-            array([[[1, 2], [3, 4], [5, 6]], [[7, 8], [9, 10], [11, 12]]])
-        ),
-        "modify_coordinates": (1, 1, 1),
-        "original_value": 10,
-        "modified_value": -100,
-    },
-]
-
-
-class TestSharedArrayView:
-    """Tests utilities.SharedArrayView."""
-
-    @mark.parametrize("test_case", SHARED_ARRAY_VIEW_TEST_CASES)
-    def test_init(self, test_case):
-        """Tests .__init__."""
-        shared_array_view = SharedArrayView(
-            SharedArraySpec.from_shared_array(test_case["shared_array"])
-        )
-        assert shared_array_view.name == test_case["shared_array"].name
-        assert shared_array_view.shape == test_case["shared_array"].shape
-        assert shared_array_view.dtype == test_case["shared_array"].dtype
-        assert numpy_all(shared_array_view.data == test_case["shared_array"].data)
-
-    @mark.parametrize("test_case", SHARED_ARRAY_VIEW_TEST_CASES)
-    def test_modify(self, test_case):
-        """Tests that the shared memory points to exact same data."""
-        shared_array_view = SharedArrayView(
-            SharedArraySpec.from_shared_array(test_case["shared_array"])
-        )
-        data = ndarray(
-            shape=test_case["shape"],
-            dtype=test_case["dtype"],
-            buffer=test_case["shared_array"].shared_memory.buf,
-        )
-        assert data[test_case["modify_coordinates"]] == test_case["original_value"]
-        assert (
-            shared_array_view.data[test_case["modify_coordinates"]]
-            == test_case["original_value"]
-        )
-        assert (
-            test_case["shared_array"].data[test_case["modify_coordinates"]]
-            == test_case["original_value"]
-        )
-        data[test_case["modify_coordinates"]] = test_case["modified_value"]
-        assert data[test_case["modify_coordinates"]] == test_case["modified_value"]
-        assert (
-            shared_array_view.data[test_case["modify_coordinates"]]
-            == test_case["modified_value"]
-        )
-        assert (
-            test_case["shared_array"].data[test_case["modify_coordinates"]]
-            == test_case["modified_value"]
-        )

@@ -47,6 +47,7 @@ def main(args):
     meta = make_metacommunity(
         species_counts,
         similarity_matrix=args.similarity_matrix_filepath,
+        subcommunities=args.subcommunities,
         chunk_size=args.chunk_size,
         subcommunity_column=args.subcommunity_column,
         species_column=args.species_column,
