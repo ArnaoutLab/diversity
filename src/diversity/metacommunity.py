@@ -662,19 +662,20 @@ def make_metacommunity(
     A diversity.metacommunity.Metacommunity object built according to
     parameter specification.
     """
-    if type(similarity_matrix) not in {DataFrame, str}:
+    similarity_type = type(similarity_matrix)
+    if similarity_type not in {DataFrame, str}:
         raise InvalidArgumentError(
             "similarity_matrix must be a str or a pandas.DataFrame, but"
-            f"was: {type(similarity_matrix)}."
+            f"was: {similarity_type}."
         )
-    similarity_from = {DataFrame: SimilarityFromMemory, str: SimilarityFromFile}
+    similarity_factory = {DataFrame: SimilarityFromMemory, str: SimilarityFromFile}
     similarity_arguments = {
         DataFrame: (similarity_matrix,),
         str: (similarity_matrix, chunk_size),
     }
-    similarity_type = similarity_from[type(similarity_matrix)]
-    initializer_arguments = similarity_arguments[type(similarity_matrix)]
-    similarity = similarity_type(*initializer_arguments)
+    similarity_class = similarity_factory[similarity_type]
+    initializer_arguments = similarity_arguments[similarity_type]
+    similarity = similarity_class(*initializer_arguments)
     abundance = Abundance(
         counts,
         similarity.species_order,
