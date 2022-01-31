@@ -755,10 +755,11 @@ def make_metacommunity(
             count_column,
         )
     )
-    if type(similarity_matrix) not in {DataFrame, str}:
+    similarity_type = type(similarity_matrix)
+    if similarity_type not in {DataFrame, str}:
         raise InvalidArgumentError(
             "similarity_matrix must be a str or a pandas.DataFrame, but"
-            f"was: {type(similarity_matrix)}."
+            f"was: {similarity_type}."
         )
 
     # Subset data if requested
