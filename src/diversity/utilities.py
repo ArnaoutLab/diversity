@@ -36,7 +36,7 @@ from numpy import (
     vectorize,
 )
 
-# from diversity.log import LOGGER
+from diversity.log import LOGGER
 
 
 class MetacommunityError(Exception):
@@ -219,10 +219,10 @@ def unique_correspondence(items, ordered_unique_items=None):
         The position in the unique items iterable for each item in
         items.
     """
-    # LOGGER.debug(
-    #     "unique_correspondence(%s, ordered_unique_items=%s"
-    #     % (items, ordered_unique_items)
-    # )
+    LOGGER.debug(
+        "unique_correspondence(%s, ordered_unique_items=%s"
+        % (items, ordered_unique_items)
+    )
     if ordered_unique_items is None:
         ordered_unique_items_, item_positions = unique(items, return_inverse=True)
     else:

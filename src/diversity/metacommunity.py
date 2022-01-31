@@ -28,7 +28,7 @@ from functools import cached_property
 from pandas import DataFrame, read_csv
 from numpy import arange, array, empty, zeros, broadcast_to, divide, float64
 
-# from diversity.log import LOGGER
+from diversity.log import LOGGER
 from diversity.utilities import (
     get_file_delimiter,
     isin,
@@ -85,18 +85,18 @@ class Abundance:
         count_column: int
             Index of species count column in counts.
         """
-        # LOGGER.debug(
-        #     "Abundance(%s, species_order=%s, subcommunity_order=%s,"
-        #     "subcommunity_column=%s, species_column=%s, count_column=%s"
-        #     % (
-        #         counts,
-        #         species_order,
-        #         subcommunity_order,
-        #         subcommunity_column,
-        #         species_column,
-        #         count_column,
-        #     )
-        # )
+        LOGGER.debug(
+            "Abundance(%s, species_order=%s, subcommunity_order=%s,"
+            "subcommunity_column=%s, species_column=%s, count_column=%s"
+            % (
+                counts,
+                species_order,
+                subcommunity_order,
+                subcommunity_column,
+                species_column,
+                count_column,
+            )
+        )
         self.counts = counts
         self.subcommunity_column = subcommunity_column
         self.species_column = species_column
@@ -119,14 +119,10 @@ class Abundance:
         subcommunities and each element is the count of a species in a
         specific subcommunity.
         """
-        # LOGGER.debug("Abundance.__pivot_table(%s)" % self)
+        LOGGER.debug("Abundance.__pivot_table(%s)" % self)
         table = zeros(
             (len(self.species_order), len(self.subcommunity_order)), dtype=float64
         )
-        # LOGGER.debug("table: %s" % table)
-        # LOGGER.debug("species_unique_pos: %s" % self.__species_unique_pos)
-        # LOGGER.debug("subcommunity_unique_pos: %s" % self.__subcommunity_unique_pos)
-        # LOGGER.debug("counts: %s" % self.counts)
         table[self.__species_unique_pos, self.__subcommunity_unique_pos] = (
             self.counts[self.count_column].to_numpy().astype(float64)
         )
@@ -284,7 +280,7 @@ class SimilarityFromFile(ISimilarity):
             corresponding to non-members of species, or None if species
             is None.
         """
-        # LOGGER.debug("SimilarityFromFile.__get_species_order(%s, %s)" % (self, species))
+        LOGGER.debug("SimilarityFromFile.__get_species_order(%s, %s)" % (self, species))
         with read_csv(
             self.similarity_matrix, delimiter=self.__delimiter, chunksize=1
         ) as similarity_matrix_chunks:
@@ -746,19 +742,19 @@ def make_metacommunity(
     A diversity.metacommunity.Metacommunity object built according to
     parameter specification.
     """
-    # LOGGER.debug(
-    #     "make_metacommunity(%s, %s, subcommunities=%s, chunk_size=%s,"
-    #     " subcommunity_column=%s, species_column=%s, count_column=%s"
-    #     % (
-    #         counts,
-    #         similarity_matrix,
-    #         subcommunities,
-    #         chunk_size,
-    #         subcommunity_column,
-    #         species_column,
-    #         count_column,
-    #     )
-    # )
+    LOGGER.debug(
+        "make_metacommunity(%s, %s, subcommunities=%s, chunk_size=%s,"
+        " subcommunity_column=%s, species_column=%s, count_column=%s"
+        % (
+            counts,
+            similarity_matrix,
+            subcommunities,
+            chunk_size,
+            subcommunity_column,
+            species_column,
+            count_column,
+        )
+    )
     if type(similarity_matrix) not in {DataFrame, str}:
         raise InvalidArgumentError(
             "similarity_matrix must be a str or a pandas.DataFrame, but"
