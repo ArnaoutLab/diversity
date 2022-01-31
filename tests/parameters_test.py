@@ -1,6 +1,4 @@
 """Tests for diversity.parameters."""
-from argparse import ArgumentParser, Namespace
-
 from pytest import mark, warns
 
 from diversity.parameters import configure_arguments

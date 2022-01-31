@@ -2,7 +2,7 @@
 from copy import deepcopy
 from itertools import product
 
-from numpy import allclose, array, empty, float64, isclose, ndarray, unique, zeros
+from numpy import allclose, array, empty, float64, isclose, unique, zeros
 from pandas import DataFrame
 from pytest import mark, warns
 
@@ -16,8 +16,6 @@ from diversity.metacommunity import (
 from diversity.utilities import (
     ArgumentWarning,
     unique_correspondence,
-    SharedArray,
-    SharedArraySpec,
 )
 
 ABUNDANCE_TEST_CASES = [
@@ -1077,7 +1075,7 @@ class TestMetacommunity:
             assert allclose(
                 subcommunity_similarity[:, j],
                 test_case["subcommunity_to_similarity"][subcommunity],
-            ), f"\n(i, subcommunity): {(i, subcommunity)}"
+            ), f"\n(i, subcommunity): {(j, subcommunity)}"
 
     @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_normalized_subcommunity_similarity(self, test_case):
@@ -1090,7 +1088,7 @@ class TestMetacommunity:
             assert allclose(
                 normalized_subcommunity_similarity[:, j],
                 test_case["subcommunity_to_normalized_similarity"][subcommunity],
-            ), f"\n(i, subcommunity): {(i, subcommunity)}"
+            ), f"\n(i, subcommunity): {(j, subcommunity)}"
 
     @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_subcommunity_alpha(self, test_case):

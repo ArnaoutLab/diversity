@@ -1,18 +1,14 @@
 """Tests for diversity.utilities."""
 from copy import deepcopy
 
-from numpy import all as numpy_all, allclose, array, dtype, inf, ndarray
+from numpy import allclose, array, inf
 from pytest import mark, raises, warns
 
 from diversity.utilities import (
     ArgumentWarning,
     get_file_delimiter,
     InvalidArgumentError,
-    partition_range,
     power_mean,
-    SharedArray,
-    SharedArraySpec,
-    SharedArrayView,
     unique_correspondence,
 )
 
@@ -92,97 +88,6 @@ class TestGetFileDelimiter:
         else:
             delimiter = get_file_delimiter(test_case["filepath"])
         assert delimiter == test_case["delimiter"]
-
-
-PARTITION_RANGE_TEST_CASES = [
-    {
-        "description": "Evenly divisible range.",
-        "range_": range(10),
-        "num_chunks": 5,
-        "expected_ranges": [
-            range(0, 2),
-            range(2, 4),
-            range(4, 6),
-            range(6, 8),
-            range(8, 10),
-        ],
-        "expect_raise": False,
-    },
-    {
-        "description": "Unevenly divisible range.",
-        "range_": range(10),
-        "num_chunks": 3,
-        "expected_ranges": [
-            range(0, 3),
-            range(3, 6),
-            range(6, 10),
-        ],
-        "expect_raise": False,
-    },
-    {
-        "description": "More chunks than range.",
-        "range_": range(5),
-        "num_chunks": 6,
-        "expected_ranges": [
-            range(0, 0),
-            range(0, 1),
-            range(1, 2),
-            range(2, 3),
-            range(3, 4),
-            range(4, 5),
-        ],
-        "expect_raise": False,
-    },
-    {
-        "description": "0 chunks, non-empty range.",
-        "range_": range(10),
-        "num_chunks": 0,
-        "expected_ranges": None,
-        "expect_raise": True,
-    },
-    {
-        "description": "0 chunks, empty range.",
-        "range_": range(0, 0),
-        "num_chunks": 0,
-        "expected_ranges": None,
-        "expect_raise": True,
-    },
-    {
-        "description": "Negative chunks, non-empty range.",
-        "range_": range(10),
-        "num_chunks": -1,
-        "expected_ranges": None,
-        "expect_raise": True,
-    },
-    {
-        "description": "Negative chunks, empty range.",
-        "range_": range(5, 5),
-        "num_chunks": -13,
-        "expected_ranges": None,
-        "expect_raise": True,
-    },
-    {
-        "description": "Non-zero chunks, empty range.",
-        "range_": range(10, 10),
-        "num_chunks": 3,
-        "expected_ranges": [range(10, 10), range(10, 10), range(10, 10)],
-        "expect_raise": False,
-    },
-]
-
-
-class TestPartitionRange:
-    """Tests utilities.partition_range."""
-
-    @mark.parametrize("test_case", PARTITION_RANGE_TEST_CASES)
-    def test_partition_range(self, test_case):
-        """Tests partition_range."""
-        if test_case["expect_raise"]:
-            with raises(InvalidArgumentError):
-                partition_range(test_case["range_"], test_case["num_chunks"])
-        else:
-            ranges = partition_range(test_case["range_"], test_case["num_chunks"])
-            assert ranges == test_case["expected_ranges"]
 
 
 POWER_MEAN_TEST_CASES = [
@@ -1010,138 +915,3 @@ class TestUniqueCorrespondence:
             assert item == result_unique_items[unique_pos]
         if original_ordered_unique_items is not None:
             assert all(result_unique_items == original_ordered_unique_items)
-
-
-SHARED_ARRAY_TEST_CASES = [
-    {
-        "description": "1-d character array.",
-        "shape": (10,),
-        "dtype": dtype("<U1"),
-        "data": array(["f", "r", "u", "i", "t", "l", "o", "o", "p", "s"]),
-        "modify_coordinates": (4,),
-        "original_value": "t",
-        "modified_value": "x",
-    },
-    {
-        "description": "3-d integer array.",
-        "shape": (2, 3, 2),
-        "dtype": dtype("i8"),
-        "data": array([[[1, 2], [3, 4], [5, 6]], [[7, 8], [9, 10], [11, 12]]]),
-        "modify_coordinates": (1, 1, 1),
-        "original_value": 10,
-        "modified_value": -100,
-    },
-]
-
-
-class TestSharedArray:
-    """Tests utilities.SharedArray."""
-
-    @mark.parametrize("test_case", SHARED_ARRAY_TEST_CASES)
-    def test_from_array(self, test_case):
-        """Tests .from_array factory."""
-        shared_array = SharedArray.from_array(test_case["data"])
-        assert numpy_all(shared_array.data == test_case["data"])
-        del shared_array
-
-    @mark.parametrize("test_case", SHARED_ARRAY_TEST_CASES)
-    def test_init(self, test_case):
-        """Tests .__init__."""
-        shared_array = SharedArray(test_case["shape"], test_case["dtype"])
-        shared_array.data[:] = test_case["data"]
-        assert numpy_all(shared_array.data == test_case["data"])
-        del shared_array
-
-    @mark.parametrize("test_case", SHARED_ARRAY_TEST_CASES)
-    def test_modify(self, test_case):
-        """Tests that the shared memory points to exact same data."""
-        shared_array = SharedArray(test_case["shape"], test_case["dtype"])
-        shared_array.data[:] = test_case["data"]
-        data = ndarray(
-            shape=test_case["shape"],
-            dtype=test_case["dtype"],
-            buffer=shared_array.shared_memory.buf,
-        )
-        assert data[test_case["modify_coordinates"]] == test_case["original_value"]
-        assert (
-            shared_array.data[test_case["modify_coordinates"]]
-            == test_case["original_value"]
-        )
-        data[test_case["modify_coordinates"]] = test_case["modified_value"]
-        assert data[test_case["modify_coordinates"]] == test_case["modified_value"]
-        assert (
-            shared_array.data[test_case["modify_coordinates"]]
-            == test_case["modified_value"]
-        )
-
-
-SHARED_ARRAY_VIEW_TEST_CASES = [
-    {
-        "description": "1-d character array.",
-        "shape": (10,),
-        "dtype": dtype("<U1"),
-        "shared_array": SharedArray.from_array(
-            array(["f", "r", "u", "i", "t", "l", "o", "o", "p", "s"])
-        ),
-        "modify_coordinates": (4,),
-        "original_value": "t",
-        "modified_value": "x",
-    },
-    {
-        "description": "3-d integer array.",
-        "shape": (2, 3, 2),
-        "dtype": dtype("i8"),
-        "shared_array": SharedArray.from_array(
-            array([[[1, 2], [3, 4], [5, 6]], [[7, 8], [9, 10], [11, 12]]])
-        ),
-        "modify_coordinates": (1, 1, 1),
-        "original_value": 10,
-        "modified_value": -100,
-    },
-]
-
-
-class TestSharedArrayView:
-    """Tests utilities.SharedArrayView."""
-
-    @mark.parametrize("test_case", SHARED_ARRAY_VIEW_TEST_CASES)
-    def test_init(self, test_case):
-        """Tests .__init__."""
-        shared_array_view = SharedArrayView(
-            SharedArraySpec.from_shared_array(test_case["shared_array"])
-        )
-        assert shared_array_view.name == test_case["shared_array"].name
-        assert shared_array_view.shape == test_case["shared_array"].shape
-        assert shared_array_view.dtype == test_case["shared_array"].dtype
-        assert numpy_all(shared_array_view.data == test_case["shared_array"].data)
-
-    @mark.parametrize("test_case", SHARED_ARRAY_VIEW_TEST_CASES)
-    def test_modify(self, test_case):
-        """Tests that the shared memory points to exact same data."""
-        shared_array_view = SharedArrayView(
-            SharedArraySpec.from_shared_array(test_case["shared_array"])
-        )
-        data = ndarray(
-            shape=test_case["shape"],
-            dtype=test_case["dtype"],
-            buffer=test_case["shared_array"].shared_memory.buf,
-        )
-        assert data[test_case["modify_coordinates"]] == test_case["original_value"]
-        assert (
-            shared_array_view.data[test_case["modify_coordinates"]]
-            == test_case["original_value"]
-        )
-        assert (
-            test_case["shared_array"].data[test_case["modify_coordinates"]]
-            == test_case["original_value"]
-        )
-        data[test_case["modify_coordinates"]] = test_case["modified_value"]
-        assert data[test_case["modify_coordinates"]] == test_case["modified_value"]
-        assert (
-            shared_array_view.data[test_case["modify_coordinates"]]
-            == test_case["modified_value"]
-        )
-        assert (
-            test_case["shared_array"].data[test_case["modify_coordinates"]]
-            == test_case["modified_value"]
-        )

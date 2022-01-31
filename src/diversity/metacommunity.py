@@ -24,10 +24,9 @@ make_metacommunity
 
 from abc import ABC, abstractmethod
 from functools import cached_property
-from multiprocessing import cpu_count, Pool
 
 from pandas import DataFrame, read_csv
-from numpy import array, empty, zeros, broadcast_to, dtype, divide, float64, vectorize
+from numpy import array, empty, zeros, broadcast_to, divide, float64
 
 from diversity.utilities import (
     get_file_delimiter,
@@ -222,14 +221,12 @@ class SimilarityFromFile(ISimilarity):
         self.__chunk_size = chunk_size
         self.species_order = self.get_species_order()
 
-    # @cached_property
     def get_species_order(self):
         """The species ordering used in similarity matrix file."""
         with read_csv(
             self.similarity_matrix, delimiter=self.__delimiter, chunksize=1
         ) as similarity_matrix_chunks:
-            species_order_ = array(next(similarity_matrix_chunks).columns)
-        return species_order_
+            return array(next(similarity_matrix_chunks).columns)
 
     def calculate_weighted_similarities(self, relative_abundances):
         """Calculates weighted sums of similarities to each species.
@@ -249,7 +246,7 @@ class SimilarityFromFile(ISimilarity):
             i = 0
             for chunk in similarity_matrix_chunks:
                 weighted_similarities[i : i + self.__chunk_size, :] = (
-                    chunk @ relative_abundances
+                    chunk.to_numpy() @ relative_abundances
                 )
                 i += self.__chunk_size
         return weighted_similarities

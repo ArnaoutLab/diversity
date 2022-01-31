@@ -193,9 +193,7 @@ class TestMain:
         ].similarity_matrix_filepath = (
             f"{tmp_path}/{test_case['args'].similarity_matrix_filepath}"
         )
-        test_case[
-            "args"
-        ].output_filepath = f"{tmp_path}/{test_case['args'].output_filepath}"
+        test_case["args"].output_filepath = tmp_path / test_case["args"].output_filepath
 
         self.write_file(
             test_case["args"].input_filepath,
