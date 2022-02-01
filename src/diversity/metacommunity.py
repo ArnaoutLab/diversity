@@ -25,7 +25,7 @@ make_metacommunity
 from abc import ABC, abstractmethod
 from functools import cached_property
 
-from pandas import DataFrame, read_csv
+from pandas import DataFrame, concat, read_csv
 from numpy import array, empty, zeros, broadcast_to, divide, float64
 
 from diversity.utilities import (
@@ -631,10 +631,30 @@ class Metacommunity:
             index=[0],
         )
 
+def make_similarity(similarity_matrix, chunk_size):
+    similarity_type = type(similarity_matrix)
+    if similarity_type not in {DataFrame, str}:
+        raise InvalidArgumentError(
+            "similarity_matrix must be a str or a pandas.DataFrame, but"
+            f"was: {similarity_type}."
+        )
+    similarity_classes = {
+        DataFrame: SimilarityFromMemory, 
+        str: SimilarityFromFile
+    }
+    similarity_arguments = {
+        DataFrame: (similarity_matrix,),
+        str: (similarity_matrix, chunk_size),
+    }
+    similarity_class = similarity_classes[similarity_type]
+    initializer_arguments = similarity_arguments[similarity_type]
+    return similarity_class(*initializer_arguments)
+
 
 def make_metacommunity(
     counts,
     similarity_matrix,
+    subcommunities=None,
     chunk_size=1,
     subcommunity_column="subcommunity",
     species_column="species",
@@ -659,25 +679,30 @@ def make_metacommunity(
     A diversity.metacommunity.Metacommunity object built according to
     parameter specification.
     """
-    similarity_type = type(similarity_matrix)
-    if similarity_type not in {DataFrame, str}:
-        raise InvalidArgumentError(
-            "similarity_matrix must be a str or a pandas.DataFrame, but"
-            f"was: {similarity_type}."
-        )
-    similarity_factory = {DataFrame: SimilarityFromMemory, str: SimilarityFromFile}
-    similarity_arguments = {
-        DataFrame: (similarity_matrix,),
-        str: (similarity_matrix, chunk_size),
-    }
-    similarity_class = similarity_factory[similarity_type]
-    initializer_arguments = similarity_arguments[similarity_type]
-    similarity = similarity_class(*initializer_arguments)
+    
+
+    similarity = make_similarity(similarity_matrix, chunk_size)
+    counts_subset = subset_subcommunities(counts, subcommunities)
     abundance = Abundance(
-        counts,
+        counts_subset,
         similarity.species_order,
         subcommunity_column=subcommunity_column,
         species_column=species_column,
         count_column=count_column,
     )
     return Metacommunity(similarity, abundance)
+
+
+def subset_subcommunities(counts, subcommunities):
+    if subcommunities is None:
+        return counts
+    return counts[counts['subcommunity'].isin(subcommunities)]
+
+
+def pairwise_metacommunities(counts, similarity_matrix):
+    subcommunties_groups = counts.groupby('subcommunity') 
+    return [make_metacommunity(concat([group_i, group_j]), similarity_matrix)
+                for i, (_, group_i) in enumerate(subcommunties_groups)
+                    for j, (_, group_j) in enumerate(subcommunties_groups) 
+                        if j > i
+            ]
