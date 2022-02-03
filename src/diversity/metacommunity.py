@@ -25,7 +25,7 @@ make_metacommunity
 from abc import ABC, abstractmethod
 from functools import cached_property
 
-from pandas import DataFrame, read_csv
+from pandas import DataFrame, concat, read_csv, unique
 from numpy import arange, array, empty, zeros, broadcast_to, divide, float64
 
 from diversity.log import LOGGER
@@ -708,6 +708,26 @@ class Metacommunity:
         )
 
 
+def make_similarity(similarity_matrix, species, chunk_size):
+    similarity_type = type(similarity_matrix)
+    if similarity_type not in {DataFrame, str}:
+        raise InvalidArgumentError(
+            "similarity_matrix must be a str or a pandas.DataFrame, but"
+            f"was: {similarity_type}."
+        )
+    similarity_classes = {
+        DataFrame: SimilarityFromMemory, 
+        str: SimilarityFromFile
+    }
+    similarity_arguments = {
+        DataFrame: (similarity_matrix, species),
+        str: (similarity_matrix, species, chunk_size),
+    }
+    similarity_class = similarity_classes[similarity_type]
+    initializer_arguments = similarity_arguments[similarity_type]
+    return similarity_class(*initializer_arguments)
+
+
 def make_metacommunity(
     counts,
     similarity_matrix,
@@ -755,39 +775,31 @@ def make_metacommunity(
             count_column,
         )
     )
-    similarity_type = type(similarity_matrix)
-    if similarity_type not in {DataFrame, str}:
-        raise InvalidArgumentError(
-            "similarity_matrix must be a str or a pandas.DataFrame, but"
-            f"was: {similarity_type}."
-        )
 
-    # Subset data if requested
-    if subcommunities is None:
-        counts_ = counts[[subcommunity_column, species_column, count_column]]
-        species = None
-    else:
-        counts_ = counts[[subcommunity_column, species_column, count_column]].loc[
-            counts[subcommunity_column].astype(str).isin(set(subcommunities))
-        ]
-        species = set(counts_[species_column].astype(str))
-
-    # Choose similarity strategy
-    similarity_from = {DataFrame: SimilarityFromMemory, str: SimilarityFromFile}
-    similarity_arguments = {
-        DataFrame: (similarity_matrix, species),
-        str: (similarity_matrix, species, chunk_size),
-    }
-    similarity_type = similarity_from[type(similarity_matrix)]
-    initializer_arguments = similarity_arguments[type(similarity_matrix)]
-
-    # Build Metacommunity object
-    similarity = similarity_type(*initializer_arguments)
+    counts_subset = subset_subcommunities(counts, subcommunities)
+    species = unique(counts_subset[species_column])
+    similarity = make_similarity(similarity_matrix, species, chunk_size)
     abundance = Abundance(
-        counts_,
+        counts_subset,
         similarity.species_order,
         subcommunity_column=subcommunity_column,
         species_column=species_column,
         count_column=count_column,
     )
     return Metacommunity(similarity, abundance)
+
+def subset_subcommunities(counts, subcommunities):
+    if subcommunities is None:
+        return counts
+    return counts[counts['subcommunity'].isin(subcommunities)]
+
+def make_pairwise_metacommunities(counts, similarity_matrix):
+    subcommunties_groups = counts.groupby('subcommunity')
+    pairwise_metacommunities = []
+    for i, (_, group_i) in enumerate(subcommunties_groups):
+            for j, (_, group_j) in enumerate(subcommunties_groups):
+                if j > i:
+                    counts = concat([group_i, group_j])
+                    pair_ij = make_metacommunity(counts, similarity_matrix)
+                    pairwise_metacommunities.append(pair_ij)
+    return pairwise_metacommunities
