@@ -26,12 +26,11 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 
 from pandas import DataFrame, concat, read_csv, unique
-from numpy import arange, array, empty, zeros, broadcast_to, divide, float64
+from numpy import arange, empty, flatnonzero, zeros, broadcast_to, isin, divide, float64 
 
 from diversity.log import LOGGER
 from diversity.utilities import (
     get_file_delimiter,
-    isin,
     InvalidArgumentError,
     power_mean,
     unique_correspondence,
@@ -231,8 +230,7 @@ class SimilarityFromFile(ISimilarity):
     The size of chunks can be specified in numbers of rows to control
     memory load.
     """
-
-    def __init__(self, similarity_matrix, species=None, chunk_size=1):
+    def __init__(self, similarity_matrix, species_subset, chunk_size=1): 
         """Initializes object.
 
         Parameters
@@ -242,7 +240,7 @@ class SimilarityFromFile(ISimilarity):
             similarities between species, together with a header
             containing the unique species names in the matrix's row and
             column ordering.
-        species: Set
+        species_subset: Set
             The species to include. Only similarities from columns and
             rows corresponding to these species are used.
         chunk_size: int
@@ -255,13 +253,14 @@ class SimilarityFromFile(ISimilarity):
             self.__species_order,
             self.__usecols,
             self.__skiprows,
-        ) = self.__get_species_order(species)
+        ) = self.__get_species_order(species_subset)
 
     def __get_species_order(self, species):
         """The species ordering used in similarity matrix file.
 
         Parameters
         ----------
+        # FIXME this may not be a set
         species: Set
             Set of species to include. If None, all species are
             included.
@@ -284,20 +283,16 @@ class SimilarityFromFile(ISimilarity):
         with read_csv(
             self.similarity_matrix, delimiter=self.__delimiter, chunksize=1
         ) as similarity_matrix_chunks:
-            header = next(similarity_matrix_chunks).columns.astype(str)
-            species_order_from_file = array(
-                header  # next(similarity_matrix_chunks).columns.astype(str)
+            species_order_from_file = (
+                next(similarity_matrix_chunks)
+                .columns
+                .to_numpy()
+                .astype(str)
             )
-
-        if species is None:
-            usecols = None
-            skiprows = None
-            species_order = species_order_from_file
-        else:
-            valid_species_index = isin(species_order_from_file, species)
-            species_order = species_order_from_file[valid_species_index]
-            usecols = arange(len(species_order_from_file))[valid_species_index]
-            skiprows = arange(1, len(species_order_from_file) + 1)[~valid_species_index]
+        species_subset_indices = isin(species_order_from_file, species)
+        species_order = species_order_from_file[species_subset_indices]
+        usecols = flatnonzero(species_subset_indices)
+        skiprows = flatnonzero(~species_subset_indices) + 1
         return species_order, usecols, skiprows
 
     @cached_property
@@ -325,7 +320,7 @@ class SimilarityFromFile(ISimilarity):
 class SimilarityFromMemory(ISimilarity):
     """Implements Similarity using similarities stored in memory."""
 
-    def __init__(self, similarity_matrix, species=None):
+    def __init__(self, similarity_matrix, species_subset):
         """Initializes object.
 
         similarity_matrix: pandas.DataFrame
@@ -336,14 +331,13 @@ class SimilarityFromMemory(ISimilarity):
             Set of species to include. If None, all species are
             included.
         """
-        all_species = array(similarity_matrix.columns)
-        if species is None:
-            self.__species_order = all_species
-            self.similarity_matrix = similarity_matrix.loc[self.species_order]
-        else:
-            valid_species = all_species[isin(all_species, species)]
-            self.__species_order = valid_species
-            self.similarity_matrix = similarity_matrix.loc[valid_species][valid_species]
+
+        species = similarity_matrix.columns.to_numpy()
+        species_subset_indices = isin(species, species_subset)
+        self.__species_order = species[species_subset_indices]
+        self.similarity_matrix = (
+            similarity_matrix
+            .reindex(index=self.species_order, columns=self.species_order, copy=False))
 
     @property
     def species_order(self):
@@ -708,7 +702,13 @@ class Metacommunity:
         )
 
 
-def make_similarity(similarity_matrix, species, chunk_size):
+def subset_subcommunities(counts, subcommunities):
+    if subcommunities is None:
+        return counts
+    return counts[counts['subcommunity'].isin(subcommunities)]
+
+
+def make_similarity(similarity_matrix, species_subset, chunk_size):
     similarity_type = type(similarity_matrix)
     if similarity_type not in {DataFrame, str}:
         raise InvalidArgumentError(
@@ -720,8 +720,8 @@ def make_similarity(similarity_matrix, species, chunk_size):
         str: SimilarityFromFile
     }
     similarity_arguments = {
-        DataFrame: (similarity_matrix, species),
-        str: (similarity_matrix, species, chunk_size),
+        DataFrame: (similarity_matrix, species_subset),
+        str: (similarity_matrix, species_subset, chunk_size),
     }
     similarity_class = similarity_classes[similarity_type]
     initializer_arguments = similarity_arguments[similarity_type]
@@ -777,8 +777,8 @@ def make_metacommunity(
     )
 
     counts_subset = subset_subcommunities(counts, subcommunities)
-    species = unique(counts_subset[species_column])
-    similarity = make_similarity(similarity_matrix, species, chunk_size)
+    species_subset = unique(counts_subset[species_column])
+    similarity = make_similarity(similarity_matrix, species_subset, chunk_size)
     abundance = Abundance(
         counts_subset,
         similarity.species_order,
@@ -788,10 +788,6 @@ def make_metacommunity(
     )
     return Metacommunity(similarity, abundance)
 
-def subset_subcommunities(counts, subcommunities):
-    if subcommunities is None:
-        return counts
-    return counts[counts['subcommunity'].isin(subcommunities)]
 
 def make_pairwise_metacommunities(counts, similarity_matrix):
     subcommunties_groups = counts.groupby('subcommunity')
