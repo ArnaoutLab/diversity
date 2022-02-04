@@ -32,8 +32,7 @@ from numpy import (
     power,
     prod,
     sum as numpy_sum,
-    unique,
-    vectorize,
+    unique
 )
 
 from diversity.log import LOGGER
@@ -85,27 +84,6 @@ def get_file_delimiter(filepath):
             category=ArgumentWarning,
         )
         return "\t"
-
-
-def isin(items, test_set):
-    """Gets boolean indexer for items in test set.
-
-    Parameters
-    ----------
-    items: numpy.ndarray
-        Items whose membership to test.
-    test_set: set
-        Boolean indexer indexes items that are members of this set.
-
-    Returns
-    -------
-    A numpy.ndarray indexing the items that are members of the test_set.
-    """
-    if items.size == 0:
-        raise InvalidArgumentError("Must specify non-empty array of items.")
-    validate_item = vectorize(lambda x: x in test_set)
-    index = validate_item(items)
-    return index
 
 
 def __validate_power_mean_args(weights, items, atol, weight_is_nonzero):
