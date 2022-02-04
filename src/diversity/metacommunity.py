@@ -255,7 +255,7 @@ class SimilarityFromFile(ISimilarity):
             self.__skiprows,
         ) = self.__get_species_order(species_subset)
 
-    def __get_species_order(self, species):
+    def __get_species_order(self, species_subset):
         """The species ordering used in similarity matrix file.
 
         Parameters
@@ -279,7 +279,7 @@ class SimilarityFromFile(ISimilarity):
             corresponding to non-members of species, or None if species
             is None.
         """
-        LOGGER.debug("SimilarityFromFile.__get_species_order(%s, %s)" % (self, species))
+        LOGGER.debug("SimilarityFromFile.__get_species_order(%s, %s)" % (self, species_subset))
         with read_csv(
             self.similarity_matrix, delimiter=self.__delimiter, chunksize=1
         ) as similarity_matrix_chunks:
@@ -289,7 +289,7 @@ class SimilarityFromFile(ISimilarity):
                 .to_numpy()
                 .astype(str)
             )
-        species_subset_indices = isin(species_order_from_file, species)
+        species_subset_indices = isin(species_order_from_file, species_subset)
         species_order = species_order_from_file[species_subset_indices]
         usecols = flatnonzero(species_subset_indices)
         skiprows = flatnonzero(~species_subset_indices) + 1
@@ -331,17 +331,20 @@ class SimilarityFromMemory(ISimilarity):
             Set of species to include. If None, all species are
             included.
         """
-
-        species = similarity_matrix.columns.to_numpy()
-        species_subset_indices = isin(species, species_subset)
-        self.__species_order = species[species_subset_indices]
-        self.similarity_matrix = (
-            similarity_matrix
-            .reindex(index=self.species_order, columns=self.species_order, copy=False))
+        self.__species_order = self.__get_species_order(similarity_matrix, species_subset)
+        self.similarity_matrix = self.__reindex_similarity_matrix(similarity_matrix)
 
     @property
     def species_order(self):
         return self.__species_order
+
+    def __get_species_order(self, similarity_matrix, species_subset):
+        species = similarity_matrix.columns.to_numpy().astype(str)
+        species_subset_indices = isin(species, species_subset)
+        return species[species_subset_indices]
+
+    def __reindex_similarity_matrix(self, similarity_matrix):
+        return similarity_matrix.reindex(index=self.species_order, columns=self.species_order, copy=False)
 
     def calculate_weighted_similarities(self, relative_abundances):
         return self.similarity_matrix.to_numpy() @ relative_abundances
