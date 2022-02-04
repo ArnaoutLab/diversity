@@ -26,7 +26,7 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 
 from pandas import DataFrame, concat, read_csv, unique
-from numpy import arange, empty, flatnonzero, zeros, broadcast_to, isin, divide, float64 
+from numpy import empty, flatnonzero, zeros, broadcast_to, divide, float64 
 
 from diversity.log import LOGGER
 from diversity.utilities import (
@@ -283,14 +283,13 @@ class SimilarityFromFile(ISimilarity):
         with read_csv(
             self.similarity_matrix, delimiter=self.__delimiter, chunksize=1
         ) as similarity_matrix_chunks:
-            species_order_from_file = (
+            species = (
                 next(similarity_matrix_chunks)
                 .columns
-                .to_numpy()
                 .astype(str)
             )
-        species_subset_indices = isin(species_order_from_file, species_subset)
-        species_order = species_order_from_file[species_subset_indices]
+        species_subset_indices = species.isin(species_subset)
+        species_order = species[species_subset_indices]
         usecols = flatnonzero(species_subset_indices)
         skiprows = flatnonzero(~species_subset_indices) + 1
         return species_order, usecols, skiprows
@@ -339,8 +338,8 @@ class SimilarityFromMemory(ISimilarity):
         return self.__species_order
 
     def __get_species_order(self, similarity_matrix, species_subset):
-        species = similarity_matrix.columns.to_numpy().astype(str)
-        species_subset_indices = isin(species, species_subset)
+        species = similarity_matrix.columns.astype(str)
+        species_subset_indices = species.isin(species_subset)
         return species[species_subset_indices]
 
     def __reindex_similarity_matrix(self, similarity_matrix):
@@ -705,12 +704,6 @@ class Metacommunity:
         )
 
 
-def subset_subcommunities(counts, subcommunities):
-    if subcommunities is None:
-        return counts
-    return counts[counts['subcommunity'].isin(subcommunities)]
-
-
 def make_similarity(similarity_matrix, species_subset, chunk_size):
     similarity_type = type(similarity_matrix)
     if similarity_type not in {DataFrame, str}:
@@ -729,6 +722,12 @@ def make_similarity(similarity_matrix, species_subset, chunk_size):
     similarity_class = similarity_classes[similarity_type]
     initializer_arguments = similarity_arguments[similarity_type]
     return similarity_class(*initializer_arguments)
+
+
+def subset_subcommunities(counts, subcommunities, subcommunity_column):
+    if subcommunities is None:
+        return counts
+    return counts[counts[subcommunity_column].isin(subcommunities)]
 
 
 def make_metacommunity(
@@ -779,7 +778,7 @@ def make_metacommunity(
         )
     )
 
-    counts_subset = subset_subcommunities(counts, subcommunities)
+    counts_subset = subset_subcommunities(counts, subcommunities, subcommunity_column)
     species_subset = unique(counts_subset[species_column])
     similarity = make_similarity(similarity_matrix, species_subset, chunk_size)
     abundance = Abundance(
@@ -792,13 +791,17 @@ def make_metacommunity(
     return Metacommunity(similarity, abundance)
 
 
-def make_pairwise_metacommunities(counts, similarity_matrix):
-    subcommunties_groups = counts.groupby('subcommunity')
+def make_pairwise_metacommunities(counts, similarity_matrix, subcommunity_column, **kwargs):
+    subcommunties_groups = counts.groupby(subcommunity_column)
     pairwise_metacommunities = []
     for i, (_, group_i) in enumerate(subcommunties_groups):
             for j, (_, group_j) in enumerate(subcommunties_groups):
                 if j > i:
                     counts = concat([group_i, group_j])
-                    pair_ij = make_metacommunity(counts, similarity_matrix)
+                    pair_ij = make_metacommunity(
+                        counts, 
+                        similarity_matrix, 
+                        subcommunity_column=subcommunity_column, 
+                        **kwargs)
                     pairwise_metacommunities.append(pair_ij)
     return pairwise_metacommunities
