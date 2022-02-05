@@ -374,6 +374,15 @@ class Metacommunity:
         """
         self.similarity = similarity
         self.abundance = abundance
+        measures_components = {
+            'alpha': (1, self.subcommunity_similarity),
+            'rho': (self.metacommunity_similarity, self.subcommunity_similarity),
+            'beta': (self.metacommunity_similarity, self.subcommunity_similarity),
+            'gamma': (1, self.metacommunity_similarity),
+            'normalized_alpha': (1, self.normalized_subcommunity_similarity),
+            'normalized_rho': (self.metacommunity_similarity, self.normalized_subcommunity_similarity),
+            'normalized_beta': (self.metacommunity_similarity, self.normalized_subcommunity_similarity)
+        }
 
     @cached_property
     def metacommunity_similarity(self):
@@ -396,261 +405,26 @@ class Metacommunity:
             self.abundance.normalized_subcommunity_abundance
         )
 
-    def subcommunity_alpha(self, viewpoint):
-        """Calculates alpha class diversities of subcommunities.
-
-        Corresponds roughly to the diversities of subcommunities
-        relative to the metacommunity.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__subcommunity_measure(viewpoint, 1, self.subcommunity_similarity)
-
-    def subcommunity_rho(self, viewpoint):
-        """Calculates rho class diversities of subcommunities.
-
-        Corresponds roughly to how redundant each subcommunity's classes
-        are in the metacommunity.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__subcommunity_measure(
-            viewpoint,
-            self.metacommunity_similarity,
-            self.subcommunity_similarity,
-        )
-
-    def subcommunity_beta(self, viewpoint):
-        """Calculates beta class diversities of subcommunities.
-
-        Corresponds roughly to how distinct each subcommunity's classes
-        are from all classes in metacommunity.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only
-            the most frequent species.
-        """
-        return 1 / self.subcommunity_rho(viewpoint)
-
-    def subcommunity_gamma(self, viewpoint):
-        """Calculates gamma class diversities of subcommunities.
-
-        Corresponds roughly to how much each subcommunity contributes
-        towards the metacommunity diversity.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only
-            the most frequent species.
-        """
-        denominator = broadcast_to(
-            self.metacommunity_similarity,
-            self.abundance.normalized_subcommunity_abundance.shape,
-        )
-        return self.__subcommunity_measure(viewpoint, 1, denominator)
-
-    def normalized_subcommunity_alpha(self, viewpoint):
-        """Calculates normalized alpha class diversities of subcommunities.
-
-        Corresponds roughly to the diversities of subcommunities in
-        isolation.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__subcommunity_measure(
-            viewpoint, 1, self.normalized_subcommunity_similarity
-        )
-
-    def normalized_subcommunity_rho(self, viewpoint):
-        """Calculates normalized rho class diversities of subcommunities.
-
-        Corresponds roughly to the representativeness of subcommunities.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__subcommunity_measure(
-            viewpoint,
-            self.metacommunity_similarity,
-            self.normalized_subcommunity_similarity,
-        )
-
-    def normalized_subcommunity_beta(self, viewpoint):
-        """Calculates normalized rho class diversities of subcommunities.
-
-        Corresponds roughly to average diversity of subcommunities in
-        the metacommunity.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return 1 / self.normalized_subcommunity_rho(viewpoint)
-
-    def metacommunity_alpha(self, viewpoint):
-        """Calculates alpha class diversity of metacommunity.
-
-        Corresponds roughly to the average diversity of subcommunities
-        relative to the metacommunity.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__metacommunity_measure(viewpoint, self.subcommunity_alpha)
-
-    def metacommunity_rho(self, viewpoint):
-        """Calculates rho class diversitiy of metacommunity.
-
-        Corresponds roughly to the average redundancy of subcommunities
-        in the metacommunity.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__metacommunity_measure(viewpoint, self.subcommunity_rho)
-
-    def metacommunity_beta(self, viewpoint):
-        """Calculates beta class diversity of metacommunity.
-
-        Corresponds roughly to the average distinctness of
-        subcommunities within the metacommunity.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__metacommunity_measure(viewpoint, self.subcommunity_beta)
-
-    def metacommunity_gamma(self, viewpoint):
-        """Calculates gamma class diversity of metacommunity.
-
-        Corresponds roughly to the class diversity of the unpartitioned
-        metacommunity.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__metacommunity_measure(viewpoint, self.subcommunity_gamma)
-
-    def normalized_metacommunity_alpha(self, viewpoint):
-        """Calculates alpha class diversity of metacommunity.
-
-        Corresponds roughly to the average diversity of subcommunities
-        in isolation.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__metacommunity_measure(
-            viewpoint, self.normalized_subcommunity_alpha
-        )
-
-    def normalized_metacommunity_rho(self, viewpoint):
-        """Calculates rho class diversitiy of metacommunity.
-
-        Corresponds roughly to the average representativeness of
-        subcommunities.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__metacommunity_measure(viewpoint, self.normalized_subcommunity_rho)
-
-    def normalized_metacommunity_beta(self, viewpoint):
-        """Calculates beta class diversity of metacommunity.
-
-        Corresponds roughly to the effective number of distinct
-        subcommunities.
-
-        Parameters
-        ----------
-        viewpoint: numeric
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
-        """
-        return self.__metacommunity_measure(
-            viewpoint, self.normalized_subcommunity_beta
-        )
-
-    def __subcommunity_measure(self, viewpoint, numerator, denominator):
+    def subcommunity_measure(self, viewpoint, measure):
         """Calculates subcommunity diversity measures."""
-        similarities = divide(
+        numerator, denominator = self.measures_components[measure]
+        if measure == 'gamma':
+            denominator = broadcast_to(denominator, self.abundance.subcommunity_abundance.shape)
+        community_ratio = divide(
             numerator, denominator, out=zeros(denominator.shape), where=denominator != 0
         )
-        return power_mean(
+        result = power_mean(
             1 - viewpoint,
             self.abundance.normalized_subcommunity_abundance,
-            similarities,
+            community_ratio,
         )
+        if measure in ['beta', 'normalized_beta']:
+            return 1 / result
+        return result
 
-    def __metacommunity_measure(self, viewpoint, subcommunity_function):
+    def metacommunity_measure(self, viewpoint, measure):
         """Calculates metcommunity diversity measures."""
-        subcommunity_measure = subcommunity_function(viewpoint)
+        subcommunity_measure = self.subcommunity_measure(viewpoint, measure)
         return power_mean(
             1 - viewpoint,
             self.abundance.subcommunity_normalizing_constants,
