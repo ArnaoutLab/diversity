@@ -34,26 +34,29 @@ from numpy import (
     sum as numpy_sum,
     unique,
     vectorize,
+    zeros,
 )
 
 from diversity.log import LOGGER
 
 
 class MetacommunityError(Exception):
-    """Base class for all custom metacommunity exceptions."""
+    pass
 
+
+class MetacommunityWarning(Warning):
     pass
 
 
 class InvalidArgumentError(MetacommunityError):
-    """Raised when a function receives an invalid argument."""
-
     pass
 
 
-class ArgumentWarning(Warning):
-    """Used for warnings related to problematic argument choices."""
+class LogicError(MetacommunityError):
+    pass
 
+
+class ArgumentWarning(MetacommunityWarning):
     pass
 
 
@@ -197,6 +200,49 @@ def power_mean(order, weights, items, atol=1e-9):
         items_product = multiply(items_power, weights, where=weight_is_nonzero)
         items_sum = numpy_sum(items_product, axis=0, where=weight_is_nonzero)
         return power(items_sum, 1 / order)
+
+
+def pivot_table(
+    data_frame,
+    pivot_column,
+    index_column,
+    value_columns,
+    pivot_ordering=None,
+    index_ordering=None,
+):
+    """Converts long to wide formatted counts.
+
+    Returns
+    -------
+    A numpy.ndarray where rows correspond to species, columns to
+    subcommunities and each element is the count of a species in a
+    specific subcommunity.
+    """
+    LOGGER.debug(
+        "pivot_table(%s, %s, %s, %s, pivot_ordering=%s, index_ordering=%s)",
+        data_frame,
+        pivot_column,
+        index_column,
+        value_columns,
+        pivot_ordering,
+        index_ordering,
+    )
+    index_ordering_, index_positions = unique_correspondence(
+        items=data_frame[index_column].to_numpy(),
+        ordered_unique_items=index_ordering,
+    )
+    pivot_ordering_, pivot_positions = unique_correspondence(
+        items=data_frame[pivot_column].to_numpy(),
+        ordered_unique_items=pivot_ordering,
+    )
+    table = zeros(
+        (len(index_ordering_), len(pivot_ordering_) * len(value_columns)), dtype=float64
+    )
+    for i, j, values in zip(
+        index_positions, pivot_positions, data_frame[value_columns].to_numpy()
+    ):
+        table[i, j : j + len(value_columns)] = values
+    return table
 
 
 def unique_correspondence(items, ordered_unique_items=None):

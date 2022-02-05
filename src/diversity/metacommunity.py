@@ -33,6 +33,7 @@ from diversity.utilities import (
     get_file_delimiter,
     isin,
     InvalidArgumentError,
+    pivot_table,
     power_mean,
     unique_correspondence,
 )
@@ -97,36 +98,14 @@ class Abundance:
                 count_column,
             )
         )
-        self.counts = counts
-        self.subcommunity_column = subcommunity_column
-        self.species_column = species_column
-        self.count_column = count_column
-        self.species_order, self.__species_unique_pos = unique_correspondence(
-            items=self.counts[self.species_column].to_numpy(),
-            ordered_unique_items=species_order,
+        self.counts = pivot_table(
+            data_frame=counts,
+            pivot_column=subcommunity_column,
+            index_column=species_column,
+            value_columns=[count_column],
+            pivot_ordering=subcommunity_ordering,
+            index_ordering=species_ordering,
         )
-        self.subcommunity_order, self.__subcommunity_unique_pos = unique_correspondence(
-            items=self.counts[self.subcommunity_column].to_numpy(),
-            ordered_unique_items=subcommunity_order,
-        )
-
-    def __pivot_table(self):
-        """Converts long to wide formatted counts.
-
-        Returns
-        -------
-        A numpy.ndarray where rows correspond to species, columns to
-        subcommunities and each element is the count of a species in a
-        specific subcommunity.
-        """
-        LOGGER.debug("Abundance.__pivot_table(%s)" % self)
-        table = zeros(
-            (len(self.species_order), len(self.subcommunity_order)), dtype=float64
-        )
-        table[self.__species_unique_pos, self.__subcommunity_unique_pos] = (
-            self.counts[self.count_column].to_numpy().astype(float64)
-        )
-        return table
 
     @cached_property
     def subcommunity_abundance(self):
@@ -140,10 +119,9 @@ class Abundance:
         in the subcommunity relative to the total metacommunity size.
         The row ordering is established by the species_to_row attribute.
         """
-        counts = self.__pivot_table()
-        total_abundance = counts.sum()
-        relative_abundances = empty(shape=counts.shape, dtype=float64)
-        relative_abundances[:] = counts / total_abundance
+        total_abundance = self.counts.sum()
+        relative_abundances = empty(shape=self.counts.shape, dtype=float64)
+        relative_abundances[:] = self.counts / total_abundance
         return relative_abundances
 
     @cached_property
