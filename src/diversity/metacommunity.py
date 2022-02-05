@@ -374,14 +374,46 @@ class Metacommunity:
         """
         self.similarity = similarity
         self.abundance = abundance
-        measures_components = {
-            'alpha': (1, self.subcommunity_similarity),
-            'rho': (self.metacommunity_similarity, self.subcommunity_similarity),
-            'beta': (self.metacommunity_similarity, self.subcommunity_similarity),
-            'gamma': (1, self.metacommunity_similarity),
-            'normalized_alpha': (1, self.normalized_subcommunity_similarity),
-            'normalized_rho': (self.metacommunity_similarity, self.normalized_subcommunity_similarity),
-            'normalized_beta': (self.metacommunity_similarity, self.normalized_subcommunity_similarity)
+        self.measures_components = {
+            "sensitive": {
+                "alpha": (1, self.subcommunity_similarity),
+                "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
+                "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
+                "gamma": (1, self.metacommunity_similarity),
+                "normalized_alpha": (1, self.normalized_subcommunity_similarity),
+                "normalized_rho": (
+                    self.metacommunity_similarity,
+                    self.normalized_subcommunity_similarity,
+                ),
+                "normalized_beta": (
+                    self.metacommunity_similarity,
+                    self.normalized_subcommunity_similarity,
+                ),
+            },
+            "insensitive": {
+                "alpha": (1, self.abundance.subcommunity_abundance),
+                "rho": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.subcommunity_abundance,
+                ),
+                "beta": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.subcommunity_abundance,
+                ),
+                "gamma": (1, self.abundance.metacommunity_abundance),
+                "normalized_alpha": (
+                    1,
+                    self.abundance.normalized_subcommunity_abundance,
+                ),
+                "normalized_rho": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.normalized_subcommunity_abundance,
+                ),
+                "normalized_beta": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.normalized_subcommunity_abundance,
+                ),
+            },
         }
 
     @cached_property
@@ -405,11 +437,13 @@ class Metacommunity:
             self.abundance.normalized_subcommunity_abundance
         )
 
-    def subcommunity_measure(self, viewpoint, measure):
+    def subcommunity_measure(self, viewpoint, measure, similarity="sensitive"):
         """Calculates subcommunity diversity measures."""
-        numerator, denominator = self.measures_components[measure]
-        if measure == 'gamma':
-            denominator = broadcast_to(denominator, self.abundance.subcommunity_abundance.shape)
+        numerator, denominator = self.measures_components[similarity][measure]
+        if measure == "gamma":
+            denominator = broadcast_to(
+                denominator, self.abundance.subcommunity_abundance.shape
+            )
         community_ratio = divide(
             numerator, denominator, out=zeros(denominator.shape), where=denominator != 0
         )
@@ -418,7 +452,7 @@ class Metacommunity:
             self.abundance.normalized_subcommunity_abundance,
             community_ratio,
         )
-        if measure in ['beta', 'normalized_beta']:
+        if measure in ["beta", "normalized_beta"]:
             return 1 / result
         return result
 
