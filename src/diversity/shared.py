@@ -2,21 +2,14 @@
 
 Classes
 -------
-ISharedArray
-    Abstract base class for shared arrays.
 SharedArraySpec
     Description of how to locate and interpret shared array.
-# SharedArray
-#     Shared array owning the corresponding memory block.
 SharedArrayView
-    Shared array, not owning the corresponding memory block.
+    Views a managed memory block as numpy.ndarray.
+LoadSharedArray
+    Manages view of a shared memory block.
 SharedArrayManager
-    Manages Shared arrays.
-
-Functions
----------
-func, func_
-    Functions for performing portion of large matrix multiplication.
+    Manages shared arrays.
 """
 from abc import ABC, abstractmethod
 
@@ -26,140 +19,9 @@ from math import prod
 from multiprocessing.shared_memory import SharedMemory
 
 from numpy import dtype, ndarray
-from pandas import read_csv
 
 from diversity.log import LOGGER
-from diversity.utilities import get_file_delimiter, LogicError, pivot_table
-
-
-class SharedAbundance:
-    count_property = "count"
-
-    def __init__(
-        self,
-        counts_filepath,
-        manager,
-        species_ordering=None,
-        subcommunity_ordering=None,
-        subcommunity_column="subcommunity",
-        species_column="species",
-        count_column="count",
-    ):
-        LOGGER.debug(
-            "SharedAbundance(%s, %s, species_ordering=%s,"
-            " subcommunity_ordering=%s, subcommunity_column=%s,"
-            " species_column=%s, count_column=%s",
-            counts_filepath,
-            manager,
-            species_ordering,
-            subcommunity_ordering,
-            subcommunity_column,
-            species_column,
-            count_column,
-        )
-        self.__shared_data = read_shared_counts(
-            filepath=counts_filepath,
-            manager=manager,
-            subcommunity_column=subcommunity_column,
-            species_column=species_column,
-            count_column=count_column,
-            species_ordering=species_ordering,
-        )
-        self.__shared_data.data.flags.writable = False
-        self.__cached_property = "count"
-        self.__total_abundance = self.__shared_data.data.sum()
-        self.__subcommunity_normalizing_constants = (
-            self.__shared_data.data.sum(axis=0) / self.__total_abundance
-        )
-
-    @cached_property
-    def __spec(self):
-        return SharedArraySpec(
-            name=self.__shared_data.name,
-            shape=self.__shared_data.data.shape,
-            dtype=self.__shared_data.data.dtype,
-        )
-
-    @property
-    def subcommunity_abundance(self):
-        """Calculates the relative abundances in subcommunities.
-
-        Returns
-        -------
-        A numpy.ndarray of shape (n_species, n_subcommunities), where
-        rows correspond to unique species, columns correspond to
-        subcommunities and each element is the abundance of the species
-        in the subcommunity relative to the total metacommunity size.
-        The row ordering is established by the species_to_row attribute.
-        """
-        self.__shared_data.data.flags.writable = True
-        if self.__cached_property == "count":
-            self.__shared_data.data /= self.__total_abundance
-        elif self.__cached_property == "normalized_subcommunity_abundance":
-            self.__shared_data.data *= self.__subcommunity_normalizing_constants
-        self.__shared_data.data.flags.writable = False
-        self.__cached_property = "subcommunity_abundance"
-        return self.__shared_data.data
-
-    @property
-    def subcommunity_abundance_spec(self):
-        """Memory block of data after storing relative subcommunity abundances.
-
-        Returns
-        -------
-        A diversity.shared.SharedArraySpec object desribing the memory
-        block at which the data is stored.
-        """
-        self.subcommunity_abundance
-        return self.__spec
-
-    @cached_property
-    def metacommunity_abundance(self):
-        """Calculates the relative abundances in metacommunity.
-
-        Returns
-        -------
-        A numpy.ndarray of shape (n_species, 1), where rows correspond
-        to unique species and each row contains the relative abundance
-        of the species in the metacommunity. The row ordering is
-        established by the species_to_row attribute.
-        """
-        return self.subcommunity_abundance.sum(axis=1, keepdims=True)
-
-    @property
-    def normalized_subcommunity_abundance(self):
-        """Calculates the relative abundances in subcommunities.
-
-        Returns
-        -------
-        A numpy.ndarray of shape (n_species, n_subcommunities), where
-        rows correspond to unique species, columns correspond to
-        subcommunities and each element is the abundance of the species
-        in the subcommunity relative to the total metacommunity size.
-        The row ordering is established by the species_to_row attribute.
-        """
-        self.__shared_data.data.flags.writable = True
-        if self.__cached_property == "count":
-            self.__shared_data.data /= (
-                self.__total_abundance * self.__subcommunity_normalizing_constants
-            )
-        elif self.__cached_property == "subcommunity_abundance":
-            self.__shared_data.data /= self.__subcommunity_normalizing_constants
-        self.__shared_data.data.flags.writable = False
-        self.__cached_property = "subcommunity_abundance"
-        return self.__shared_data.data
-
-    @property
-    def normalized_subcommunity_abundance_spec(self):
-        """Memory block of data after storing relative normalized subcommunity abundances.
-
-        Returns
-        -------
-        A diversity.shared.SharedArraySpec object desribing the memory
-        block at which the data is stored.
-        """
-        self.normalized_subcommunity_abundance
-        return self.__spec
+from diversity.utilities import LogicError
 
 
 @dataclass
@@ -194,16 +56,12 @@ class SharedArrayView:
     """
 
     def __init__(self, spec, memory_view):
-        LOGGER.debug(
-            "SharedArrayView(%s, %s, %s)",
-            spec,
-            memory_view,
-        )
+        LOGGER.debug("SharedArrayView(%s, %s)", spec, memory_view)
         self.data = ndarray(shape=spec.shape, dtype=spec.dtype, buffer=memory_view)
 
 
 class LoadSharedArray(AbstractContextManager):
-    """Context manager to view shared memory block that is not owned."""
+    """Context manager to view shared memory block as numpy.ndarray."""
 
     def __init__(self, spec):
         """Initializes object from existing shared memory block.

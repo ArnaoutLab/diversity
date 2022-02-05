@@ -2,9 +2,14 @@
 
 Classes
 -------
+IAbundance
+    Abstract base class for relative species abundances in (meta-/sub-)
+    communities.
 Abundance
-    Species abundances in metacommunity.
-Similarity
+    Implements IAbundance for fast, but memory-heavy calculations.
+SharedAbundance
+    Implements IAbundance using shared memory.
+ISimilarity
     Abstract base class for relative abundance-weighted species
     similarities.
 SimilarityFromFile
@@ -29,6 +34,7 @@ from pandas import DataFrame, read_csv
 from numpy import arange, array, empty, zeros, broadcast_to, divide, float64
 
 from diversity.log import LOGGER
+from diversity.shared import SharedArraySpec
 from diversity.utilities import (
     get_file_delimiter,
     isin,
@@ -39,7 +45,7 @@ from diversity.utilities import (
 )
 
 
-class Abundance:
+class IAbundance(ABC):
     """Relative abundances of species in a metacommunity.
 
     A community consists of a set of species, each of which may appear
@@ -49,65 +55,8 @@ class Abundance:
     species appears in.
     """
 
-    def __init__(
-        self,
-        counts,
-        species_order=None,
-        subcommunity_order=None,
-        subcommunity_column="subcommunity",
-        species_column="species",
-        count_column="count",
-    ):
-        """Initializes object.
-
-        Determines species and subcommunity orderings if needed.
-
-        Parameters
-        ----------
-        counts: numpy.ndarray
-            A 2-d numpy.ndarray with subcommunity identifiers, species
-            identifiers and number of appearances of the row's species
-            in the row's subcommunity. The column ordering is determined
-            by the subcommunity_column, species_column, and
-            counts_column parameters. Each combination of species and
-            subcommunity must appear no more than once.
-        species_order: numpy.ndarray
-            Ordered unique species identifiers. The ordering determines
-            in which order values corresponding to each species are
-            returned by methods of the object.
-        subcommunity_order: Iterable
-            Ordered unique subcommunity identifiers. The ordering
-            determines in which order values corresponding to each
-            species are returned by methods of the object.
-        subcommunity_column: int
-            Index of subcommunity identifier column in counts.
-        species_column: int
-            Index of species identifier column in counts.
-        count_column: int
-            Index of species count column in counts.
-        """
-        LOGGER.debug(
-            "Abundance(%s, species_order=%s, subcommunity_order=%s,"
-            "subcommunity_column=%s, species_column=%s, count_column=%s"
-            % (
-                counts,
-                species_order,
-                subcommunity_order,
-                subcommunity_column,
-                species_column,
-                count_column,
-            )
-        )
-        self.counts = pivot_table(
-            data_frame=counts,
-            pivot_column=subcommunity_column,
-            index_column=species_column,
-            value_columns=[count_column],
-            pivot_ordering=subcommunity_ordering,
-            index_ordering=species_ordering,
-        )
-
-    @cached_property
+    @property
+    @abstractmethod
     def subcommunity_abundance(self):
         """Calculates the relative abundances in subcommunities.
 
@@ -117,14 +66,11 @@ class Abundance:
         rows correspond to unique species, columns correspond to
         subcommunities and each element is the abundance of the species
         in the subcommunity relative to the total metacommunity size.
-        The row ordering is established by the species_to_row attribute.
         """
-        total_abundance = self.counts.sum()
-        relative_abundances = empty(shape=self.counts.shape, dtype=float64)
-        relative_abundances[:] = self.counts / total_abundance
-        return relative_abundances
+        pass
 
-    @cached_property
+    @property
+    @abstractmethod
     def metacommunity_abundance(self):
         """Calculates the relative abundances in metacommunity.
 
@@ -132,12 +78,12 @@ class Abundance:
         -------
         A numpy.ndarray of shape (n_species, 1), where rows correspond
         to unique species and each row contains the relative abundance
-        of the species in the metacommunity. The row ordering is
-        established by the species_to_row attribute.
+        of the species in the metacommunity.
         """
-        return self.subcommunity_abundance.sum(axis=1, keepdims=True)
+        pass
 
-    @cached_property
+    @property
+    @abstractmethod
     def subcommunity_normalizing_constants(self):
         """Calculates subcommunity normalizing constants.
 
@@ -146,9 +92,10 @@ class Abundance:
         A numpy.ndarray of shape (n_subcommunities,), with the fraction
         of each subcommunity's size of the metacommunity.
         """
-        return self.subcommunity_abundance.sum(axis=0)
+        pass
 
-    @cached_property
+    @property
+    @abstractmethod
     def normalized_subcommunity_abundance(self):
         """Calculates normalized relative abundances in subcommunities.
 
@@ -157,10 +104,177 @@ class Abundance:
         A numpy.ndarray of shape (n_species, n_subcommunities), where
         rows correspond to unique species, columns correspond to
         subcommunities and each element is the abundance of the species
-        in the subcommunity relative to the subcommunity size. The row
-        ordering is established by the species_to_row attribute.
+        in the subcommunity relative to the subcommunity size.
         """
+        pass
+
+
+class Abundance(IAbundance):
+    """Implements IAbundance for fast, but memory-heavy calculations.
+
+    Caches counts and (normalized) relative meta- and subcommunity
+    abundances at the same time.
+    """
+
+    def __init__(self, counts):
+        """Initializes object.
+
+        Parameters
+        ----------
+        counts: numpy.ndarray
+            A 2-d numpy.ndarray with one column per subcommunity, one
+            row per species, containing the count of each species in the
+            corresponding subcommunities.
+
+        """
+        LOGGER.debug("Abundance(counts=%s", counts)
+        self.counts = counts
+
+    @cached_property
+    def subcommunity_abundance(self):
+        total_abundance = self.counts.sum()
+        relative_abundances = empty(shape=self.counts.shape, dtype=float64)
+        relative_abundances[:] = self.counts / total_abundance
+        return relative_abundances
+
+    @cached_property
+    def metacommunity_abundance(self):
+        return self.subcommunity_abundance.sum(axis=1, keepdims=True)
+
+    @cached_property
+    def subcommunity_normalizing_constants(self):
+        return self.subcommunity_abundance.sum(axis=0)
+
+    @cached_property
+    def normalized_subcommunity_abundance(self):
         return self.subcommunity_abundance / self.subcommunity_normalizing_constants
+
+
+class SharedAbundance(IAbundance):
+    """Implements IAbundance using shared memory.
+
+    Caches only one of relative subcommunity abundances and normalized
+    relative subcommunity abundances at a time. All relative abundances
+    are stored in shared arrays, which can be passed to other processors
+    without copying.
+    """
+
+    counts = "count"
+    subcommunity_abundances = "subcommunity_abundance"
+    normalized_subcommunity_abundances = "normalized_subcommunity_abundance"
+
+    def __init__(self, counts, shared_array_manager):
+        """Initializes object.
+
+        Parameters
+        ----------
+        counts: diversity.shared.SharedArrayView
+            A 2-d shared array with one column per subcommunity, one
+            row per species, containing the count of each species in the
+            corresponding subcommunities.
+        shared_array_manager: diversity.shared.SharedArrayManager
+            An active manager for creating shared arrays.
+        """
+        LOGGER.debug("SharedAbundance(counts=%s)", counts)
+        self.__shared_data = counts
+        self.__shared_array_manager = shared_array_manager
+        self.__shared_data.data.flags.writable = False
+        self.__stores = "count"
+        self.__total_abundance = self.__shared_data.data.sum()
+        self.__subcommunity_normalizing_constants = (
+            self.__shared_data.data.sum(axis=0) / self.__total_abundance
+        )
+        self.__metacommunity_abundance = None
+
+    @cached_property
+    def __spec(self):
+        return SharedArraySpec(
+            name=self.__shared_data.name,
+            shape=self.__shared_data.data.shape,
+            dtype=self.__shared_data.data.dtype,
+        )
+
+    @property
+    def subcommunity_abundance(self):
+        self.__shared_data.data.flags.writable = True
+        if self.__stores == self.counts:
+            self.__shared_data.data /= self.__total_abundance
+        elif self.__stores == self.normalized_subcommunity_abundances:
+            self.__shared_data.data *= self.__subcommunity_normalizing_constants
+        self.__shared_data.data.flags.writable = False
+        self.__stores = self.subcommunity_abundances
+        return self.__shared_data.data
+
+    @property
+    def subcommunity_abundance_spec(self):
+        """Memory block of data after storing relative subcommunity abundances.
+
+        Returns
+        -------
+        A diversity.shared.SharedArraySpec object desribing the memory
+        block at which the data is stored.
+        """
+        self.subcommunity_abundance
+        return self.__spec
+
+    @property
+    def metacommunity_abundance(self):
+        if self.__metacommunity_abundance is None:
+            self.__metacommunity_abundance = self.__shared_array_manager.empty(
+                shape=(self.__shared_data.data.shape[0], 1),
+                dtype=self.__shared_data.data.dtype,
+            )
+            self.__shared_data.sum(
+                axis=1, keepdims=True, out=self.__metacommunity_abundance.data
+            )
+            if self.__stores == self.counts:
+                self.__metacommunity_abundance.data /= self.__total_abundance
+            elif self.__stores == self.normalized_subcommunity_abundances:
+                self.__metacommunity_abundance.data *= (
+                    self.__subcommunity_normalizing_constants
+                )
+        return self.__metacommunity_abundance.data
+
+    @property
+    def metacommunity_abundance_spec(self):
+        """Memory block of relative metacommunity abundances.
+
+        Returns
+        -------
+        A diversity.shared.SharedArraySpec object desribing the memory
+        block at which the data is stored.
+        """
+        self.metacommunity_abundance
+        return self.__metacommunity_abundance.spec
+
+    @property
+    def subcommunity_normalizing_constants(self):
+        return self.__subcommunity_normalizing_constants
+
+    @property
+    def normalized_subcommunity_abundance(self):
+        self.__shared_data.data.flags.writable = True
+        if self.__stores == self.counts:
+            self.__shared_data.data /= (
+                self.__total_abundance * self.__subcommunity_normalizing_constants
+            )
+        elif self.__stores == self.subcommunity_abundances:
+            self.__shared_data.data /= self.__subcommunity_normalizing_constants
+        self.__shared_data.data.flags.writable = False
+        self.__stores = self.normalized_subcommunity_abundances
+        return self.__shared_data.data
+
+    @property
+    def normalized_subcommunity_abundance_spec(self):
+        """Memory block of data after storing relative normalized subcommunity abundances.
+
+        Returns
+        -------
+        A diversity.shared.SharedArraySpec object desribing the memory
+        block at which the data is stored.
+        """
+        self.normalized_subcommunity_abundance
+        return self.__spec
 
 
 class ISimilarity(ABC):
