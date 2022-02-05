@@ -4,6 +4,8 @@ Functions
 ---------
 get_file_delimiter
     Determines delimiter in datafile from file extension.
+pivot_table
+    Converts long to wide formatted data.
 power_mean
     Calculates weighted power means.
 unique_correspondence
@@ -12,10 +14,14 @@ unique_correspondence
 
 Exceptions
 ----------
-MetacommunityError
-    Base class for all custom metacommunity exceptions.
+DiversityError
+    Base class for all custom diversity exceptions.
+DiversityWarning
+    Base class for all custom diversity warnings.
 InvalidArgumentError
     Raised when invalid argument is passed to a function.
+LogicError
+    Raised when code logic is flawed.
 ArgumentWarning
     Used for warnings of problematic argument choices.
 """
@@ -33,30 +39,30 @@ from numpy import (
     prod,
     sum as numpy_sum,
     unique,
-    vectorize,
     zeros,
+    unique,
 )
 
 from diversity.log import LOGGER
 
 
-class MetacommunityError(Exception):
+class DiversityError(Exception):
     pass
 
 
-class MetacommunityWarning(Warning):
+class DiversityWarning(Warning):
     pass
 
 
-class InvalidArgumentError(MetacommunityError):
+class InvalidArgumentError(DiversityError):
     pass
 
 
-class LogicError(MetacommunityError):
+class LogicError(DiversityError):
     pass
 
 
-class ArgumentWarning(MetacommunityWarning):
+class ArgumentWarning(DiversityWarning):
     pass
 
 
@@ -88,27 +94,6 @@ def get_file_delimiter(filepath):
             category=ArgumentWarning,
         )
         return "\t"
-
-
-def isin(items, test_set):
-    """Gets boolean indexer for items in test set.
-
-    Parameters
-    ----------
-    items: numpy.ndarray
-        Items whose membership to test.
-    test_set: set
-        Boolean indexer indexes items that are members of this set.
-
-    Returns
-    -------
-    A numpy.ndarray indexing the items that are members of the test_set.
-    """
-    if items.size == 0:
-        raise InvalidArgumentError("Must specify non-empty array of items.")
-    validate_item = vectorize(lambda x: x in test_set)
-    index = validate_item(items)
-    return index
 
 
 def __validate_power_mean_args(weights, items, atol, weight_is_nonzero):
@@ -152,6 +137,68 @@ def __validate_power_mean_args(weights, items, atol, weight_is_nonzero):
             " considered 0, if absolute value does not meet or exceed"
             f" configurable minimum threshold: {atol:.2e}."
         )
+
+
+def pivot_table(
+    data_frame,
+    pivot_column,
+    index_column,
+    value_columns,
+    pivot_ordering=None,
+    index_ordering=None,
+):
+    """Converts long to wide formatted data.
+
+    Parameters
+    ----------
+    data_frame: pandas.DataFrame
+        The data to pivot.
+    pivot_column: str
+        Name of column whose unique values will become new headers.
+    index_column: str
+        Name of column whose unique values will become the new index.
+    value_columns: list[str]
+        Names of columns whose data for each pivot_column-index_column
+        value pair is included in the wide formatted table.
+
+    Returns
+    -------
+    A numpy.ndarray where rows correspond to unique index_column values,
+    columns to pairs of value_columns and unique pivot_column values,
+    and each element is the corresponding value for that
+    index-pivot-value column triple.
+
+    Notes
+    -----
+    With unique values ['foo', 'bar'] in pivot_column and value_columns
+    ['a', 'b', 'c'], the resulting column ordering becomes:
+        ['foo-a', 'foo-b', 'foo-c', 'bar-a', 'bar-b', 'bar-c']
+    """
+    LOGGER.debug(
+        "pivot_table(%s, %s, %s, %s, pivot_ordering=%s, index_ordering=%s)",
+        data_frame,
+        pivot_column,
+        index_column,
+        value_columns,
+        pivot_ordering,
+        index_ordering,
+    )
+    index_ordering_, index_positions = unique_correspondence(
+        items=data_frame[index_column].to_numpy(),
+        ordered_unique_items=index_ordering,
+    )
+    pivot_ordering_, pivot_positions = unique_correspondence(
+        items=data_frame[pivot_column].to_numpy(),
+        ordered_unique_items=pivot_ordering,
+    )
+    table = zeros(
+        (len(index_ordering_), len(pivot_ordering_) * len(value_columns)), dtype=float64
+    )
+    for i, j, values in zip(
+        index_positions, pivot_positions, data_frame[value_columns].to_numpy()
+    ):
+        table[i, j : j + len(value_columns)] = values
+    return table
 
 
 def power_mean(order, weights, items, atol=1e-9):
@@ -200,49 +247,6 @@ def power_mean(order, weights, items, atol=1e-9):
         items_product = multiply(items_power, weights, where=weight_is_nonzero)
         items_sum = numpy_sum(items_product, axis=0, where=weight_is_nonzero)
         return power(items_sum, 1 / order)
-
-
-def pivot_table(
-    data_frame,
-    pivot_column,
-    index_column,
-    value_columns,
-    pivot_ordering=None,
-    index_ordering=None,
-):
-    """Converts long to wide formatted counts.
-
-    Returns
-    -------
-    A numpy.ndarray where rows correspond to species, columns to
-    subcommunities and each element is the count of a species in a
-    specific subcommunity.
-    """
-    LOGGER.debug(
-        "pivot_table(%s, %s, %s, %s, pivot_ordering=%s, index_ordering=%s)",
-        data_frame,
-        pivot_column,
-        index_column,
-        value_columns,
-        pivot_ordering,
-        index_ordering,
-    )
-    index_ordering_, index_positions = unique_correspondence(
-        items=data_frame[index_column].to_numpy(),
-        ordered_unique_items=index_ordering,
-    )
-    pivot_ordering_, pivot_positions = unique_correspondence(
-        items=data_frame[pivot_column].to_numpy(),
-        ordered_unique_items=pivot_ordering,
-    )
-    table = zeros(
-        (len(index_ordering_), len(pivot_ordering_) * len(value_columns)), dtype=float64
-    )
-    for i, j, values in zip(
-        index_positions, pivot_positions, data_frame[value_columns].to_numpy()
-    ):
-        table[i, j : j + len(value_columns)] = values
-    return table
 
 
 def unique_correspondence(items, ordered_unique_items=None):

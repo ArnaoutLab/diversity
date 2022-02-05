@@ -9,9 +9,7 @@ from numpy import (
     empty,
     float64,
     isclose,
-    ndarray,
     unique,
-    zeros,
 )
 from pandas import DataFrame
 from pandas.testing import assert_frame_equal
@@ -605,7 +603,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
     {
         "description": "tsv file; 2 communities",
         "similarity_matrix_filepath": "similarities_file.tsv",
-        "species": None,
+        "species": ["species_3", "species_1", "species_2"],
         "chunk_size": 1,
         "expected_species_order": array(["species_3", "species_1", "species_2"]),
         "species_to_relative_abundances": {
@@ -629,7 +627,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
     {
         "description": "csv file; 2 communities",
         "similarity_matrix_filepath": "similarities_file.csv",
-        "species": None,
+        "species": ["species_3", "species_1", "species_2"],
         "chunk_size": 1,
         "expected_species_order": array(["species_3", "species_1", "species_2"]),
         "species_to_relative_abundances": {
@@ -650,7 +648,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
     {
         "description": "no file extension; 1 community",
         "similarity_matrix_filepath": "similarities_file",
-        "species": None,
+        "species": ["species_3", "species_1", "species_2"],
         "chunk_size": 1,
         "expected_species_order": array(["species_3", "species_1", "species_2"]),
         "species_to_relative_abundances": {
@@ -674,7 +672,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
     {
         "description": "species subset",
         "similarity_matrix_filepath": "similarities_file.tsv",
-        "species": {"species_1", "species_3"},
+        "species": ["species_1", "species_3"],
         "chunk_size": 1,
         "expected_species_order": array(["species_3", "species_1"]),
         "species_to_relative_abundances": {
@@ -696,7 +694,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
     {
         "description": "non-default chunk_size",
         "similarity_matrix_filepath": "similarities_file.tsv",
-        "species": None,
+        "species": ["species_3", "species_1", "species_2"],
         "chunk_size": 12,
         "expected_species_order": array(["species_3", "species_1", "species_2"]),
         "species_to_relative_abundances": {
@@ -735,13 +733,13 @@ class TestSimilarityFromFile:
             with warns(ArgumentWarning):
                 similarity = SimilarityFromFile(
                     similarity_matrix=test_case["similarity_matrix_filepath"],
-                    species=test_case["species"],
+                    species_subset=test_case["species"],
                     chunk_size=test_case["chunk_size"],
                 )
         else:
             similarity = SimilarityFromFile(
                 similarity_matrix=test_case["similarity_matrix_filepath"],
-                species=test_case["species"],
+                species_subset=test_case["species"],
                 chunk_size=test_case["chunk_size"],
             )
         assert array_equal(
@@ -759,13 +757,13 @@ class TestSimilarityFromFile:
             with warns(ArgumentWarning):
                 similarity = SimilarityFromFile(
                     similarity_matrix=test_case["similarity_matrix_filepath"],
-                    species=test_case["species"],
+                    species_subset=test_case["species"],
                     chunk_size=test_case["chunk_size"],
                 )
         else:
             similarity = SimilarityFromFile(
                 similarity_matrix=test_case["similarity_matrix_filepath"],
-                species=test_case["species"],
+                species_subset=test_case["species"],
                 chunk_size=test_case["chunk_size"],
             )
         relative_abundances = arrange_values(
@@ -800,7 +798,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_1", "species_2", "species_3"],
         ),
-        "species": None,
+        "species": ["species_1", "species_2", "species_3"],
         "expected_species_order": array(["species_1", "species_2", "species_3"]),
         "expected_similarity_matrix": DataFrame(
             data=array(
@@ -848,7 +846,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_1", "species_2", "species_3"],
         ),
-        "species": None,
+        "species": ["species_1", "species_2", "species_3"],
         "expected_species_order": array(["species_1", "species_2", "species_3"]),
         "species_to_relative_abundances": {
             "species_1": array([1 / 1000]),
@@ -874,7 +872,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_2", "species_1", "species_3"],
         ),
-        "species": None,
+        "species": ["species_2", "species_1", "species_3"],
         "expected_similarity_matrix": DataFrame(
             data=array(
                 [
@@ -911,7 +909,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_1", "species_3", "species_2"],
         ),
-        "species": None,
+        "species": ["species_1", "species_2", "species_3"],
         "expected_similarity_matrix": DataFrame(
             data=array(
                 [
@@ -948,8 +946,8 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_1", "species_2", "species_3"],
         ),
-        "species": {"species_2", "species_3"},
-        "expected_species_order": array(["species_2", "species_3"]),
+        "species": ["species_2", "species_3"],
+        "expected_species_order": ["species_2", "species_3"],
         "expected_similarity_matrix": DataFrame(
             data=array(
                 [
@@ -990,7 +988,7 @@ class TestSimilarityFromMemory:
         """Tests initializer."""
         similarity = SimilarityFromMemory(
             similarity_matrix=test_case["similarity_matrix"],
-            species=test_case["species"],
+            species_subset=test_case["species"],
         )
         assert array_equal(
             similarity.species_order, test_case["expected_species_order"]
@@ -1004,7 +1002,7 @@ class TestSimilarityFromMemory:
         """Tests .calculate_weighted_similarities."""
         similarity = SimilarityFromMemory(
             similarity_matrix=test_case["similarity_matrix"],
-            species=test_case["species"],
+            species_subset=test_case["species"],
         )
         relative_abundances = self.arrange_values(
             test_case["expected_species_order"],
@@ -1053,6 +1051,14 @@ METACOMMUNITY_TEST_CASES = [
                     "species_6",
                 ],
             ),
+            species_subset=[
+                        "species_1",
+                        "species_2",
+                        "species_3",
+                        "species_4",
+                        "species_5",
+                        "species_6",
+                    ]
         ),
         "abundance": Abundance(
             counts=DataFrame(
@@ -1186,6 +1192,11 @@ METACOMMUNITY_TEST_CASES = [
                     "species_3",
                 ],
             ),
+            species_subset=[
+                    "species_1",
+                    "species_2",
+                    "species_3",
+            ]
         ),
         "abundance": Abundance(
             counts=DataFrame(
@@ -1285,7 +1296,7 @@ class TestMetacommunity:
             assert allclose(
                 subcommunity_similarity[:, j],
                 test_case["subcommunity_to_similarity"][subcommunity],
-            ), f"\n(i, subcommunity): {(i, subcommunity)}"
+            ), f"\n(i, subcommunity): {(j, subcommunity)}"
 
     @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_normalized_subcommunity_similarity(self, test_case):
@@ -1298,7 +1309,7 @@ class TestMetacommunity:
             assert allclose(
                 normalized_subcommunity_similarity[:, j],
                 test_case["subcommunity_to_normalized_similarity"][subcommunity],
-            ), f"\n(i, subcommunity): {(i, subcommunity)}"
+            ), f"\n(i, subcommunity): {(j, subcommunity)}"
 
     @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_subcommunity_alpha(self, test_case):
@@ -1490,7 +1501,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
                 columns=["species_1", "species_2", "species_3"],
                 index=["species_1", "species_2", "species_3"],
             ),
-            "species": None,
+            "species_subset": ["species_1", "species_2", "species_3"],
         },
     },
     {
@@ -1503,7 +1514,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
                     "community_2_",
                     "community_2_",
                 ],
-                "species": ["species_9", "species_7", "species_8", "species_6"],
+                "species_subset": ["species_9", "species_7", "species_8", "species_6"],
                 "count": [40, 1, 14, 21],
                 "subcommunity_": [
                     "community_1",
@@ -1556,7 +1567,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
                 columns=["species_1", "species_2", "species_3"],
                 index=["species_1", "species_2", "species_3"],
             ),
-            "species": None,
+            "species_subset": ["species_1", "species_2", "species_3"],
         },
     },
     {
@@ -1614,7 +1625,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
                 columns=["species_1", "species_2", "species_3"],
                 index=["species_1", "species_2", "species_3"],
             ),
-            "species": None,
+            "species_subset": ["species_1", "species_2", "species_3"],
         },
     },
     {
@@ -1652,7 +1663,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3", "species_4"],
             index=["species_1", "species_2", "species_3", "species_4"],
         ),
-        "subcommunities": {"community_1", "community_3"},
+        "subcommunities": ["community_1", "community_3"],
         "chunk_size": 1,
         "subcommunity_column": "subcommunity",
         "species_column": "species",
@@ -1699,7 +1710,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
                 columns=["species_1", "species_2", "species_4"],
                 index=["species_1", "species_2", "species_4"],
             ),
-            "species": None,
+            "species_subset": ["species_1", "species_2", "species_4"],
         },
     },
     {
@@ -1749,7 +1760,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
         "similarity_type": SimilarityFromFile,
         "similarity_init_kwargs": {
             "similarity_matrix": "foo_similarities.tsv",
-            "species": None,
+            "species_subset": ["species_1", "species_2", "species_3"],
             "chunk_size": 1,
         },
     },
@@ -1808,7 +1819,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
         "similarity_type": SimilarityFromFile,
         "similarity_init_kwargs": {
             "similarity_matrix": "bar_similarities.csv",
-            "species": None,
+            "species_subset": ["species_1", "species_2", "species_3"],
             "chunk_size": 1,
         },
     },
@@ -1859,7 +1870,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
         "similarity_type": SimilarityFromFile,
         "similarity_init_kwargs": {
             "similarity_matrix": "foo_similarities.tsv",
-            "species": None,
+            "species_subset": ["species_1", "species_2", "species_3"],
             "chunk_size": 10,
         },
     },
@@ -1887,7 +1898,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "similarity_matrix": "bar_similarities.csv",
-        "subcommunities": {"community_1", "community_3"},
+        "subcommunities": ["community_1", "community_3"],
         "chunk_size": 1,
         "subcommunity_column": "subcommunity",
         "species_column": "species",
@@ -1924,7 +1935,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
         "similarity_type": SimilarityFromFile,
         "similarity_init_kwargs": {
             "similarity_matrix": "bar_similarities.csv",
-            "species": None,
+            "species_subset": ["species_1", "species_2", "species_4"],
             "chunk_size": 1,
         },
     },
