@@ -96,49 +96,6 @@ def get_file_delimiter(filepath):
         return "\t"
 
 
-def __validate_power_mean_args(weights, items, atol, weight_is_nonzero):
-    """Validates arguments for power_mean.
-
-    Parameters
-    ----------
-    weights, items, atol
-        Same as for power_mean.
-    weight_is_nonzero
-        Boolean array of same shape as weights, indicating those whose
-        absolute value meets or exceeds atol.
-
-    Raises
-    ------
-    InvalidArgumentError when:
-    - weights has more than 2 axes.
-    - weights and items do not have the same shape
-    - any column in weights contains 0s only when weights is 2d and when
-      weights is all 0.
-    """
-    if len(weights.shape) > 2:
-        raise InvalidArgumentError(
-            f"Invalid weights shape for power_mean: {weights.shape}."
-        )
-    if weights.shape != items.shape:
-        raise InvalidArgumentError(
-            f"Shape of weights ({weights.shape}) must be the same as"
-            f" shape fo items ({items.shape})."
-        )
-    all_0_column = None
-    if len(weights.shape) == 1:
-        all_0_column = [not (weight_is_nonzero).any()]
-    elif len(weights.shape) == 2:
-        all_0_column = [
-            not (weight_is_nonzero[:, col]).any() for col in range(weights.shape[1])
-        ]
-    if any(all_0_column):
-        raise InvalidArgumentError(
-            "power_mean expects at least one zero weight. Weights are"
-            " considered 0, if absolute value does not meet or exceed"
-            f" configurable minimum threshold: {atol:.2e}."
-        )
-
-
 def pivot_table(
     data_frame,
     pivot_column,
@@ -201,6 +158,49 @@ def pivot_table(
     return table
 
 
+def __validate_power_mean_args(weights, items, atol, weight_is_nonzero):
+    """Validates arguments for power_mean.
+
+    Parameters
+    ----------
+    weights, items, atol
+        Same as for power_mean.
+    weight_is_nonzero
+        Boolean array of same shape as weights, indicating those whose
+        absolute value meets or exceeds atol.
+
+    Raises
+    ------
+    InvalidArgumentError when:
+    - weights has more than 2 axes.
+    - weights and items do not have the same shape
+    - any column in weights contains 0s only when weights is 2d and when
+      weights is all 0.
+    """
+    if len(weights.shape) > 2:
+        raise InvalidArgumentError(
+            f"Invalid weights shape for power_mean: {weights.shape}."
+        )
+    if weights.shape != items.shape:
+        raise InvalidArgumentError(
+            f"Shape of weights ({weights.shape}) must be the same as"
+            f" shape fo items ({items.shape})."
+        )
+    all_0_column = None
+    if len(weights.shape) == 1:
+        all_0_column = [not (weight_is_nonzero).any()]
+    elif len(weights.shape) == 2:
+        all_0_column = [
+            not (weight_is_nonzero[:, col]).any() for col in range(weights.shape[1])
+        ]
+    if any(all_0_column):
+        raise InvalidArgumentError(
+            "power_mean expects at least one zero weight. Weights are"
+            " considered 0, if absolute value does not meet or exceed"
+            f" configurable minimum threshold: {atol:.2e}."
+        )
+
+
 def power_mean(order, weights, items, atol=1e-9):
     """Calculates weighted power means.
 
@@ -230,6 +230,13 @@ def power_mean(order, weights, items, atol=1e-9):
     weights or a column of weights (in the 2-d case) are all too close
     to 0.
     """
+    LOGGER.debug(
+        "power_mean(order=%s, weights=%s, items=%s, atol=%s)",
+        order,
+        weights,
+        items,
+        atol,
+    )
     weight_is_nonzero = abs(weights) >= atol
     __validate_power_mean_args(weights, items, atol, weight_is_nonzero)
     if isclose(order, 0):
@@ -243,9 +250,10 @@ def power_mean(order, weights, items, atol=1e-9):
     elif order > 100:
         return amax(items, axis=0, where=weight_is_nonzero, initial=-inf)
     else:
-        items_power = power(items, order, where=weight_is_nonzero)
-        items_product = multiply(items_power, weights, where=weight_is_nonzero)
-        items_sum = numpy_sum(items_product, axis=0, where=weight_is_nonzero)
+        result = zeros(shape=items.shape, dtype=items.dtype)
+        power(items, order, where=weight_is_nonzero, out=result)
+        multiply(result, weights, where=weight_is_nonzero, out=result)
+        items_sum = numpy_sum(result, axis=0, where=weight_is_nonzero)
         return power(items_sum, 1 / order)
 
 
@@ -270,8 +278,9 @@ def unique_correspondence(items, ordered_unique_items=None):
         items.
     """
     LOGGER.debug(
-        "unique_correspondence(%s, ordered_unique_items=%s"
-        % (items, ordered_unique_items)
+        "unique_correspondence(%s, ordered_unique_items=%s)",
+        items,
+        ordered_unique_items,
     )
     if ordered_unique_items is None:
         ordered_unique_items_, item_positions = unique(items, return_inverse=True)
