@@ -4,26 +4,17 @@ Functions
 ---------
 get_file_delimiter
     Determines delimiter in datafile from file extension.
+partition_range
+    Splits range into evenly sized consecutive subranges.
 pivot_table
     Converts long to wide formatted data.
 power_mean
     Calculates weighted power means.
+subset_by_column
+    Returns portion of data frame with specific column values in subset.
 unique_correspondence
     Describes correspondence between a sequence of items and the set of
     their unique elements.
-
-Exceptions
-----------
-DiversityError
-    Base class for all custom diversity exceptions.
-DiversityWarning
-    Base class for all custom diversity warnings.
-InvalidArgumentError
-    Raised when invalid argument is passed to a function.
-LogicError
-    Raised when code logic is flawed.
-ArgumentWarning
-    Used for warnings of problematic argument choices.
 """
 from pathlib import Path
 from warnings import warn
@@ -32,6 +23,7 @@ from numpy import (
     amax,
     amin,
     array,
+    dtype,
     inf,
     isclose,
     multiply,
@@ -43,27 +35,8 @@ from numpy import (
     unique,
 )
 
+from diversity.exceptions import ArgumentWarning, InvalidArgumentError
 from diversity.log import LOGGER
-
-
-class DiversityError(Exception):
-    pass
-
-
-class DiversityWarning(Warning):
-    pass
-
-
-class InvalidArgumentError(DiversityError):
-    pass
-
-
-class LogicError(DiversityError):
-    pass
-
-
-class ArgumentWarning(DiversityWarning):
-    pass
 
 
 def get_file_delimiter(filepath):
@@ -96,6 +69,52 @@ def get_file_delimiter(filepath):
         return "\t"
 
 
+def partition_range(range_, num_chunks):
+    """Splits range_ into evenly sized consecutive subranges.
+
+    Parameters
+    ----------
+    range_: range
+        The overall range to split into chunks.
+    num_chunks: int
+        The number of subranges to split range_ into. Must be positive.
+
+    Returns
+    -------
+    A list of range objects. The ranges are evenly sized. When range_
+    doesn't divide evenly by num_chunks, the ranges near the end of the
+    returned list are 1 larger than ranges near the beginning.
+
+    Raises
+    ------
+    InvalidArgumentError when num_chunks is not positive.
+    """
+    if num_chunks <= 0:
+        raise InvalidArgumentError(
+            f"Range can not be split into a non-positive number of chunks."
+        )
+    small_chunk_size, num_big_chunks = divmod(len(range_), num_chunks)
+    num_small_chunks = num_chunks - num_big_chunks
+    small_chunks_start = range_.start
+    small_chunks = [
+        range(
+            small_chunks_start + (i * small_chunk_size),
+            small_chunks_start + ((i + 1) * small_chunk_size),
+        )
+        for i in range(num_small_chunks)
+    ]
+    big_chunks_start = small_chunks_start + (num_small_chunks * small_chunk_size)
+    big_chunk_size = small_chunk_size + 1
+    big_chunks = [
+        range(
+            big_chunks_start + (i * big_chunk_size),
+            big_chunks_start + ((i + 1) * big_chunk_size),
+        )
+        for i in range(num_big_chunks)
+    ]
+    return [*small_chunks, *big_chunks]
+
+
 def pivot_table(
     data_frame,
     pivot_column,
@@ -105,6 +124,11 @@ def pivot_table(
     index_ordering=None,
 ):
     """Converts long to wide formatted data.
+
+    Assumes that combinations of pivot_column and index_colum value
+    pairs appear at most once in table. If a combination appears more
+    than once, then no guarantees are made whose values are chosen to be
+    in the pivotted table.
 
     Parameters
     ----------
@@ -116,20 +140,29 @@ def pivot_table(
         Name of column whose unique values will become the new index.
     value_columns: list[str]
         Names of columns whose data for each pivot_column-index_column
-        value pair is included in the wide formatted table.
+        value pair is included in the wide formatted table. Data should
+        be numeric.
+    pivot_ordering: Iterable
+        Unique values of pivot column in desired order to determine
+        ordering of resulting columns. If None, values are sorted.
+    index_ordering: Iterable
+        Unique values of index column in desired order to determine
+        ordering of resulting index. If None, values are sorted.
 
     Returns
     -------
     A numpy.ndarray where rows correspond to unique index_column values,
     columns to pairs of value_columns and unique pivot_column values,
     and each element is the corresponding value for that
-    index-pivot-value column triple.
+    index-pivot-value column triple. If a pair of unique index and pivot
+    column values does not appear in data_frame, its value is set to 0.0
+    in the pivotted table.
 
     Notes
     -----
     With unique values ['foo', 'bar'] in pivot_column and value_columns
     ['a', 'b', 'c'], the resulting column ordering becomes:
-        ['foo-a', 'foo-b', 'foo-c', 'bar-a', 'bar-b', 'bar-c']
+        ['bar-a', 'bar-b', 'bar-c', 'foo-a', 'foo-b', 'foo-c']
     """
     LOGGER.debug(
         "pivot_table(%s, %s, %s, %s, pivot_ordering=%s, index_ordering=%s)",
@@ -149,10 +182,13 @@ def pivot_table(
         ordered_unique_items=pivot_ordering,
     )
     table = zeros(
-        (len(index_ordering_), len(pivot_ordering_) * len(value_columns)), dtype=float64
+        (len(index_ordering_), len(pivot_ordering_) * len(value_columns)),
+        dtype=dtype("f8"),
     )
     for i, j, values in zip(
-        index_positions, pivot_positions, data_frame[value_columns].to_numpy()
+        index_positions,
+        len(value_columns) * pivot_positions,
+        data_frame[value_columns].to_numpy(),
     ):
         table[i, j : j + len(value_columns)] = values
     return table
@@ -257,6 +293,16 @@ def power_mean(order, weights, items, atol=1e-9):
         return power(items_sum, 1 / order)
 
 
+def subset_by_column(data_frame, column, subset):
+    """Returns portion of data_frame with column values in subset.
+
+    If subset is None, entire data_frame is returned.
+    """
+    if subset is None:
+        return data_frame
+    return data_frame[data_frame[column].isin(subset)]
+
+
 def unique_correspondence(items, ordered_unique_items=None):
     """Returns uniqued items and a mapping from items to uniqued items.
 
@@ -265,8 +311,7 @@ def unique_correspondence(items, ordered_unique_items=None):
     items: numpy.ndarray
         Array of items to unique and/or obtain mapping for.
     ordered_unique_items: Iterable
-        Unique items in desired order. If None, ordering will be
-        established according to numpy.unique.
+        Unique items in desired order. If None, unique items are sorted.
 
     Returns
     -------

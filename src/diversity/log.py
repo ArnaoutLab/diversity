@@ -13,13 +13,13 @@ from logging import (
 )
 from multiprocessing import get_logger
 
-date_format = "%Y-%m-%dT%H:%M:%S%z"
-logging_format = (
+DATE_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
+LOGGING_FORMAT = (
     "%(asctime)s\t(%(processName)s, %(threadName)s)\t%(levelname)s\t%(message)s"
 )
 
 LOGGER = get_logger()
-formatter = Formatter(fmt=logging_format, datefmt=date_format)
+formatter = Formatter(fmt=LOGGING_FORMAT, datefmt=DATE_FORMAT)
 LOG_HANDLER = StreamHandler()
 LOG_HANDLER.setFormatter(formatter)
 LOGGER.addHandler(LOG_HANDLER)

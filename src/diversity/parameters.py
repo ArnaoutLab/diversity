@@ -16,7 +16,7 @@ from warnings import warn
 
 from numpy import inf
 
-from diversity.utilities import ArgumentWarning
+from diversity.exceptions import ArgumentWarning
 
 
 class ValidateViewpoint(Action):
