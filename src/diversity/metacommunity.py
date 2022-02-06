@@ -23,7 +23,7 @@ make_metacommunity
 """
 
 from abc import ABC, abstractmethod
-from functools import cached_property
+from functools import cache
 
 from pandas import DataFrame, read_csv
 from numpy import arange, array, empty, zeros, broadcast_to, divide, float64
@@ -128,7 +128,7 @@ class Abundance:
         )
         return table
 
-    @cached_property
+    @cache
     def subcommunity_abundance(self):
         """Calculates the relative abundances in subcommunities.
 
@@ -146,7 +146,7 @@ class Abundance:
         relative_abundances[:] = counts / total_abundance
         return relative_abundances
 
-    @cached_property
+    @cache
     def metacommunity_abundance(self):
         """Calculates the relative abundances in metacommunity.
 
@@ -159,7 +159,7 @@ class Abundance:
         """
         return self.subcommunity_abundance.sum(axis=1, keepdims=True)
 
-    @cached_property
+    @cache
     def subcommunity_normalizing_constants(self):
         """Calculates subcommunity normalizing constants.
 
@@ -170,7 +170,7 @@ class Abundance:
         """
         return self.subcommunity_abundance.sum(axis=0)
 
-    @cached_property
+    @cache
     def normalized_subcommunity_abundance(self):
         """Calculates normalized relative abundances in subcommunities.
 
@@ -300,7 +300,7 @@ class SimilarityFromFile(ISimilarity):
             skiprows = arange(1, len(species_order_from_file) + 1)[~valid_species_index]
         return species_order, usecols, skiprows
 
-    @cached_property
+    @property
     def species_order(self):
         return self.__species_order
 
@@ -374,7 +374,7 @@ class Metacommunity:
         """
         self.similarity = similarity
         self.abundance = abundance
-        self.measures_components = {
+        self.measure_components = {
             "sensitive": {
                 "alpha": (1, self.subcommunity_similarity),
                 "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
@@ -416,30 +416,34 @@ class Metacommunity:
             },
         }
 
-    @cached_property
+    @cache
     def metacommunity_similarity(self):
         """Sums of similarities weighted by metacommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
             self.abundance.metacommunity_abundance
         )
 
-    @cached_property
+    @cache
     def subcommunity_similarity(self):
         """Sums of similarities weighted by subcommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
             self.abundance.subcommunity_abundance
         )
 
-    @cached_property
+    @cache
     def normalized_subcommunity_similarity(self):
         """Sums of similarities weighted by the normalized subcommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
             self.abundance.normalized_subcommunity_abundance
         )
 
+    @cache
     def subcommunity_measure(self, viewpoint, measure, similarity="sensitive"):
         """Calculates subcommunity diversity measures."""
-        numerator, denominator = self.measures_components[similarity][measure]
+        numerator, denominator = self.measure_components[similarity][measure]
+        if callable(numerator):
+            numerator = numerator()
+        denominator = denominator()
         if measure == "gamma":
             denominator = broadcast_to(
                 denominator, self.abundance.subcommunity_abundance.shape
@@ -456,16 +460,16 @@ class Metacommunity:
             return 1 / result
         return result
 
-    def metacommunity_measure(self, viewpoint, measure):
+    def metacommunity_measure(self, viewpoint, measure, similarity="sensitive"):
         """Calculates metcommunity diversity measures."""
-        subcommunity_measure = self.subcommunity_measure(viewpoint, measure)
+        subcommunity_measure = self.subcommunity_measure(viewpoint, measure, similarity)
         return power_mean(
             1 - viewpoint,
             self.abundance.subcommunity_normalizing_constants,
             subcommunity_measure,
         )
 
-    def subcommunities_to_dataframe(self, viewpoint):
+    def subcommunities_to_dataframe(self, viewpoint, similarity="sensitive"):
         """Table containing all subcommunity diversity values.
 
         Parameters
@@ -476,21 +480,15 @@ class Metacommunity:
             the same as frequent species, and infinity considers only the
             most frequent species.
         """
-        return DataFrame(
-            {
-                "community": self.abundance.subcommunity_order,
-                "viewpoint": viewpoint,
-                "alpha": self.subcommunity_alpha(viewpoint),
-                "rho": self.subcommunity_rho(viewpoint),
-                "beta": self.subcommunity_beta(viewpoint),
-                "gamma": self.subcommunity_gamma(viewpoint),
-                "normalized_alpha": self.normalized_subcommunity_alpha(viewpoint),
-                "normalized_rho": self.normalized_subcommunity_rho(viewpoint),
-                "normalized_beta": self.normalized_subcommunity_beta(viewpoint),
-            }
+        df = DataFrame(
+        {key: self.subcommunity_measure(viewpoint, key, similarity) 
+            for key in self.measure_components['sensitve'].keys()}
         )
+        df.insert(0, 'viewpoint', viewpoint)
+        df.insert(0, 'community', self.abundance.subcommunity_order)
+        return df
 
-    def metacommunity_to_dataframe(self, viewpoint):
+    def metacommunity_to_dataframe(self, viewpoint, similarity="sensitive"):
         """Table containing all metacommunity diversity values.
 
         Parameters
@@ -500,20 +498,13 @@ class Metacommunity:
             ignorance towards rare species, where 0 treats rare species
             the same as frequent species, and infinity considers only the
             most frequent species."""
-        return DataFrame(
-            {
-                "community": "metacommunity",
-                "viewpoint": viewpoint,
-                "alpha": self.metacommunity_alpha(viewpoint),
-                "rho": self.metacommunity_rho(viewpoint),
-                "beta": self.metacommunity_beta(viewpoint),
-                "gamma": self.metacommunity_gamma(viewpoint),
-                "normalized_alpha": self.normalized_metacommunity_alpha(viewpoint),
-                "normalized_rho": self.normalized_metacommunity_rho(viewpoint),
-                "normalized_beta": self.normalized_metacommunity_beta(viewpoint),
-            },
-            index=[0],
+        df = DataFrame(
+        {key: self.metacommunity_measure(viewpoint, key, similarity) 
+            for key in self.measure_components['sensitve'].keys()}
         )
+        df.insert(0, 'viewpoint', viewpoint)
+        df.insert(0, 'community', "metacommunity")
+        return df
 
 
 def make_metacommunity(
