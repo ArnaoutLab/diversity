@@ -2,14 +2,14 @@
 
 Classes
 -------
-SharedArraySpec
-    Description of how to locate and interpret shared array.
-SharedArrayView
-    Views a managed memory block as numpy.ndarray.
 LoadSharedArray
     Manages view of a shared memory block.
 SharedArrayManager
     Manages shared arrays.
+SharedArraySpec
+    Description of how to locate and interpret shared array.
+SharedArrayView
+    Views a managed memory block as numpy.ndarray.
 
 Functions
 ---------
@@ -35,43 +35,6 @@ def extract_data_if_shared(arr):
         return arr.data
     else:
         return arr
-
-
-@dataclass
-class SharedArraySpec:
-    """Describes the shape and memory location of a shared array.
-
-    Attributes
-    ----------
-    name: str
-        The name of the shared memory containing the array data.
-    shape: tuple[int]
-        The shape of the array.
-    dtype: numpy.dtype
-        The data type of the array.
-    """
-
-    name: str
-    shape: tuple[int]
-    dtype: dtype
-
-
-class SharedArrayView:
-    """Views a managed memory block as numpy.ndarray.
-
-    Attributes
-    ----------
-    spec: diversity.shared.SharedArraySpec
-        Specification of the shared array and its underlying memory
-        block.
-    data: numpy.ndarray
-        The numpy.ndarray whose underlying memory block is managed.
-    """
-
-    def __init__(self, spec, memory_view):
-        LOGGER.debug("SharedArrayView(%s, %s)", spec, memory_view)
-        self.spec = spec
-        self.data = ndarray(shape=spec.shape, dtype=spec.dtype, buffer=memory_view)
 
 
 class LoadSharedArray(AbstractContextManager):
@@ -137,14 +100,14 @@ class SharedArrayManager(AbstractContextManager):
         if self.__shared_memory_blocks is None:
             raise LogicError("Resource allocation using inactive object.")
 
-    def empty(self, shape, dtype):
+    def empty(self, shape, data_type):
         """Allocates shared memory block for a numpy.ndarray.
 
         Parameters
         ----------
         shape: tuple
             Shape of desired numpy.ndarray.
-        dtype: numpy.dtype
+        data_type: numpy.dtype
             Data type of the numpy.ndarray.
 
         Returns
@@ -152,12 +115,14 @@ class SharedArrayManager(AbstractContextManager):
         A diversity.shared.SharedArrayManager.SharedArrayView object
         viewing the allocated memory block.
         """
-        LOGGER.debug("SharedArrayManager.empty(%s, %s)", shape, dtype)
+        LOGGER.debug(
+            "SharedArrayManager.empty(shape=%s, data_type=%s)", shape, data_type
+        )
         self.__assert_active()
-        itemsize = dtype.itemsize
+        itemsize = dtype(data_type).itemsize
         size = prod([*shape, itemsize])
         shared_memory = SharedMemory(create=True, size=size)
-        spec = SharedArraySpec(name=shared_memory.name, shape=shape, dtype=dtype)
+        spec = SharedArraySpec(name=shared_memory.name, shape=shape, dtype=data_type)
         view = SharedArrayView(spec=spec, memory_view=shared_memory.buf)
         self.__shared_array_views.append(view)
         self.__shared_memory_blocks.append(shared_memory)
@@ -169,3 +134,40 @@ class SharedArrayManager(AbstractContextManager):
         view = self.empty(shape=arr.shape, dtype=arr.dtype)
         view.data[:] = arr
         return view
+
+
+@dataclass
+class SharedArraySpec:
+    """Describes the shape and memory location of a shared array.
+
+    Attributes
+    ----------
+    name: str
+        The name of the shared memory containing the array data.
+    shape: tuple[int]
+        The shape of the array.
+    dtype: numpy.dtype
+        The data type of the array.
+    """
+
+    name: str
+    shape: tuple[int]
+    dtype: dtype
+
+
+class SharedArrayView:
+    """Views a managed memory block as numpy.ndarray.
+
+    Attributes
+    ----------
+    spec: diversity.shared.SharedArraySpec
+        Specification of the shared array and its underlying memory
+        block.
+    data: numpy.ndarray
+        The numpy.ndarray whose underlying memory block is managed.
+    """
+
+    def __init__(self, spec, memory_view):
+        LOGGER.debug("SharedArrayView(%s, %s)", spec, memory_view)
+        self.spec = spec
+        self.data = ndarray(shape=spec.shape, dtype=spec.dtype, buffer=memory_view)

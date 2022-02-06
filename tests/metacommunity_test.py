@@ -1,32 +1,35 @@
 """Tests for diversity.metacommunity."""
-from copy import deepcopy
-from itertools import product
-
 from numpy import (
     allclose,
     array,
-    array_equal,
-    empty,
-    float64,
+    dtype,
     isclose,
-    unique,
 )
 from pandas import DataFrame
-from pandas.testing import assert_frame_equal
-from pytest import mark, warns
+from pytest import fixture, mark
 
+from diversity.abundance import Abundance, SharedAbundance
 from diversity.metacommunity import (
-    Abundance,
     make_metacommunity,
     Metacommunity,
-    SimilarityFromFile,
-    SimilarityFromMemory,
 )
-from diversity.utilities import (
-    ArgumentWarning,
-    get_file_delimiter,
-    unique_correspondence,
-)
+from diversity.shared import SharedArrayManager, SharedArrayView
+from diversity.similarity import SimilarityFromFunction, SimilarityFromMemory
+
+
+def sim_func(a, b):
+    distance_table = {
+        ("species_1", "species_1"): 1.0,
+        ("species_1", "species_2"): 0.5,
+        ("species_1", "species_3"): 0.1,
+        ("species_2", "species_1"): 0.5,
+        ("species_2", "species_2"): 1.0,
+        ("species_2", "species_3"): 0.2,
+        ("species_3", "species_1"): 0.1,
+        ("species_3", "species_2"): 0.2,
+        ("species_3", "species_3"): 1.0,
+    }
+    return distance_table[(a[0], b[0])]
 
 
 METACOMMUNITY_TEST_CASES = [
@@ -71,29 +74,7 @@ METACOMMUNITY_TEST_CASES = [
             ],
         ),
         "abundance": Abundance(
-            counts=DataFrame(
-                data=array(
-                    [
-                        ["subcommunity_1", "species_1", "1"],
-                        ["subcommunity_1", "species_2", "1"],
-                        ["subcommunity_1", "species_3", "1"],
-                        ["subcommunity_2", "species_4", "1"],
-                        ["subcommunity_2", "species_5", "1"],
-                        ["subcommunity_2", "species_6", "1"],
-                    ]
-                ),
-                columns=["subcommunity", "species", "count"],
-            ),
-            species_order=array(
-                [
-                    "species_1",
-                    "species_2",
-                    "species_3",
-                    "species_4",
-                    "species_5",
-                    "species_6",
-                ]
-            ),
+            counts=array([[1, 0], [1, 0], [1, 0], [0, 1], [0, 1], [0, 1]])
         ),
         "viewpoint": 0,
         "metacommunity_similarity": array(
@@ -106,78 +87,33 @@ METACOMMUNITY_TEST_CASES = [
                 [0.68333333],
             ]
         ),
-        "subcommunity_to_similarity": {
-            "subcommunity_1": array(
-                [
-                    0.33333333,
-                    0.33333333,
-                    0.33333333,
-                    0.35,
-                    0.35,
-                    0.35,
-                ],
-            ),
-            "subcommunity_2": array(
-                [
-                    0.35,
-                    0.35,
-                    0.35,
-                    0.33333333,
-                    0.33333333,
-                    0.33333333,
-                ]
-            ),
-        },
-        "subcommunity_to_normalized_similarity": {
-            "subcommunity_1": array(
-                [
-                    0.66666667,
-                    0.66666667,
-                    0.66666667,
-                    0.7,
-                    0.7,
-                    0.7,
-                ]
-            ),
-            "subcommunity_2": array(
-                [
-                    0.7,
-                    0.7,
-                    0.7,
-                    0.66666667,
-                    0.66666667,
-                    0.66666667,
-                ]
-            ),
-        },
-        "subcommunity_to_alpha": {
-            "subcommunity_1": 3.0,
-            "subcommunity_2": 3.0,
-        },
-        "subcommunity_to_rho": {
-            "subcommunity_1": 2.05,
-            "subcommunity_2": 2.05,
-        },
-        "subcommunity_to_beta": {
-            "subcommunity_1": 0.487805,
-            "subcommunity_2": 0.487805,
-        },
-        "subcommunity_to_gamma": {
-            "subcommunity_1": 1.463415,
-            "subcommunity_2": 1.463415,
-        },
-        "subcommunity_to_normalized_alpha": {
-            "subcommunity_1": 1.5,
-            "subcommunity_2": 1.5,
-        },
-        "subcommunity_to_normalized_rho": {
-            "subcommunity_1": 1.025,
-            "subcommunity_2": 1.025,
-        },
-        "subcommunity_to_normalized_beta": {
-            "subcommunity_1": 0.97561,
-            "subcommunity_2": 0.97561,
-        },
+        "subcommunity_similarity": array(
+            [
+                [0.33333333, 0.35],
+                [0.33333333, 0.35],
+                [0.33333333, 0.35],
+                [0.35, 0.33333333],
+                [0.35, 0.33333333],
+                [0.35, 0.33333333],
+            ],
+        ),
+        "normalized_subcommunity_similarity": array(
+            [
+                [0.66666667, 0.7],
+                [0.66666667, 0.7],
+                [0.66666667, 0.7],
+                [0.7, 0.66666667],
+                [0.7, 0.66666667],
+                [0.7, 0.66666667],
+            ]
+        ),
+        "subcommunity_alpha": array([3.0, 3.0]),
+        "subcommunity_rho": array([2.05, 2.05]),
+        "subcommunity_beta": array([0.487805, 0.487805]),
+        "subcommunity_gamma": array([1.463415, 1.463415]),
+        "normalized_subcommunity_alpha": array([1.5, 1.5]),
+        "normalized_subcommunity_rho": array([1.025, 1.025]),
+        "normalized_subcommunity_beta": array([0.97561, 0.97561]),
         "metacommunity_alpha": 3.0,
         "metacommunity_rho": 2.05,
         "metacommunity_beta": 0.487805,
@@ -208,71 +144,82 @@ METACOMMUNITY_TEST_CASES = [
                 "species_3",
             ],
         ),
-        "abundance": Abundance(
-            counts=DataFrame(
-                data=array(
-                    [
-                        ["subcommunity_1", "species_1", "2"],
-                        ["subcommunity_1", "species_2", "3"],
-                        ["subcommunity_2", "species_1", "5"],
-                        ["subcommunity_2", "species_3", "1"],
-                    ]
-                ),
-                columns=["subcommunity", "species", "count"],
-            ),
-            species_order=array(
+        "abundance": Abundance(counts=array([[1, 5], [3, 0], [0, 1]])),
+        "viewpoint": 2,
+        "metacommunity_similarity": array([[0.76], [0.62], [0.22]]),
+        "subcommunity_similarity": array(
+            [
+                [0.25, 0.51],
+                [0.35, 0.27],
+                [0.07, 0.15],
+            ]
+        ),
+        "normalized_subcommunity_similarity": array(
+            [
+                [0.625, 0.85],
+                [0.875, 0.45],
+                [0.175, 0.25],
+            ]
+        ),
+        "subcommunity_alpha": array([3.07692308, 2.22222222]),
+        "subcommunity_rho": array([1.97775446, 1.48622222]),
+        "subcommunity_beta": array([0.50562394, 0.67284689]),
+        "subcommunity_gamma": array([1.52671756, 1.49253731]),
+        "normalized_subcommunity_alpha": array([1.23076923, 1.33333333]),
+        "normalized_subcommunity_rho": array([0.79110178, 0.89173333]),
+        "normalized_subcommunity_beta": array([1.26405985, 1.12141148]),
+        "metacommunity_alpha": 2.5,
+        "metacommunity_rho": 1.6502801833927663,
+        "metacommunity_beta": 0.5942352817544037,
+        "metacommunity_gamma": 1.5060240963855422,
+        "metacommunity_normalized_alpha": 1.2903225806451613,
+        "metacommunity_normalized_rho": 0.8485572790897555,
+        "metacommunity_normalized_beta": 1.1744247216675028,
+    },
+    {
+        "description": "similarity from function; default num_processors.",
+        "similarity": {
+            "similarity_function": sim_func,
+            "species_ordering": array(
                 [
                     "species_1",
                     "species_2",
                     "species_3",
                 ]
             ),
-        ),
+            "num_processors": None,
+        },
+        "abundance": array([[1, 5], [3, 0], [0, 1]], dtype=dtype("f8")),
         "viewpoint": 2,
-        "metacommunity_similarity": array([[0.78181818], [0.60909091], [0.20909091]]),
-        "subcommunity_to_similarity": {
-            "subcommunity_1": array([0.31818182, 0.36363636, 0.07272727]),
-            "subcommunity_2": array([0.46363636, 0.24545455, 0.13636364]),
-        },
-        "subcommunity_to_normalized_similarity": {
-            "subcommunity_1": array([0.7, 0.8, 0.16]),
-            "subcommunity_2": array([0.85, 0.45, 0.25]),
-        },
-        "subcommunity_to_alpha": {
-            "subcommunity_1": 2.89473684,
-            "subcommunity_2": 2.44444444,
-        },
-        "subcommunity_to_rho": {
-            "subcommunity_1": 1.91938708,
-            "subcommunity_2": 1.65870021,
-        },
-        "subcommunity_to_beta": {
-            "subcommunity_1": 0.52099965,
-            "subcommunity_2": 0.6028817,
-        },
-        "subcommunity_to_gamma": {
-            "subcommunity_1": 1.47453083,
-            "subcommunity_2": 1.45695364,
-        },
-        "subcommunity_to_normalized_alpha": {
-            "subcommunity_1": 1.31578947,
-            "subcommunity_2": 1.33333333,
-        },
-        "subcommunity_to_normalized_rho": {
-            "subcommunity_1": 0.87244867,
-            "subcommunity_2": 0.90474557,
-        },
-        "subcommunity_to_normalized_beta": {
-            "subcommunity_1": 1.14619924,
-            "subcommunity_2": 1.10528311,
-        },
-        "metacommunity_alpha": 2.630434782608696,
-        "metacommunity_rho": 1.7678383245514573,
-        "metacommunity_beta": 0.5626846957892072,
-        "metacommunity_gamma": 1.4648910411622276,
-        "metacommunity_normalized_alpha": 1.3253012048192772,
-        "metacommunity_normalized_rho": 0.8897736389973379,
-        "metacommunity_normalized_beta": 1.1235132485772303,
+        "metacommunity_similarity": array([[0.76], [0.62], [0.22]]),
+        "subcommunity_similarity": array(
+            [
+                [0.25, 0.51],
+                [0.35, 0.27],
+                [0.07, 0.15],
+            ]
+        ),
+        "normalized_subcommunity_similarity": array(
+            [
+                [0.625, 0.85],
+                [0.875, 0.45],
+                [0.175, 0.25],
+            ]
+        ),
+        "subcommunity_alpha": array([3.07692308, 2.22222222]),
+        "subcommunity_rho": array([1.97775446, 1.48622222]),
+        "subcommunity_beta": array([0.50562394, 0.67284689]),
+        "subcommunity_gamma": array([1.52671756, 1.49253731]),
+        "normalized_subcommunity_alpha": array([1.23076923, 1.33333333]),
+        "normalized_subcommunity_rho": array([0.79110178, 0.89173333]),
+        "normalized_subcommunity_beta": array([1.26405985, 1.12141148]),
+        "metacommunity_alpha": 2.5,
+        "metacommunity_rho": 1.6502801833927663,
+        "metacommunity_beta": 0.5942352817544037,
+        "metacommunity_gamma": 1.5060240963855422,
+        "metacommunity_normalized_alpha": 1.2903225806451613,
+        "metacommunity_normalized_rho": 0.8485572790897555,
+        "metacommunity_normalized_beta": 1.1744247216675028,
     },
 ]
 
@@ -280,175 +227,230 @@ METACOMMUNITY_TEST_CASES = [
 class TestMetacommunity:
     """Tests metacommunity.Metacommunity."""
 
-    def make_metacommunity(self, test_case):
-        """Simple initializer that doesn't modify test_case."""
-        test_case_ = deepcopy(test_case)
-        return Metacommunity(
-            similarity=test_case_["similarity"], abundance=test_case_["abundance"]
-        )
+    @fixture(params=METACOMMUNITY_TEST_CASES, scope="class")
+    def test_case(self, request):
+        if isinstance(request.param["similarity"], dict):
+            kwargs = request.param["similarity"]
+            with SharedArrayManager() as shared_array_manager:
+                shared_features = shared_array_manager.from_array(
+                    kwargs["species_ordering"].reshape(-1, 1)
+                )
+                kwargs["shared_array_manager"] = shared_array_manager
+                kwargs["features_spec"] = shared_features.spec
+                shared_features.data[:] = kwargs["species_ordering"].reshape(-1, 1)
+                similarity = SimilarityFromFunction(**kwargs)
+                counts = shared_array_manager.from_array(request.param["abundance"])
+                abundance = SharedAbundance(
+                    counts=counts, shared_array_manager=shared_array_manager
+                )
+                request.param["similarity"] = similarity
+                request.param["abundance"] = abundance
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
+                yield request.param
+        else:
+            yield request.param
+
     def test_metacommunity_similarity(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        metacommunity_similarity = metacommunity.metacommunity_similarity
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        metacommunity_similarity = metacommunity.metacommunity_similarity()
+        if isinstance(metacommunity_similarity, SharedArrayView):
+            metacommunity_similarity = metacommunity_similarity.data
         assert (
-            test_case["metacommunity_similarity"].shape
-            == metacommunity_similarity.shape
+            metacommunity_similarity.shape
+            == test_case["metacommunity_similarity"].shape
         )
-        assert allclose(test_case["metacommunity_similarity"], metacommunity_similarity)
+        assert allclose(metacommunity_similarity, test_case["metacommunity_similarity"])
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_subcommunity_similarity(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        subcommunity_order = test_case["abundance"].subcommunity_order
-        subcommunity_similarity = metacommunity.subcommunity_similarity
-        for j, subcommunity in enumerate(subcommunity_order):
-            assert allclose(
-                subcommunity_similarity[:, j],
-                test_case["subcommunity_to_similarity"][subcommunity],
-            ), f"\n(i, subcommunity): {(j, subcommunity)}"
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        subcommunity_similarity = metacommunity.subcommunity_similarity()
+        if isinstance(subcommunity_similarity, SharedArrayView):
+            subcommunity_similarity = subcommunity_similarity.data
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
+        assert (
+            subcommunity_similarity.shape == test_case["subcommunity_similarity"].shape
+        )
+        assert allclose(subcommunity_similarity, test_case["subcommunity_similarity"])
+
     def test_normalized_subcommunity_similarity(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        subcommunity_order = test_case["abundance"].subcommunity_order
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
         normalized_subcommunity_similarity = (
-            metacommunity.normalized_subcommunity_similarity
+            metacommunity.normalized_subcommunity_similarity()
         )
-        for j, subcommunity in enumerate(subcommunity_order):
-            assert allclose(
-                normalized_subcommunity_similarity[:, j],
-                test_case["subcommunity_to_normalized_similarity"][subcommunity],
-            ), f"\n(i, subcommunity): {(j, subcommunity)}"
+        if isinstance(normalized_subcommunity_similarity, SharedArrayView):
+            normalized_subcommunity_similarity = normalized_subcommunity_similarity.data
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
+        assert (
+            normalized_subcommunity_similarity.shape
+            == test_case["normalized_subcommunity_similarity"].shape
+        )
+        assert allclose(
+            normalized_subcommunity_similarity,
+            test_case["normalized_subcommunity_similarity"],
+        )
+
     def test_subcommunity_alpha(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        subcommunity_order = test_case["abundance"].subcommunity_order
-        subcommunity_alpha = metacommunity.subcommunity_alpha(test_case["viewpoint"])
-        for i, subcommunity in enumerate(subcommunity_order):
-            assert isclose(
-                subcommunity_alpha[i], test_case["subcommunity_to_alpha"][subcommunity]
-            ), f"\n(i, subcommunity): {(i,subcommunity)}"
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        subcommunity_alpha = metacommunity.subcommunity_measure(
+            test_case["viewpoint"], measure="alpha"
+        )
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
+        assert subcommunity_alpha.shape == test_case["subcommunity_alpha"].shape
+        assert allclose(subcommunity_alpha, test_case["subcommunity_alpha"])
+
     def test_subcommunity_rho(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        subcommunity_order = test_case["abundance"].subcommunity_order
-        subcommunity_rho = metacommunity.subcommunity_rho(test_case["viewpoint"])
-        for i, subcommunity in enumerate(subcommunity_order):
-            assert isclose(
-                subcommunity_rho[i], test_case["subcommunity_to_rho"][subcommunity]
-            ), f"\n(i, subcommunity): {(i,subcommunity)}"
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        subcommunity_rho = metacommunity.subcommunity_measure(
+            test_case["viewpoint"], measure="rho"
+        )
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
+        assert subcommunity_rho.shape == test_case["subcommunity_rho"].shape
+        assert allclose(subcommunity_rho, test_case["subcommunity_rho"])
+
     def test_subcommunity_beta(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        subcommunity_order = test_case["abundance"].subcommunity_order
-        subcommunity_beta = metacommunity.subcommunity_beta(test_case["viewpoint"])
-        for i, subcommunity in enumerate(subcommunity_order):
-            assert isclose(
-                subcommunity_beta[i], test_case["subcommunity_to_beta"][subcommunity]
-            ), f"\n(i, subcommunity): {(i,subcommunity)}"
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        subcommunity_beta = metacommunity.subcommunity_measure(
+            test_case["viewpoint"], measure="beta"
+        )
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
+        assert subcommunity_beta.shape == test_case["subcommunity_beta"].shape
+        assert allclose(subcommunity_beta, test_case["subcommunity_beta"])
+
     def test_subcommunity_gamma(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        subcommunity_order = test_case["abundance"].subcommunity_order
-        subcommunity_gamma = metacommunity.subcommunity_gamma(test_case["viewpoint"])
-        for i, subcommunity in enumerate(subcommunity_order):
-            assert isclose(
-                subcommunity_gamma[i], test_case["subcommunity_to_gamma"][subcommunity]
-            ), f"\n(i, subcommunity): {(i,subcommunity)}"
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        subcommunity_gamma = metacommunity.subcommunity_measure(
+            test_case["viewpoint"], measure="gamma"
+        )
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
+        assert subcommunity_gamma.shape == test_case["subcommunity_gamma"].shape
+        assert allclose(subcommunity_gamma, test_case["subcommunity_gamma"])
+
     def test_normalized_subcommunity_alpha(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        subcommunity_order = test_case["abundance"].subcommunity_order
-        normalized_subcommunity_alpha = metacommunity.normalized_subcommunity_alpha(
-            test_case["viewpoint"]
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
         )
-        for i, subcommunity in enumerate(subcommunity_order):
-            assert isclose(
-                normalized_subcommunity_alpha[i],
-                test_case["subcommunity_to_normalized_alpha"][subcommunity],
-            ), f"\n(i, subcommunity): {(i,subcommunity)}"
+        normalized_subcommunity_alpha = metacommunity.subcommunity_measure(
+            test_case["viewpoint"], measure="normalized_alpha"
+        )
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
+        assert (
+            normalized_subcommunity_alpha.shape
+            == test_case["normalized_subcommunity_alpha"].shape
+        )
+        assert allclose(
+            normalized_subcommunity_alpha, test_case["normalized_subcommunity_alpha"]
+        )
+
     def test_normalized_subcommunity_rho(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        subcommunity_order = test_case["abundance"].subcommunity_order
-        normalized_subcommunity_rho = metacommunity.normalized_subcommunity_rho(
-            test_case["viewpoint"]
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
         )
-        for i, subcommunity in enumerate(subcommunity_order):
-            assert isclose(
-                normalized_subcommunity_rho[i],
-                test_case["subcommunity_to_normalized_rho"][subcommunity],
-            ), f"\n(i, subcommunity): {(i,subcommunity)}"
+        normalized_subcommunity_rho = metacommunity.subcommunity_measure(
+            test_case["viewpoint"], measure="normalized_rho"
+        )
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
+        assert (
+            normalized_subcommunity_rho.shape
+            == test_case["normalized_subcommunity_rho"].shape
+        )
+        assert allclose(
+            normalized_subcommunity_rho, test_case["normalized_subcommunity_rho"]
+        )
+
     def test_normalized_subcommunity_beta(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        subcommunity_order = test_case["abundance"].subcommunity_order
-        normalized_subcommunity_beta = metacommunity.normalized_subcommunity_beta(
-            test_case["viewpoint"]
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
         )
-        for i, subcommunity in enumerate(subcommunity_order):
-            assert isclose(
-                normalized_subcommunity_beta[i],
-                test_case["subcommunity_to_normalized_beta"][subcommunity],
-            ), f"\n(i, subcommunity): {(i,subcommunity)}"
+        normalized_subcommunity_beta = metacommunity.subcommunity_measure(
+            test_case["viewpoint"], measure="normalized_beta"
+        )
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
+        assert (
+            normalized_subcommunity_beta.shape
+            == test_case["normalized_subcommunity_beta"].shape
+        )
+        assert allclose(
+            normalized_subcommunity_beta, test_case["normalized_subcommunity_beta"]
+        )
+
     def test_metacommunity_alpha(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        metacommunity_alpha = metacommunity.metacommunity_alpha(test_case["viewpoint"])
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        metacommunity_alpha = metacommunity.metacommunity_measure(
+            test_case["viewpoint"], "alpha"
+        )
         assert isclose(metacommunity_alpha, test_case["metacommunity_alpha"])
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_metacommunity_rho(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        metacommunity_rho = metacommunity.metacommunity_rho(test_case["viewpoint"])
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        metacommunity_rho = metacommunity.metacommunity_measure(
+            test_case["viewpoint"], "rho"
+        )
         assert isclose(metacommunity_rho, test_case["metacommunity_rho"])
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_metacommunity_beta(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        metacommunity_beta = metacommunity.metacommunity_beta(test_case["viewpoint"])
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        metacommunity_beta = metacommunity.metacommunity_measure(
+            test_case["viewpoint"], "beta"
+        )
         assert isclose(metacommunity_beta, test_case["metacommunity_beta"])
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_metacommunity_gamma(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        metacommunity_gamma = metacommunity.metacommunity_gamma(test_case["viewpoint"])
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        metacommunity_gamma = metacommunity.metacommunity_measure(
+            test_case["viewpoint"], "gamma"
+        )
         assert isclose(metacommunity_gamma, test_case["metacommunity_gamma"])
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_metacommunity_normalized_alpha(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        metacommunity_normalized_alpha = metacommunity.normalized_metacommunity_alpha(
-            test_case["viewpoint"]
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        metacommunity_normalized_alpha = metacommunity.metacommunity_measure(
+            test_case["viewpoint"], "normalized_alpha"
         )
         assert isclose(
             metacommunity_normalized_alpha, test_case["metacommunity_normalized_alpha"]
         )
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_metacommunity_normalized_rho(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        metacommunity_normalized_rho = metacommunity.normalized_metacommunity_rho(
-            test_case["viewpoint"]
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        metacommunity_normalized_rho = metacommunity.metacommunity_measure(
+            test_case["viewpoint"], "normalized_rho"
         )
         assert isclose(
             metacommunity_normalized_rho, test_case["metacommunity_normalized_rho"]
         )
 
-    @mark.parametrize("test_case", METACOMMUNITY_TEST_CASES)
     def test_metacommunity_normalized_beta(self, test_case):
-        metacommunity = self.make_metacommunity(test_case)
-        metacommunity_normalized_beta = metacommunity.normalized_metacommunity_beta(
-            test_case["viewpoint"]
+        metacommunity = Metacommunity(
+            similarity=test_case["similarity"], abundance=test_case["abundance"]
+        )
+        metacommunity_normalized_beta = metacommunity.metacommunity_measure(
+            test_case["viewpoint"], "normalized_beta"
         )
         assert isclose(
             metacommunity_normalized_beta, test_case["metacommunity_normalized_beta"]

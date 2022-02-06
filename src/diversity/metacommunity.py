@@ -48,9 +48,9 @@ class Metacommunity:
             Object whose (sub-/meta-)community species abundances are
             used.
         """
-        self.similarity = similarity
-        self.abundance = abundance
-        self.measure_components = {
+        self.__similarity = similarity
+        self.__abundance = abundance
+        self.__measure_components = {
             "sensitive": {
                 "alpha": (1, self.subcommunity_similarity),
                 "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
@@ -67,27 +67,27 @@ class Metacommunity:
                 ),
             },
             "insensitive": {
-                "alpha": (1, self.abundance.subcommunity_abundance),
+                "alpha": (1, self.__abundance.subcommunity_abundance),
                 "rho": (
-                    self.abundance.metacommunity_abundance,
-                    self.abundance.subcommunity_abundance,
+                    self.__abundance.metacommunity_abundance,
+                    self.__abundance.subcommunity_abundance,
                 ),
                 "beta": (
-                    self.abundance.metacommunity_abundance,
-                    self.abundance.subcommunity_abundance,
+                    self.__abundance.metacommunity_abundance,
+                    self.__abundance.subcommunity_abundance,
                 ),
-                "gamma": (1, self.abundance.metacommunity_abundance),
+                "gamma": (1, self.__abundance.metacommunity_abundance),
                 "normalized_alpha": (
                     1,
-                    self.abundance.normalized_subcommunity_abundance,
+                    self.__abundance.normalized_subcommunity_abundance,
                 ),
                 "normalized_rho": (
-                    self.abundance.metacommunity_abundance,
-                    self.abundance.normalized_subcommunity_abundance,
+                    self.__abundance.metacommunity_abundance,
+                    self.__abundance.normalized_subcommunity_abundance,
                 ),
                 "normalized_beta": (
-                    self.abundance.metacommunity_abundance,
-                    self.abundance.normalized_subcommunity_abundance,
+                    self.__abundance.metacommunity_abundance,
+                    self.__abundance.normalized_subcommunity_abundance,
                 ),
             },
         }
@@ -95,43 +95,43 @@ class Metacommunity:
     @cache
     def metacommunity_similarity(self):
         """Sums of similarities weighted by metacommunity abundances."""
-        return self.similarity.calculate_weighted_similarities(
-            self.abundance.metacommunity_abundance
+        return self.__similarity.calculate_weighted_similarities(
+            self.__abundance.metacommunity_abundance
         )
 
     @cache
     def subcommunity_similarity(self):
         """Sums of similarities weighted by subcommunity abundances."""
-        return self.similarity.calculate_weighted_similarities(
-            self.abundance.subcommunity_abundance
+        return self.__similarity.calculate_weighted_similarities(
+            self.__abundance.subcommunity_abundance
         )
 
     @cache
     def normalized_subcommunity_similarity(self):
         """Sums of similarities weighted by the normalized subcommunity abundances."""
-        return self.similarity.calculate_weighted_similarities(
-            self.abundance.normalized_subcommunity_abundance
+        return self.__similarity.calculate_weighted_similarities(
+            self.__abundance.normalized_subcommunity_abundance
         )
 
     @cache
     def subcommunity_measure(self, viewpoint, measure, similarity="sensitive"):
         """Calculates subcommunity diversity measures."""
-        numerator, denominator = map(
-            extract_data_if_shared, self.measures_components[similarity][measure]
-        )
+        numerator, denominator = self.__measure_components[similarity][measure]
         if callable(numerator):
             numerator = numerator()
         denominator = denominator()
+        numerator, denominator = map(extract_data_if_shared, (numerator, denominator))
         if measure == "gamma":
             denominator = broadcast_to(
-                denominator, self.abundance.subcommunity_abundance.shape
+                denominator,
+                extract_data_if_shared(self.__abundance.subcommunity_abundance).shape,
             )
         community_ratio = divide(
             numerator, denominator, out=zeros(denominator.shape), where=denominator != 0
         )
         result = power_mean(
             1 - viewpoint,
-            extract_data_if_shared(self.abundance.normalized_subcommunity_abundance),
+            extract_data_if_shared(self.__abundance.normalized_subcommunity_abundance),
             community_ratio,
         )
         if measure in ["beta", "normalized_beta"]:
@@ -143,7 +143,7 @@ class Metacommunity:
         subcommunity_measure = self.subcommunity_measure(viewpoint, measure, similarity)
         return power_mean(
             1 - viewpoint,
-            extract_data_if_shared(self.abundance.subcommunity_normalizing_constants),
+            extract_data_if_shared(self.__abundance.subcommunity_normalizing_constants),
             subcommunity_measure,
         )
 
@@ -161,11 +161,11 @@ class Metacommunity:
         df = DataFrame(
             {
                 key: self.subcommunity_measure(viewpoint, key, similarity)
-                for key in self.measure_components["sensitve"].keys()
+                for key in self.__measure_components["sensitve"].keys()
             }
         )
         df.insert(0, "viewpoint", viewpoint)
-        df.insert(0, "community", self.abundance.subcommunity_order)
+        df.insert(0, "community", self.__abundance.subcommunity_order)
         return df
 
     def metacommunity_to_dataframe(self, viewpoint, similarity="sensitive"):
@@ -181,7 +181,7 @@ class Metacommunity:
         df = DataFrame(
             {
                 key: self.metacommunity_measure(viewpoint, key, similarity)
-                for key in self.measure_components["sensitve"].keys()
+                for key in self.__measure_components["sensitve"].keys()
             }
         )
         df.insert(0, "viewpoint", viewpoint)
