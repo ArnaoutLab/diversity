@@ -130,6 +130,7 @@ dmypy.json
 
 test_files/
 .DS_Store/
+legacy_code/
 
 junk_code.txt
 examples.ipynb
