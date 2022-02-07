@@ -19,7 +19,7 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from multiprocessing import cpu_count, Pool
 
-from numpy import dtype, empty, flatnonzero
+from numpy import dtype, empty, flatnonzero, where
 from pandas import DataFrame, read_csv
 
 from diversity.exceptions import InvalidArgumentError
@@ -105,7 +105,7 @@ class SimilarityFromFile(ISimilarity):
             similarities between species, together with a header
             containing the unique species names in the matrix's row and
             column ordering.
-        species_subset: Set
+        species_subset: collection of str objects supporting membership test
             The species to include. Only similarities from columns and
             rows corresponding to these species are used.
         chunk_size: int
@@ -131,8 +131,7 @@ class SimilarityFromFile(ISimilarity):
 
         Parameters
         ----------
-        # FIXME this may not be a set
-        species: Set
+        species_subset: collection of str objects supporting membership test
             Set of species to include. If None, all species are
             included.
 
@@ -191,8 +190,14 @@ class SimilarityFromFunction(ISimilarity):
     class ApplySimilarityFunction:
         """Applies similarity function to a chunk of data."""
 
-        def __init__(self, func):
+        def __init__(self, func, valid_features_index):
+            LOGGER.debug(
+                "ApplySimilarityFunction(func=%s, valid_features_index=%s)",
+                func,
+                valid_features_index,
+            )
             self.func = func
+            self.__valid_features_index = valid_features_index
 
         def __call__(
             self,
@@ -219,6 +224,16 @@ class SimilarityFromFunction(ISimilarity):
                 The specification for the memory block containing the
                 relative abundances of species (per community).
             """
+            LOGGER.debug(
+                "ApplySimilarityFunction.__call__(row_start=%s, row_stop=%s,"
+                " weighted_similarities_spec=%s, features_spec=%s,"
+                " relative_abundance_spec=%s)",
+                row_start,
+                row_stop,
+                weighted_similarities_spec,
+                features_spec,
+                relative_abundance_spec,
+            )
             with LoadSharedArray(
                 weighted_similarities_spec
             ) as weighted_similarities, LoadSharedArray(
@@ -227,12 +242,16 @@ class SimilarityFromFunction(ISimilarity):
                 features_spec
             ) as features:
                 similarities_row_i = empty(
-                    shape=(weighted_similarities.data.shape[0],), dtype=dtype("f8")
+                    shape=(len(self.__valid_features_index),), dtype=dtype("f8")
                 )
-                for i in range(row_start, row_stop):
-                    for j, feature_j in enumerate(features.data):
-                        similarities_row_i[j] = self.func(features.data[i], feature_j)
-                    weighted_similarities.data[i] = (
+                for i, feature_i in enumerate(
+                    self.__valid_features_index[row_start:row_stop]
+                ):
+                    for j, feature_j in enumerate(self.__valid_features_index):
+                        similarities_row_i[j] = self.func(
+                            features.data[feature_i], features.data[feature_j]
+                        )
+                    weighted_similarities.data[i + row_start] = (
                         similarities_row_i @ relative_abundances.data
                     )
 
@@ -241,6 +260,7 @@ class SimilarityFromFunction(ISimilarity):
         similarity_function,
         features_spec,
         species_ordering,
+        species_subset,
         shared_array_manager,
         num_processors=None,
     ):
@@ -251,32 +271,41 @@ class SimilarityFromFunction(ISimilarity):
         similarity_function: Callable
             Callable to determine similarity between species. Must take
             two items from the features argument and return a numeric
-            similarity value.
+            similarity value. Must be pickleable.
         features: numpy.ndarray
             A numpy.ndarray where each item along axis 0 comprises the
             features of a species that are passed to
             similarity_function. The order of features is determined
             by species_ordering.
-        species_ordering: Iterable
-            The unique species in desired order. Row and column ordering
-            in similarity matrix calculations is determined by this
-            argument.
+        species_ordering: pandas.Index
+            The unique species in order corresponding to features. Row
+            and column ordering in similarity matrix calculations is
+            determined by this argument.
+        species_subset: collection of str objects supporting membership test
+            The species to include. Only similarities from columns and
+            rows corresponding to these species are used.
         shared_array_manager: diversity.shared.SharedArrayManager
             An active manager for creating shared arrays.
+        num_processors: int
+            Number of processors to use.
         """
         LOGGER.debug(
             "SimilarityFromFunction(similarity_function=%s,"
-            " features_spec=%s, species_ordering=%s,"
+            " features_spec=%s, species_ordering=%s, species_subset=%s"
             " shared_array_manager=%s, num_processors=%s)",
             similarity_function,
             features_spec,
             species_ordering,
+            species_subset,
             shared_array_manager,
             num_processors,
         )
-        self.similarity_function = self.ApplySimilarityFunction(similarity_function)
+        valid_features_index = species_ordering.astype(str).isin(species_subset)
+        self.similarity_function = self.ApplySimilarityFunction(
+            similarity_function, where(valid_features_index)[0]
+        )
         self.__features_spec = features_spec
-        self.__species_ordering = species_ordering
+        self.__species_ordering = species_ordering[valid_features_index]
         self.__shared_array_manager = shared_array_manager
         self.__num_processors = self.__get_num_processors(num_processors)
 
@@ -303,7 +332,7 @@ class SimilarityFromFunction(ISimilarity):
             relative_abundances,
         )
         weighted_similarities = self.__shared_array_manager.empty(
-            shape=relative_abundances.spec.shape, dtype=dtype("f8")
+            shape=relative_abundances.spec.shape, data_type=dtype("f8")
         )
         row_chunks = partition_range(
             range(len(self.species_ordering)), self.__num_processors

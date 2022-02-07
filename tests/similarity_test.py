@@ -2,27 +2,17 @@
 from multiprocessing import cpu_count
 
 from numpy import allclose, array, array_equal, dtype, empty, zeros
-from pandas import DataFrame
+from pandas import DataFrame, Index
 from pandas.testing import assert_frame_equal
 from pytest import fixture, mark, warns
 
 from diversity.exceptions import ArgumentWarning
+from diversity.log import LOGGER
 from diversity.similarity import (
     SimilarityFromFile,
     SimilarityFromFunction,
     SimilarityFromMemory,
 )
-
-
-def arrange_values(ordered_names, name_to_row):
-    """Arranges matrix rows according to ordered_names ordering."""
-    matrix = empty(
-        shape=(len(ordered_names), name_to_row[ordered_names[0]].shape[0]),
-        dtype=dtype("f8"),
-    )
-    for i, name in enumerate(ordered_names):
-        matrix[i][:] = name_to_row[name]
-    return matrix
 
 
 SIMILARITY_FROM_FILE_TEST_CASES = [
@@ -31,7 +21,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
         "similarity_matrix_filepath": "similarities_file.tsv",
         "species_subset": ["species_3", "species_1", "species_2"],
         "chunk_size": 1,
-        "expected_species_ordering": array(["species_3", "species_1", "species_2"]),
+        "expected_species_ordering": Index(["species_3", "species_1", "species_2"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "weighted_similarities": array(
             [[2.011, 20.11], [5.1001, 51.001], [10.0502, 100.502]]
@@ -49,7 +39,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
         "similarity_matrix_filepath": "similarities_file.csv",
         "species_subset": ["species_3", "species_1", "species_2"],
         "chunk_size": 1,
-        "expected_species_ordering": array(["species_3", "species_1", "species_2"]),
+        "expected_species_ordering": Index(["species_3", "species_1", "species_2"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "weighted_similarities": array(
             [[2.011, 20.11], [5.1001, 51.001], [10.0502, 100.502]]
@@ -64,7 +54,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
         "similarity_matrix_filepath": "similarities_file",
         "species_subset": ["species_3", "species_1", "species_2"],
         "chunk_size": 1,
-        "expected_species_ordering": array(["species_3", "species_1", "species_2"]),
+        "expected_species_ordering": Index(["species_3", "species_1", "species_2"]),
         "relative_abundances": array([[1 / 1000], [1 / 10], [10]]),
         "weighted_similarities": array([[2.011], [5.1001], [10.0502]]),
         "similarities_filecontents": (
@@ -80,7 +70,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
         "similarity_matrix_filepath": "similarities_file.tsv",
         "species_subset": ["species_1", "species_3"],
         "chunk_size": 1,
-        "expected_species_ordering": array(["species_3", "species_1"]),
+        "expected_species_ordering": Index(["species_3", "species_1"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [10, 100]]),
         "weighted_similarities": array([[1.001, 10.01], [10.0001, 100.001]]),
         "similarities_filecontents": (
@@ -96,7 +86,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
         "similarity_matrix_filepath": "similarities_file.tsv",
         "species_subset": ["species_3", "species_1", "species_2"],
         "chunk_size": 12,
-        "expected_species_ordering": array(["species_3", "species_1", "species_2"]),
+        "expected_species_ordering": Index(["species_3", "species_1", "species_2"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "weighted_similarities": array(
             [[2.011, 20.11], [5.1001, 51.001], [10.0502, 100.502]]
@@ -191,9 +181,10 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
         "description": "2 communities; 2 features; default num_processors",
         "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b)
         "features": array([[1, 2], [3, 5], [7, 11]]),
-        "species_ordering": array(["species_1", "species_2", "species_3"]),
+        "species_ordering": Index(["species_1", "species_2", "species_3"]),
+        "species_subset": {"species_1", "species_2", "species_3"},
         "num_processors": None,
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "expected_weighted_similarities": array(
             [
@@ -211,9 +202,10 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
         "description": "2 communities; 2 features; num_processors=1",
         "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b)
         "features": array([[1, 2], [3, 5], [7, 11]]),
-        "species_ordering": array(["species_1", "species_2", "species_3"]),
+        "species_ordering": Index(["species_1", "species_2", "species_3"]),
+        "species_subset": {"species_1", "species_2", "species_3"},
         "num_processors": 1,
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "expected_weighted_similarities": array(
             [
@@ -231,9 +223,10 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
         "description": "2 communities; 2 features; num_processors=2",
         "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b)
         "features": array([[1, 2], [3, 5], [7, 11]]),
-        "species_ordering": array(["species_1", "species_2", "species_3"]),
+        "species_ordering": Index(["species_1", "species_2", "species_3"]),
+        "species_subset": {"species_1", "species_2", "species_3"},
         "num_processors": 2,
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "expected_weighted_similarities": array(
             [
@@ -251,9 +244,10 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
         "description": "2 communities; 2 features; num_processors>num_species",
         "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b)
         "features": array([[1, 2], [3, 5], [7, 11]]),
-        "species_ordering": array(["species_1", "species_2", "species_3"]),
+        "species_ordering": Index(["species_1", "species_2", "species_3"]),
+        "species_subset": {"species_1", "species_2", "species_3"},
         "num_processors": 4,
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "expected_weighted_similarities": array(
             [
@@ -271,9 +265,10 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
         "description": "2 communities; 2 features; default num_processors>cpu_count",
         "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b)
         "features": array([[1, 2], [3, 5], [7, 11]]),
-        "species_ordering": array(["species_1", "species_2", "species_3"]),
+        "species_ordering": Index(["species_1", "species_2", "species_3"]),
+        "species_subset": {"species_1", "species_2", "species_3"},
         "num_processors": cpu_count() + 1,
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "expected_weighted_similarities": array(
             [
@@ -291,9 +286,10 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
         "description": "2 communities; 1 feature; default num_processors",
         "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b)
         "features": array([[1], [3], [7]]),
-        "species_ordering": array(["species_1", "species_2", "species_3"]),
+        "species_ordering": Index(["species_1", "species_2", "species_3"]),
+        "species_subset": {"species_1", "species_2", "species_3"},
         "num_processors": None,
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "expected_weighted_similarities": array(
             [
@@ -311,9 +307,10 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
         "description": "1 community; 2 features; default num_processors",
         "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b)
         "features": array([[1, 2], [3, 5], [7, 11]]),
-        "species_ordering": array(["species_1", "species_2", "species_3"]),
+        "species_ordering": Index(["species_1", "species_2", "species_3"]),
+        "species_subset": {"species_1", "species_2", "species_3"},
         "num_processors": None,
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000], [1 / 10], [10]]),
         "expected_weighted_similarities": array(
             [[0.35271989], [0.13459705], [0.0601738]]
@@ -327,9 +324,10 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
         "description": "1 community; 1 feature; default num_processors",
         "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b)
         "features": array([[1], [3], [7]]),
-        "species_ordering": array(["species_1", "species_2", "species_3"]),
+        "species_ordering": Index(["species_1", "species_2", "species_3"]),
+        "species_subset": {"species_1", "species_2", "species_3"},
         "num_processors": None,
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000], [1 / 10], [10]]),
         "expected_weighted_similarities": array(
             [
@@ -342,6 +340,36 @@ SIMILARITY_FROM_FUNCTION_TEST_CASES = [
         # [1,   1/3,  1/7]
         # [1/3, 1/9,  1/21]
         # [1/7, 1/21, 1/49]
+    },
+    {
+        "description": "nonempty species subset",
+        "similarity_function": sim_func,  # lambda a, b: 1 / sum(a * b)
+        "features": array([[0, 1], [1, 2], [3, 2], [3, 5], [7, 11], [13, 17]]),
+        "species_ordering": Index(
+            [
+                "species_0",
+                "species_1",
+                "species_1b",
+                "species_2",
+                "species_3",
+                "species_4",
+            ]
+        ),
+        "species_subset": {"species_1", "species_2", "species_3"},
+        "num_processors": None,
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
+        "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
+        "expected_weighted_similarities": array(
+            [
+                [0.35271989, 3.52719894],
+                [0.13459705, 1.34597047],
+                [0.0601738, 0.60173802],
+            ]
+        ),
+        # similarity matrix
+        # [0.2          , 0.07692307692, 0.03448275862]
+        # [0.07692307692, 0.02941176471, 0.01315789474]
+        # [0.03448275862, 0.01315789474, 0.005882352941]
     },
 ]
 
@@ -361,6 +389,7 @@ class TestSimilarityFromFunction:
                 "description",
                 "similarity_function",
                 "species_ordering",
+                "species_subset",
                 "num_processors",
                 "expected_species_ordering",
                 "expected_weighted_similarities",
@@ -381,6 +410,7 @@ class TestSimilarityFromFunction:
             similarity_function=test_case["similarity_function"],
             features_spec=test_case["shared_features"].spec,
             species_ordering=test_case["species_ordering"],
+            species_subset=test_case["species_subset"],
             shared_array_manager=test_case["shared_array_manager"],
             num_processors=test_case["num_processors"],
         )
@@ -394,6 +424,7 @@ class TestSimilarityFromFunction:
             similarity_function=test_case["similarity_function"],
             features_spec=test_case["shared_features"].spec,
             species_ordering=test_case["species_ordering"],
+            species_subset=test_case["species_subset"],
             shared_array_manager=test_case["shared_array_manager"],
             num_processors=test_case["num_processors"],
         )
@@ -413,6 +444,7 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "All rows; 2 columns",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
+        "valid_features_index": array([0, 1, 2]),
         "row_start": 0,
         "row_stop": 3,
         "weighted_similarities": zeros(shape=(3, 2), dtype=dtype("f8")),
@@ -429,6 +461,7 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "Single row; 2 columns",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
+        "valid_features_index": array([0, 1, 2]),
         "row_start": 1,
         "row_stop": 2,
         "weighted_similarities": zeros(shape=(3, 2), dtype=dtype("f8")),
@@ -445,6 +478,7 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "Some rows; 2 columns",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
+        "valid_features_index": array([0, 1, 2]),
         "row_start": 1,
         "row_stop": 3,
         "weighted_similarities": zeros(shape=(3, 2), dtype=dtype("f8")),
@@ -461,6 +495,7 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "No rows; 2 columns",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
+        "valid_features_index": array([0, 1, 2]),
         "row_start": 0,
         "row_stop": 0,
         "weighted_similarities": zeros(shape=(3, 2), dtype=dtype("f8")),
@@ -477,6 +512,7 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "All rows; 1 column",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
+        "valid_features_index": array([0, 1, 2]),
         "row_start": 0,
         "row_stop": 3,
         "weighted_similarities": zeros(shape=(3, 1), dtype=dtype("f8")),
@@ -499,6 +535,7 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "Single row; 1 column",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
+        "valid_features_index": array([0, 1, 2]),
         "row_start": 2,
         "row_stop": 3,
         "weighted_similarities": zeros(shape=(3, 1), dtype=dtype("f8")),
@@ -521,6 +558,7 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "Some rows; 1 column",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
+        "valid_features_index": array([0, 1, 2]),
         "row_start": 0,
         "row_stop": 2,
         "weighted_similarities": zeros(shape=(3, 1), dtype=dtype("f8")),
@@ -543,6 +581,7 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "No rows; 1 column",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
+        "valid_features_index": array([0, 1, 2]),
         "row_start": 1,
         "row_stop": 1,
         "weighted_similarities": zeros(shape=(3, 1), dtype=dtype("f8")),
@@ -561,6 +600,20 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
                 [0.0],
             ]
         ),
+    },
+    {
+        "description": "Some rows; 2 columns; some invalid species",
+        "func": sim_func,  # lambda a, b: 1 / sum(a * b)
+        "valid_features_index": array([0, 2]),
+        "row_start": 1,
+        "row_stop": 3,
+        "weighted_similarities": zeros(shape=(2, 2), dtype=dtype("f8")),
+        "features": array([[1, 2], [3, 5], [7, 11]]),
+        "relative_abundances": array([[1 / 1000, 1 / 100], [10, 100]]),
+        "expected_weighted_similarities": array([[0.0, 0.0], [0.05885801, 0.58858012]]),
+        # similarity matrix
+        # [0.2          , 0.03448275862]
+        # [0.03448275862, 0.005882352941]
     },
 ]
 
@@ -586,6 +639,7 @@ class TestSimilarityFromFunctionApplysimilarityFunction:
             for key in [
                 "description",
                 "func",
+                "valid_features_index",
                 "row_start",
                 "row_stop",
                 "expected_weighted_similarities",
@@ -603,7 +657,7 @@ class TestSimilarityFromFunctionApplysimilarityFunction:
     def test_call(self, test_case):
         """Tests .__call__."""
         apply_similarity_function = SimilarityFromFunction.ApplySimilarityFunction(
-            test_case["func"]
+            test_case["func"], test_case["valid_features_index"]
         )
         apply_similarity_function(
             test_case["row_start"],
@@ -633,7 +687,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             index=["species_1", "species_2", "species_3"],
         ),
         "species_subset": ["species_1", "species_2", "species_3"],
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "expected_similarity_matrix": DataFrame(
             data=array(
                 [
@@ -675,7 +729,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             index=["species_1", "species_2", "species_3"],
         ),
         "species_subset": ["species_1", "species_2", "species_3"],
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000], [1 / 10], [10]]),
         "weighted_similarities": array([[1.051], [2.1005], [10.0201]]),
     },
@@ -704,7 +758,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_1", "species_2", "species_3"],
         ),
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "weighted_similarities": array(
             [[1.051, 10.51], [2.1005, 21.005], [10.0201, 100.201]]
@@ -735,7 +789,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_1", "species_2", "species_3"],
         ),
-        "expected_species_ordering": array(["species_1", "species_2", "species_3"]),
+        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000], [1 / 10], [10]]),
         "weighted_similarities": array([[1.051], [2.1005], [10.0201]]),
     },

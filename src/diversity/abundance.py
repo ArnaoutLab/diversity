@@ -160,7 +160,7 @@ class SharedAbundance(IAbundance):
         self.__subcommunity_normalizing_constants = self.__shared_data.data.sum(axis=0)
         self.__metacommunity_abundance = shared_array_manager.empty(
             shape=(self.__shared_data.data.shape[0], 1),
-            dtype=self.__shared_data.data.dtype,
+            data_type=self.__shared_data.data.dtype,
         )
         self.__shared_data.data.sum(
             axis=1, keepdims=True, out=self.__metacommunity_abundance.data

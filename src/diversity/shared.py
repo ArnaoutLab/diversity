@@ -131,7 +131,7 @@ class SharedArrayManager(AbstractContextManager):
     def from_array(self, arr):
         """Stores data from numpy.ndarray in shared memory block."""
         LOGGER.debug("SharedArrayManager.from_array(arr=%s)", arr)
-        view = self.empty(shape=arr.shape, dtype=arr.dtype)
+        view = self.empty(shape=arr.shape, data_type=arr.dtype)
         view.data[:] = arr
         return view
 
