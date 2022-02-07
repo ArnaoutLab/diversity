@@ -357,7 +357,7 @@ class Metacommunity:
     precise definitions of the various diversity measures.
     """
 
-    def __init__(self, similarity, abundance):
+    def __init__(self, abundance, similarity=None):
         """Initializes object.
 
         Parameters
@@ -368,48 +368,46 @@ class Metacommunity:
             Object whose (sub-/meta-)community species abundances are
             used.
         """
-        self.similarity = similarity
         self.abundance = abundance
-        self.measure_components = {
-            "sensitive": {
-                "alpha": (1, self.subcommunity_similarity),
-                "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
-                "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
-                "gamma": (1, self.metacommunity_similarity),
-                "normalized_alpha": (1, self.normalized_subcommunity_similarity),
-                "normalized_rho": (
-                    self.metacommunity_similarity,
-                    self.normalized_subcommunity_similarity,
-                ),
-                "normalized_beta": (
-                    self.metacommunity_similarity,
-                    self.normalized_subcommunity_similarity,
-                ),
-            },
-            "insensitive": {
-                "alpha": (1, self.abundance.subcommunity_abundance),
-                "rho": (
-                    self.abundance.metacommunity_abundance,
-                    self.abundance.subcommunity_abundance,
-                ),
-                "beta": (
-                    self.abundance.metacommunity_abundance,
-                    self.abundance.subcommunity_abundance,
-                ),
-                "gamma": (1, self.abundance.metacommunity_abundance),
-                "normalized_alpha": (
-                    1,
-                    self.abundance.normalized_subcommunity_abundance,
-                ),
-                "normalized_rho": (
-                    self.abundance.metacommunity_abundance,
-                    self.abundance.normalized_subcommunity_abundance,
-                ),
-                "normalized_beta": (
-                    self.abundance.metacommunity_abundance,
-                    self.abundance.normalized_subcommunity_abundance,
-                ),
-            },
+        self.similarity = similarity
+        self.similarity_sensitive_components = {
+            "alpha": (1, self.subcommunity_similarity),
+            "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
+            "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
+            "gamma": (1, self.metacommunity_similarity),
+            "normalized_alpha": (1, self.normalized_subcommunity_similarity),
+            "normalized_rho": (
+                self.metacommunity_similarity,
+                self.normalized_subcommunity_similarity,
+            ),
+            "normalized_beta": (
+                self.metacommunity_similarity,
+                self.normalized_subcommunity_similarity,
+            ),
+        }
+        self.similarity_insensitive_components = {
+            "alpha": (1, self.abundance.subcommunity_abundance),
+            "rho": (
+                self.abundance.metacommunity_abundance,
+                self.abundance.subcommunity_abundance,
+            ),
+            "beta": (
+                self.abundance.metacommunity_abundance,
+                self.abundance.subcommunity_abundance,
+            ),
+            "gamma": (1, self.abundance.metacommunity_abundance),
+            "normalized_alpha": (
+                1,
+                self.abundance.normalized_subcommunity_abundance,
+            ),
+            "normalized_rho": (
+                self.abundance.metacommunity_abundance,
+                self.abundance.normalized_subcommunity_abundance,
+            ),
+            "normalized_beta": (
+                self.abundance.metacommunity_abundance,
+                self.abundance.normalized_subcommunity_abundance,
+            ),
         }
 
     @cache
@@ -436,7 +434,17 @@ class Metacommunity:
     @cache
     def subcommunity_measure(self, viewpoint, measure, similarity="sensitive"):
         """Calculates subcommunity diversity measures."""
-        numerator, denominator = self.measure_components[similarity][measure]
+        if self.similarity is None or similarity == "insensitive":
+            numerator, denominator = self.similarity_insensitive_components[measure]
+        elif self.similarity is not None and similarity == "sensitive":
+           numerator, denominator = self.similarity_sensitive_components[measure]
+        else:
+            InvalidArgumentError(
+            """
+            A similarity matrix must be passed to the make_metacommunity function
+            for a metacommunity object to calculate similarity-sensitive diveristy
+            """
+            )
         if callable(numerator):
             numerator = numerator()
         denominator = denominator()
@@ -531,7 +539,7 @@ def subset_subcommunities(counts, subcommunities, subcommunity_column):
 
 def make_metacommunity(
     counts,
-    similarity_matrix,
+    similarity_matrix=None,
     subcommunities=None,
     chunk_size=1,
     subcommunity_column="subcommunity",
@@ -579,7 +587,8 @@ def make_metacommunity(
 
     counts_subset = subset_subcommunities(counts, subcommunities, subcommunity_column)
     species_subset = unique(counts_subset[species_column])
-    similarity = make_similarity(similarity_matrix, species_subset, chunk_size)
+    if similarity_matrix is not None:
+        similarity = make_similarity(similarity_matrix, species_subset, chunk_size)
     abundance = Abundance(
         counts_subset,
         similarity.species_order,
@@ -587,7 +596,7 @@ def make_metacommunity(
         species_column=species_column,
         count_column=count_column,
     )
-    return Metacommunity(similarity, abundance)
+    return Metacommunity(abundance, similarity)
 
 
 def make_pairwise_metacommunities(counts, similarity_matrix, subcommunity_column, **kwargs):
