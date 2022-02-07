@@ -156,7 +156,7 @@ class Abundance:
         of the species in the metacommunity. The row ordering is
         established by the species_to_row attribute.
         """
-        return self.subcommunity_abundance.sum(axis=1, keepdims=True)
+        return self.subcommunity_abundance().sum(axis=1, keepdims=True)
 
     @cache
     def subcommunity_normalizing_constants(self):
@@ -167,7 +167,7 @@ class Abundance:
         A numpy.ndarray of shape (n_subcommunities,), with the fraction
         of each subcommunity's size of the metacommunity.
         """
-        return self.subcommunity_abundance.sum(axis=0)
+        return self.subcommunity_abundance().sum(axis=0)
 
     @cache
     def normalized_subcommunity_abundance(self):
@@ -181,7 +181,7 @@ class Abundance:
         in the subcommunity relative to the subcommunity size. The row
         ordering is established by the species_to_row attribute.
         """
-        return self.subcommunity_abundance / self.subcommunity_normalizing_constants
+        return self.subcommunity_abundance() / self.subcommunity_normalizing_constants()
 
 
 class ISimilarity(ABC):
@@ -370,110 +370,103 @@ class Metacommunity:
         """
         self.abundance = abundance
         self.similarity = similarity
-        self.similarity_sensitive_components = {
-            "alpha": (1, self.subcommunity_similarity),
-            "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
-            "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
-            "gamma": (1, self.metacommunity_similarity),
-            "normalized_alpha": (1, self.normalized_subcommunity_similarity),
-            "normalized_rho": (
-                self.metacommunity_similarity,
-                self.normalized_subcommunity_similarity,
-            ),
-            "normalized_beta": (
-                self.metacommunity_similarity,
-                self.normalized_subcommunity_similarity,
-            ),
-        }
-        self.similarity_insensitive_components = {
-            "alpha": (1, self.abundance.subcommunity_abundance),
-            "rho": (
-                self.abundance.metacommunity_abundance,
-                self.abundance.subcommunity_abundance,
-            ),
-            "beta": (
-                self.abundance.metacommunity_abundance,
-                self.abundance.subcommunity_abundance,
-            ),
-            "gamma": (1, self.abundance.metacommunity_abundance),
-            "normalized_alpha": (
-                1,
-                self.abundance.normalized_subcommunity_abundance,
-            ),
-            "normalized_rho": (
-                self.abundance.metacommunity_abundance,
-                self.abundance.normalized_subcommunity_abundance,
-            ),
-            "normalized_beta": (
-                self.abundance.metacommunity_abundance,
-                self.abundance.normalized_subcommunity_abundance,
-            ),
-        }
+
+        if self.similarity is not None:
+            self.measure_components = { 
+                    "alpha": (1, self.subcommunity_similarity),
+                    "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
+                    "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
+                    "gamma": (1, self.metacommunity_similarity),
+                    "normalized_alpha": (1, self.normalized_subcommunity_similarity),
+                    "normalized_rho": (
+                        self.metacommunity_similarity,
+                        self.normalized_subcommunity_similarity,
+                    ),
+                    "normalized_beta": (
+                        self.metacommunity_similarity,
+                        self.normalized_subcommunity_similarity,
+                    ),
+                }
+        else:
+            self.measure_components = {
+                "alpha": (1, self.abundance.subcommunity_abundance),
+                "rho": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.subcommunity_abundance,
+                ),
+                "beta": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.subcommunity_abundance,
+                ),
+                "gamma": (1, self.abundance.metacommunity_abundance),
+                "normalized_alpha": (
+                    1,
+                    self.abundance.normalized_subcommunity_abundance,
+                ),
+                "normalized_rho": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.normalized_subcommunity_abundance,
+                ),
+                "normalized_beta": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.normalized_subcommunity_abundance,
+                ),
+            }
 
     @cache
     def metacommunity_similarity(self):
         """Sums of similarities weighted by metacommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
-            self.abundance.metacommunity_abundance
+            self.abundance.metacommunity_abundance()
         )
 
     @cache
     def subcommunity_similarity(self):
         """Sums of similarities weighted by subcommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
-            self.abundance.subcommunity_abundance
+            self.abundance.subcommunity_abundance()
         )
 
     @cache
     def normalized_subcommunity_similarity(self):
         """Sums of similarities weighted by the normalized subcommunity abundances."""
         return self.similarity.calculate_weighted_similarities(
-            self.abundance.normalized_subcommunity_abundance
+            self.abundance.normalized_subcommunity_abundance()
         )
 
     @cache
-    def subcommunity_measure(self, viewpoint, measure, similarity="sensitive"):
+    def subcommunity_measure(self, viewpoint, measure):
         """Calculates subcommunity diversity measures."""
-        if self.similarity is None or similarity == "insensitive":
-            numerator, denominator = self.similarity_insensitive_components[measure]
-        elif self.similarity is not None and similarity == "sensitive":
-           numerator, denominator = self.similarity_sensitive_components[measure]
-        else:
-            InvalidArgumentError(
-            """
-            A similarity matrix must be passed to the make_metacommunity function
-            for a metacommunity object to calculate similarity-sensitive diveristy
-            """
-            )
+        numerator, denominator = self.measure_components[measure]
         if callable(numerator):
             numerator = numerator()
         denominator = denominator()
         if measure == "gamma":
             denominator = broadcast_to(
-                denominator, self.abundance.subcommunity_abundance.shape
+                denominator, self.abundance.subcommunity_abundance().shape
             )
         community_ratio = divide(
             numerator, denominator, out=zeros(denominator.shape), where=denominator != 0
         )
         result = power_mean(
             1 - viewpoint,
-            self.abundance.normalized_subcommunity_abundance,
+            self.abundance.normalized_subcommunity_abundance(),
             community_ratio,
         )
         if measure in ["beta", "normalized_beta"]:
             return 1 / result
         return result
 
-    def metacommunity_measure(self, viewpoint, measure, similarity="sensitive"):
+    def metacommunity_measure(self, viewpoint, measure):
         """Calculates metcommunity diversity measures."""
-        subcommunity_measure = self.subcommunity_measure(viewpoint, measure, similarity)
+        subcommunity_measure = self.subcommunity_measure(viewpoint, measure)
         return power_mean(
             1 - viewpoint,
-            self.abundance.subcommunity_normalizing_constants,
+            self.abundance.subcommunity_normalizing_constants(),
             subcommunity_measure,
         )
 
-    def subcommunities_to_dataframe(self, viewpoint, similarity="sensitive"):
+    def subcommunities_to_dataframe(self, viewpoint):
         """Table containing all subcommunity diversity values.
 
         Parameters
@@ -485,14 +478,13 @@ class Metacommunity:
             most frequent species.
         """
         df = DataFrame(
-        {key: self.subcommunity_measure(viewpoint, key, similarity) 
-            for key in self.measure_components['sensitve'].keys()}
-        )
+        {key: self.subcommunity_measure(viewpoint, key)
+            for key in self.measure_components.keys()})
         df.insert(0, 'viewpoint', viewpoint)
         df.insert(0, 'community', self.abundance.subcommunity_order)
         return df
 
-    def metacommunity_to_dataframe(self, viewpoint, similarity="sensitive"):
+    def metacommunity_to_dataframe(self, viewpoint):
         """Table containing all metacommunity diversity values.
 
         Parameters
@@ -503,13 +495,13 @@ class Metacommunity:
             the same as frequent species, and infinity considers only the
             most frequent species."""
         df = DataFrame(
-        {key: self.metacommunity_measure(viewpoint, key, similarity) 
-            for key in self.measure_components['sensitve'].keys()}
-        )
+        {key: self.metacommunity_measure(viewpoint, key)
+            for key in self.measure_components.keys()},
+            index=["metacommunity"]
+            )
         df.insert(0, 'viewpoint', viewpoint)
-        df.insert(0, 'community', "metacommunity")
+        df.reset_index(level=0)
         return df
-
 
 def make_similarity(similarity_matrix, species_subset, chunk_size):
     similarity_type = type(similarity_matrix)
@@ -587,16 +579,18 @@ def make_metacommunity(
 
     counts_subset = subset_subcommunities(counts, subcommunities, subcommunity_column)
     species_subset = unique(counts_subset[species_column])
-    if similarity_matrix is not None:
-        similarity = make_similarity(similarity_matrix, species_subset, chunk_size)
     abundance = Abundance(
         counts_subset,
-        similarity.species_order,
+        species_subset,
         subcommunity_column=subcommunity_column,
         species_column=species_column,
         count_column=count_column,
     )
-    return Metacommunity(abundance, similarity)
+    if similarity_matrix is not None:
+        similarity = make_similarity(similarity_matrix, species_subset, chunk_size)
+        arguements = (abundance, similarity)
+    arguements = (abundance,)
+    return Metacommunity(*arguements)
 
 
 def make_pairwise_metacommunities(counts, similarity_matrix, subcommunity_column, **kwargs):
