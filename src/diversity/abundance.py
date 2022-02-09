@@ -16,7 +16,7 @@ make_abundance
     Chooses and creates instance of concrete IAbundance implementation.
 """
 from abc import ABC, abstractmethod
-from functools import cached_property
+from functools import cache
 
 from numpy import dtype, empty
 
@@ -24,7 +24,7 @@ from diversity.log import LOGGER
 
 
 class IAbundance(ABC):
-    """Relative abundances of species in a metacommunity.
+    """Interface for relative abundances of species in a metacommunity.
 
     A community consists of a set of species, each of which may appear
     any (non-negative) number of times. A metacommunity consists of one
@@ -108,24 +108,24 @@ class Abundance(IAbundance):
         LOGGER.debug("Abundance(counts=%s", counts)
         self.counts = counts
 
-    @cached_property
+    @cache
     def subcommunity_abundance(self):
         total_abundance = self.counts.sum()
         relative_abundances = empty(shape=self.counts.shape, dtype=dtype("f8"))
         relative_abundances[:] = self.counts / total_abundance
         return relative_abundances
 
-    @cached_property
+    @cache
     def metacommunity_abundance(self):
-        return self.subcommunity_abundance.sum(axis=1, keepdims=True)
+        return self.subcommunity_abundance().sum(axis=1, keepdims=True)
 
-    @cached_property
+    @cache
     def subcommunity_normalizing_constants(self):
-        return self.subcommunity_abundance.sum(axis=0)
+        return self.subcommunity_abundance().sum(axis=0)
 
-    @cached_property
+    @cache
     def normalized_subcommunity_abundance(self):
-        return self.subcommunity_abundance / self.subcommunity_normalizing_constants
+        return self.subcommunity_abundance() / self.subcommunity_normalizing_constants()
 
 
 class SharedAbundance(IAbundance):
@@ -136,9 +136,6 @@ class SharedAbundance(IAbundance):
     are stored in shared arrays, which can be passed to other processors
     without copying.
     """
-
-    __unnormalized = "unnormalized"
-    __normalized = "normalized"
 
     def __init__(self, counts, shared_array_manager):
         """Initializes object.
@@ -156,7 +153,7 @@ class SharedAbundance(IAbundance):
         LOGGER.debug("SharedAbundance(counts=%s)", counts)
         self.__shared_data = counts
         self.__shared_data.data /= self.__shared_data.data.sum()
-        self.__stores = self.__unnormalized
+        self.__storing_normalized_abundances = False
         self.__subcommunity_normalizing_constants = self.__shared_data.data.sum(axis=0)
         self.__metacommunity_abundance = shared_array_manager.empty(
             shape=(self.__shared_data.data.shape[0], 1),
@@ -166,27 +163,23 @@ class SharedAbundance(IAbundance):
             axis=1, keepdims=True, out=self.__metacommunity_abundance.data
         )
 
-    @property
     def subcommunity_abundance(self):
         """Same as in diversity.metacommunity.IAbundance, except a shared array is returned."""
-        if self.__stores == self.__normalized:
+        if self.__storing_normalized_abundances:
             self.__shared_data.data *= self.__subcommunity_normalizing_constants
-        self.__stores = self.__unnormalized
+        self.__storing_normalized_abundances = False
         return self.__shared_data
 
-    @property
     def metacommunity_abundance(self):
         """Same as in diversity.metacommunity.IAbundance, except a shared array is returned."""
         return self.__metacommunity_abundance
 
-    @property
     def subcommunity_normalizing_constants(self):
         return self.__subcommunity_normalizing_constants
 
-    @property
     def normalized_subcommunity_abundance(self):
         """Same as in diversity.metacommunity.IAbundance, except a shared array is returned."""
-        if self.__stores == self.__unnormalized:
+        if not self.__storing_normalized_abundances:
             self.__shared_data.data /= self.__subcommunity_normalizing_constants
-        self.__stores = self.__normalized
+        self.__storing_normalized_abundances = True
         return self.__shared_data

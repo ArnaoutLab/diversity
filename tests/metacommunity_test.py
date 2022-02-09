@@ -5,8 +5,8 @@ from numpy import (
     dtype,
     isclose,
 )
-from pandas import DataFrame
-from pytest import fixture, mark
+from pandas import DataFrame, Index
+from pytest import fixture
 
 from diversity.abundance import Abundance, SharedAbundance
 from diversity.metacommunity import (
@@ -180,13 +180,25 @@ METACOMMUNITY_TEST_CASES = [
         "description": "similarity from function; default num_processors.",
         "similarity": {
             "similarity_function": sim_func,
-            "species_ordering": array(
+            "features": array(
+                [
+                    ["species_1"],
+                    ["species_2"],
+                    ["species_3"],
+                ]
+            ),
+            "species_ordering": Index(
                 [
                     "species_1",
                     "species_2",
                     "species_3",
                 ]
             ),
+            "species_subset": {
+                "species_1",
+                "species_2",
+                "species_3",
+            },
             "num_processors": None,
         },
         "abundance": array([[1, 5], [3, 0], [0, 1]], dtype=dtype("f8")),
@@ -232,12 +244,20 @@ class TestMetacommunity:
         if isinstance(request.param["similarity"], dict):
             kwargs = request.param["similarity"]
             with SharedArrayManager() as shared_array_manager:
+                kwargs = {
+                    key: request.param["similarity"][key]
+                    for key in [
+                        "similarity_function",
+                        "species_ordering",
+                        "species_subset",
+                        "num_processors",
+                    ]
+                }
                 shared_features = shared_array_manager.from_array(
-                    kwargs["species_ordering"].reshape(-1, 1)
+                    request.param["similarity"]["features"]
                 )
                 kwargs["shared_array_manager"] = shared_array_manager
                 kwargs["features_spec"] = shared_features.spec
-                shared_features.data[:] = kwargs["species_ordering"].reshape(-1, 1)
                 similarity = SimilarityFromFunction(**kwargs)
                 counts = shared_array_manager.from_array(request.param["abundance"])
                 abundance = SharedAbundance(

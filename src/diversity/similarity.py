@@ -321,12 +321,7 @@ class SimilarityFromFunction(ISimilarity):
         return self.__species_ordering
 
     def calculate_weighted_similarities(self, relative_abundances):
-        """Calculates weighted sums of similarities to each species.
-        Similarities are calculated using object's similarity_function
-        attribute.
-        See diversity.metacommunity.ISimilarity.calculate_weighted_similarities
-        for complete specification.
-        """
+        """Same as diversity.metacommunity.ISimilarity.calculate_weighted_similarities, except using shared arrays."""
         LOGGER.debug(
             "calculate_weighted_similarities(relative_abundances=%s)",
             relative_abundances,

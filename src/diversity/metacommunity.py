@@ -13,6 +13,7 @@ make_metacommunity
     parameter specification.
 """
 
+from abc import ABC, abstractmethod
 from functools import cache
 
 from pandas import DataFrame, concat, unique
@@ -20,7 +21,6 @@ from numpy import zeros, broadcast_to, divide
 
 from diversity.abundance import Abundance
 from diversity.log import LOGGER
-from diversity.shared import extract_data_if_shared
 from diversity.similarity import make_similarity
 from diversity.utilities import (
     pivot_table,
@@ -99,17 +99,19 @@ def make_metacommunity(
     parameter specification.
     """
     LOGGER.debug(
-        "make_metacommunity(%s, %s, subcommunities=%s, chunk_size=%s,"
-        " subcommunity_column=%s, species_column=%s, count_column=%s"
-        % (
-            counts,
-            similarity_matrix,
-            subcommunities,
-            chunk_size,
-            subcommunity_column,
-            species_column,
-            count_column,
-        )
+        "make_metacommunity(counts=%s, similarity_method=%s,"
+        " subcommunities=%s, chunk_size=%s, features_filepath=%s,"
+        " num_processors=%s, subcommunity_column=%s, species_column=%s,"
+        " count_column=%s",
+        counts,
+        similarity_method,
+        subcommunities,
+        chunk_size,
+        features_filepath,
+        num_processors,
+        subcommunity_column,
+        species_column,
+        count_column,
     )
 
     counts_subset = subset_by_column(counts, subcommunities, subcommunity_column)
@@ -146,15 +148,10 @@ def make_pairwise_metacommunities(
     return pairwise_metacommunities
 
 
-class Metacommunity:
-    """Class for metacommunities and calculating their diversity.
+class IMetacommunity(ABC):
+    """Interface for metacommunities and calculating their diversity."""
 
-    All diversities computed by objects of this class are
-    similarity-sensitive. See https://arxiv.org/abs/1404.6520 for
-    precise definitions of the various diversity measures.
-    """
-
-    def __init__(self, similarity, abundance):
+    def __init__(self, abundance, similarity=None):
         """Initializes object.
 
         Parameters
@@ -167,8 +164,8 @@ class Metacommunity:
         """
         self.__similarity = similarity
         self.__abundance = abundance
-        self.__measure_components = {
-            "sensitive": {
+        if self.__similarity is not None:
+            self.__measure_components = {
                 "alpha": (1, self.subcommunity_similarity),
                 "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
                 "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
@@ -182,8 +179,9 @@ class Metacommunity:
                     self.metacommunity_similarity,
                     self.normalized_subcommunity_similarity,
                 ),
-            },
-            "insensitive": {
+            }
+        else:
+            self.__measure_components = {
                 "alpha": (1, self.__abundance.subcommunity_abundance),
                 "rho": (
                     self.__abundance.metacommunity_abundance,
@@ -206,65 +204,58 @@ class Metacommunity:
                     self.__abundance.metacommunity_abundance,
                     self.__abundance.normalized_subcommunity_abundance,
                 ),
-            },
-        }
+            }
 
-    @cache
+    @abstractmethod
     def metacommunity_similarity(self):
         """Sums of similarities weighted by metacommunity abundances."""
-        return self.__similarity.calculate_weighted_similarities(
-            self.__abundance.metacommunity_abundance
-        )
+        pass
 
-    @cache
+    @abstractmethod
     def subcommunity_similarity(self):
         """Sums of similarities weighted by subcommunity abundances."""
-        return self.__similarity.calculate_weighted_similarities(
-            self.__abundance.subcommunity_abundance
-        )
+        pass
 
-    @cache
+    @abstractmethod
     def normalized_subcommunity_similarity(self):
         """Sums of similarities weighted by the normalized subcommunity abundances."""
-        return self.__similarity.calculate_weighted_similarities(
-            self.__abundance.normalized_subcommunity_abundance
-        )
+        pass
 
     @cache
-    def subcommunity_measure(self, viewpoint, measure, similarity="sensitive"):
+    def subcommunity_diversity(self, viewpoint, measure):
         """Calculates subcommunity diversity measures."""
-        numerator, denominator = self.__measure_components[similarity][measure]
+        numerator, denominator = self.__measure_components[measure]
         if callable(numerator):
             numerator = numerator()
         denominator = denominator()
-        numerator, denominator = map(extract_data_if_shared, (numerator, denominator))
         if measure == "gamma":
             denominator = broadcast_to(
                 denominator,
-                extract_data_if_shared(self.__abundance.subcommunity_abundance).shape,
+                self.__abundance.normalized_subcommunity_abundance().shape,
             )
         community_ratio = divide(
             numerator, denominator, out=zeros(denominator.shape), where=denominator != 0
         )
         result = power_mean(
             1 - viewpoint,
-            extract_data_if_shared(self.__abundance.normalized_subcommunity_abundance),
+            self.__abundance.normalized_subcommunity_abundance(),
             community_ratio,
         )
         if measure in ["beta", "normalized_beta"]:
             return 1 / result
         return result
 
-    def metacommunity_measure(self, viewpoint, measure, similarity="sensitive"):
+    @cache
+    def metacommunity_diversity(self, viewpoint, measure):
         """Calculates metcommunity diversity measures."""
-        subcommunity_measure = self.subcommunity_measure(viewpoint, measure, similarity)
+        subcommunity_diversity = self.subcommunity_diversity(viewpoint, measure)
         return power_mean(
             1 - viewpoint,
-            extract_data_if_shared(self.__abundance.subcommunity_normalizing_constants),
-            subcommunity_measure,
+            self.__abundance.subcommunity_normalizing_constants(),
+            subcommunity_diversity,
         )
 
-    def subcommunities_to_dataframe(self, viewpoint, similarity="sensitive"):
+    def subcommunities_to_dataframe(self, viewpoint):
         """Table containing all subcommunity diversity values.
 
         Parameters
@@ -277,15 +268,15 @@ class Metacommunity:
         """
         df = DataFrame(
             {
-                key: self.subcommunity_measure(viewpoint, key, similarity)
-                for key in self.__measure_components["sensitve"].keys()
+                key: self.subcommunity_diversity(viewpoint, key)
+                for key in self.__measure_components.keys()
             }
         )
         df.insert(0, "viewpoint", viewpoint)
         df.insert(0, "community", self.__abundance.subcommunity_order)
         return df
 
-    def metacommunity_to_dataframe(self, viewpoint, similarity="sensitive"):
+    def metacommunity_to_dataframe(self, viewpoint):
         """Table containing all metacommunity diversity values.
 
         Parameters
@@ -294,13 +285,63 @@ class Metacommunity:
             Non-negative number. Can be interpreted as the degree of
             ignorance towards rare species, where 0 treats rare species
             the same as frequent species, and infinity considers only the
-            most frequent species."""
+            most frequent species.
+        """
         df = DataFrame(
             {
-                key: self.metacommunity_measure(viewpoint, key, similarity)
-                for key in self.__measure_components["sensitve"].keys()
-            }
+                key: self.metacommunity_diversity(viewpoint, key)
+                for key in self.__measure_components.keys()
+            },
+            index=["metacommunity"],
         )
         df.insert(0, "viewpoint", viewpoint)
-        df.insert(0, "community", "metacommunity")
         return df
+
+
+class Metacommunity(IMetacommunity):
+    """Implements IMetacommunity for fast but memory heavy calculations."""
+
+    @cache
+    def metacommunity_similarity(self):
+        return self.__similarity.calculate_weighted_similarities(
+            self.__abundance.metacommunity_abundance()
+        )
+
+    @cache
+    def subcommunity_similarity(self):
+        return self.__similarity.calculate_weighted_similarities(
+            self.__abundance.subcommunity_abundance()
+        )
+
+    @cache
+    def normalized_subcommunity_similarity(self):
+        return self.__similarity.calculate_weighted_similarities(
+            self.__abundance.normalized_subcommunity_abundance()
+        )
+
+
+class SharedMetacommunity(IMetacommunity):
+    """Implements IAbundance using shared memory.
+
+    Caches only one of weighted subcommunity similarities and normalized
+    weighted subcommunity similarities at a time. Weighted similarities
+    are stored in shared arrays, which can be passed to other processors
+    without copying.
+    """
+
+    def __init__(self, shared_memory_manager, abundance, similarity=None):
+        """Initializes object.
+
+        Parameters
+        ----------
+        shared_memory_manager: diversity.shared.SharedMemoryManager
+            Active manager for obtaining shared arrays.
+        similarity: diversity.similarity.ISimilarity
+            Object for calculating abundance-weighted similarities.
+        abundance: diversity.abundance.IAbundance
+            Object whose (sub-/meta-)community species abundances are
+            used.
+        """
+        super().__init__(abundance=abundance, similarity=similarity)
+        self.__storing_normalized_similarities = False
+        self.__shared_similarities = None
