@@ -589,7 +589,8 @@ def make_metacommunity(
     if similarity_matrix is not None:
         similarity = make_similarity(similarity_matrix, species_subset, chunk_size)
         arguements = (abundance, similarity)
-    arguements = (abundance,)
+    else:
+        arguements = (abundance,)
     return Metacommunity(*arguements)
 
 
