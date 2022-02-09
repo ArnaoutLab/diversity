@@ -151,74 +151,9 @@ def make_pairwise_metacommunities(
 class IMetacommunity(ABC):
     """Interface for metacommunities and calculating their diversity."""
 
-    def __init__(self, abundance, similarity=None):
-        """Initializes object.
-
-        Parameters
-        ----------
-        similarity: diversity.similarity.ISimilarity
-            Object for calculating abundance-weighted similarities.
-        abundance: diversity.abundance.IAbundance
-            Object whose (sub-/meta-)community species abundances are
-            used.
-        """
-        self.__similarity = similarity
+    @abstractmethod
+    def __init__(self, abundance):
         self.__abundance = abundance
-        if self.__similarity is not None:
-            self.__measure_components = {
-                "alpha": (1, self.subcommunity_similarity),
-                "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
-                "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
-                "gamma": (1, self.metacommunity_similarity),
-                "normalized_alpha": (1, self.normalized_subcommunity_similarity),
-                "normalized_rho": (
-                    self.metacommunity_similarity,
-                    self.normalized_subcommunity_similarity,
-                ),
-                "normalized_beta": (
-                    self.metacommunity_similarity,
-                    self.normalized_subcommunity_similarity,
-                ),
-            }
-        else:
-            self.__measure_components = {
-                "alpha": (1, self.__abundance.subcommunity_abundance),
-                "rho": (
-                    self.__abundance.metacommunity_abundance,
-                    self.__abundance.subcommunity_abundance,
-                ),
-                "beta": (
-                    self.__abundance.metacommunity_abundance,
-                    self.__abundance.subcommunity_abundance,
-                ),
-                "gamma": (1, self.__abundance.metacommunity_abundance),
-                "normalized_alpha": (
-                    1,
-                    self.__abundance.normalized_subcommunity_abundance,
-                ),
-                "normalized_rho": (
-                    self.__abundance.metacommunity_abundance,
-                    self.__abundance.normalized_subcommunity_abundance,
-                ),
-                "normalized_beta": (
-                    self.__abundance.metacommunity_abundance,
-                    self.__abundance.normalized_subcommunity_abundance,
-                ),
-            }
-
-    @abstractmethod
-    def metacommunity_similarity(self):
-        """Sums of similarities weighted by metacommunity abundances."""
-        pass
-
-    @abstractmethod
-    def subcommunity_similarity(self):
-        """Sums of similarities weighted by subcommunity abundances."""
-        pass
-
-    @abstractmethod
-    def normalized_subcommunity_similarity(self):
-        """Sums of similarities weighted by the normalized subcommunity abundances."""
         pass
 
     @cache
@@ -298,8 +233,95 @@ class IMetacommunity(ABC):
         return df
 
 
-class Metacommunity(IMetacommunity):
-    """Implements IMetacommunity for fast but memory heavy calculations."""
+class ISimilaritySensitiveMetacommunity(IMetacommunity):
+    """Interface for calculating similarity-sensitive diversity."""
+
+    @abstractmethod
+    def metacommunity_similarity(self):
+        """Sums of similarities weighted by metacommunity abundances."""
+        pass
+
+    @abstractmethod
+    def subcommunity_similarity(self):
+        """Sums of similarities weighted by subcommunity abundances."""
+        pass
+
+    @abstractmethod
+    def normalized_subcommunity_similarity(self):
+        """Sums of similarities weighted by the normalized subcommunity abundances."""
+        pass
+
+
+class SimilarityInsensitiveMetacommunity(IMetacommunity):
+    """Implements IMetacommunity for similarity-insensitive diversity."""
+
+    def __init__(self, abundance):
+        """Initializes object.
+
+        Parameters
+        ----------
+        abundance: diversity.abundance.IAbundance
+            Object whose (sub-/meta-)community species abundances are
+            used.
+        """
+        super().__init__(abundance)
+        self.__measure_components = {
+            "alpha": (1, self.__abundance.subcommunity_abundance),
+            "rho": (
+                self.__abundance.metacommunity_abundance,
+                self.__abundance.subcommunity_abundance,
+            ),
+            "beta": (
+                self.__abundance.metacommunity_abundance,
+                self.__abundance.subcommunity_abundance,
+            ),
+            "gamma": (1, self.__abundance.metacommunity_abundance),
+            "normalized_alpha": (
+                1,
+                self.__abundance.normalized_subcommunity_abundance,
+            ),
+            "normalized_rho": (
+                self.__abundance.metacommunity_abundance,
+                self.__abundance.normalized_subcommunity_abundance,
+            ),
+            "normalized_beta": (
+                self.__abundance.metacommunity_abundance,
+                self.__abundance.normalized_subcommunity_abundance,
+            ),
+        }
+
+
+class SimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
+    """Implements ISimilaritySensitiveMetacommunity for fast but memory heavy calculations."""
+
+    def __init__(self, abundance, similarity):
+        """Initializes object.
+
+        Parameters
+        ----------
+        abundance: diversity.abundance.IAbundance
+            Object whose (sub-/meta-)community species abundances are
+            used.
+        similarity: diversity.similarity.ISimilarity
+            Object for calculating abundance-weighted similarities.
+        """
+        super().__init__(abundance)
+        self.__similarity = similarity
+        self.__measure_components = {
+            "alpha": (1, self.subcommunity_similarity),
+            "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
+            "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
+            "gamma": (1, self.metacommunity_similarity),
+            "normalized_alpha": (1, self.normalized_subcommunity_similarity),
+            "normalized_rho": (
+                self.metacommunity_similarity,
+                self.normalized_subcommunity_similarity,
+            ),
+            "normalized_beta": (
+                self.metacommunity_similarity,
+                self.normalized_subcommunity_similarity,
+            ),
+        }
 
     @cache
     def metacommunity_similarity(self):
