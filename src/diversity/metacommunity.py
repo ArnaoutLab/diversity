@@ -28,13 +28,14 @@ from diversity.utilities import (
     subset_by_column,
 )
 
-
 def make_metacommunity(
     counts,
     similarity_method,
     subcommunities=None,
+    shared_abundance=False,
     chunk_size=1,
     features_filepath=None,
+    shared_array_manager=None,
     num_processors=None,
     subcommunity_column="subcommunity",
     species_column="species",
@@ -154,11 +155,28 @@ class IMetacommunity(ABC):
     @abstractmethod
     def __init__(self, abundance):
         self.__abundance = abundance
-        pass
+        self.__measure_components = None
 
     @cache
     def subcommunity_diversity(self, viewpoint, measure):
-        """Calculates subcommunity diversity measures."""
+        """Calculates subcommunity diversity measures.
+
+        Parameters
+        ----------
+        viewpoint: numeric
+            Viewpoint parameter for diversity measure.
+        measure: str
+            Name of the diversity measure.
+
+        Returns
+        -------
+        A numpy array with a diversity value per subcommunity.
+
+        Notes
+        -----
+        Valid measure identifiers are: "alpha", "rho", "beta", "gamma",
+        "normalized_alpha", "normalized_rho", and "normalized_beta".
+        """
         numerator, denominator = self.__measure_components[measure]
         if callable(numerator):
             numerator = numerator()
@@ -173,7 +191,7 @@ class IMetacommunity(ABC):
         )
         result = power_mean(
             1 - viewpoint,
-            self.__abundance.normalized_subcommunity_abundance(),
+            self.__abundance.normalized_subcommunity_abundance()
             community_ratio,
         )
         if measure in ["beta", "normalized_beta"]:
@@ -186,7 +204,7 @@ class IMetacommunity(ABC):
         subcommunity_diversity = self.subcommunity_diversity(viewpoint, measure)
         return power_mean(
             1 - viewpoint,
-            self.__abundance.subcommunity_normalizing_constants(),
+            self.__abundance.subcommunity_normalizing_constants()
             subcommunity_diversity,
         )
 
@@ -235,6 +253,35 @@ class IMetacommunity(ABC):
 
 class ISimilaritySensitiveMetacommunity(IMetacommunity):
     """Interface for calculating similarity-sensitive diversity."""
+
+    def __init__(self, abundance, similarity):
+        """Initializes object.
+
+        Parameters
+        ----------
+        abundance: diversity.abundance.IAbundance
+            Object whose (sub-/meta-)community species abundances are
+            used.
+        similarity: diversity.similarity.ISimilarity
+            Object for calculating abundance-weighted similarities.
+        """
+        super().__init__(abundance)
+        self.__similarity = similarity
+        self.__measure_components = {
+            "alpha": (1, self.subcommunity_similarity),
+            "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
+            "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
+            "gamma": (1, self.metacommunity_similarity),
+            "normalized_alpha": (1, self.normalized_subcommunity_similarity),
+            "normalized_rho": (
+                self.metacommunity_similarity,
+                self.normalized_subcommunity_similarity,
+            ),
+            "normalized_beta": (
+                self.metacommunity_similarity,
+                self.normalized_subcommunity_similarity,
+            ),
+        }
 
     @abstractmethod
     def metacommunity_similarity(self):
@@ -294,35 +341,6 @@ class SimilarityInsensitiveMetacommunity(IMetacommunity):
 class SimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
     """Implements ISimilaritySensitiveMetacommunity for fast but memory heavy calculations."""
 
-    def __init__(self, abundance, similarity):
-        """Initializes object.
-
-        Parameters
-        ----------
-        abundance: diversity.abundance.IAbundance
-            Object whose (sub-/meta-)community species abundances are
-            used.
-        similarity: diversity.similarity.ISimilarity
-            Object for calculating abundance-weighted similarities.
-        """
-        super().__init__(abundance)
-        self.__similarity = similarity
-        self.__measure_components = {
-            "alpha": (1, self.subcommunity_similarity),
-            "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
-            "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
-            "gamma": (1, self.metacommunity_similarity),
-            "normalized_alpha": (1, self.normalized_subcommunity_similarity),
-            "normalized_rho": (
-                self.metacommunity_similarity,
-                self.normalized_subcommunity_similarity,
-            ),
-            "normalized_beta": (
-                self.metacommunity_similarity,
-                self.normalized_subcommunity_similarity,
-            ),
-        }
-
     @cache
     def metacommunity_similarity(self):
         return self.__similarity.calculate_weighted_similarities(
@@ -341,29 +359,75 @@ class SimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
             self.__abundance.normalized_subcommunity_abundance()
         )
 
-
-class SharedMetacommunity(IMetacommunity):
-    """Implements IAbundance using shared memory.
+class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
+    """Implements ISimilaritySensitiveMetacommunity using shared memory.
 
     Caches only one of weighted subcommunity similarities and normalized
-    weighted subcommunity similarities at a time. Weighted similarities
+    weighted subcommunity similarities at a time. All weighted similarities
     are stored in shared arrays, which can be passed to other processors
     without copying.
     """
 
-    def __init__(self, shared_memory_manager, abundance, similarity=None):
+    def __init__(self, abundance, similarity, shared_array_manager):
         """Initializes object.
 
         Parameters
         ----------
+        abundance, similarity
+            See diversity.metacommunity.ISimilaritySensitiveMetacommunity.
         shared_memory_manager: diversity.shared.SharedMemoryManager
             Active manager for obtaining shared arrays.
-        similarity: diversity.similarity.ISimilarity
-            Object for calculating abundance-weighted similarities.
-        abundance: diversity.abundance.IAbundance
-            Object whose (sub-/meta-)community species abundances are
-            used.
+
+        Notes
+        -----
+        - Object will break once shared_array_manager becomes inactive.
+        - If a diversity.similarity.SimilarityFromFunction object is
+          chosen as argument for simlarity, it must be paired with
+          diversity.abundance.SharedAbundance object as argument for
+          abundance.
         """
         super().__init__(abundance=abundance, similarity=similarity)
+        self.__storing_normalized_similarities = None
+        self.__shared_array_manager = shared_array_manager
+        self.__shared_similarity = self.__shared_array_manager.empty(
+            shape=self.__abundance.subcommunity_abundance().shape,
+            data_type=self.__abundance.subcommunity_abundance().dtype,
+        )
+        self.__metacommunity_similarity = None
+
+
+    def metacommunity_similarity(self):
+        self.__metacommunity_similarity is None:
+            self.__metacommunity_similarity = self.__shared_array_manager.empty(
+                shape=self.__abundance.metacommunity_abundance().shape,
+                dtype=self.__abundance.metacommunity_abundance().dtype,
+            )
+            self.__similarity.calculate_weighted_similarities(
+                self.__abundance.metacommunity_abundance(),
+                out=self.__metacommunity_similarity
+            )
+        return self.__metacommunity_similarity.data
+
+    @cache
+    def subcommunity_similarity(self):
+        if self.__storing_normalized_similarities is None:
+            self.__similarity.calculate_weighted_similarities(
+                self.__abundance.subcommunity_abundance(),
+                out=self.__shared_similarity
+            )
+        elif self.__storing_normalized_similarities:
+            self.__shared_similarity.data *= self.__abundance.subcommunity_normalizing_constants()
         self.__storing_normalized_similarities = False
-        self.__shared_similarities = None
+        return self.__shared_similarity.data
+
+    @cache
+    def normalized_subcommunity_similarity(self):
+        if self.__storing_normalized_similarities is None:
+            self.__similarity.calculate_weighted_similarities(
+                self.__abundance.normalized_subcommunity_abundance(),
+                out=self.__shared_similarity
+            )
+        elif not self.__storing_normalized_similarities:
+            self.__shared_similarity.data /= self.__abundance.subcommunity_normalizing_constants()
+        self.__storing_normalized_similarities = True
+        return self.__shared_similarity.data

@@ -29,12 +29,9 @@ from diversity.log import LOGGER
 from diversity.exceptions import LogicError
 
 
-def extract_data_if_shared(arr):
-    """Returns .data attribute of a SharedArrayView, and arr otherwise."""
-    if isinstance(arr, SharedArrayView):
-        return arr.data
-    else:
-        return arr
+def extract_data_if_shared(*args):
+    """Returns .data attribute of a SharedArrayView, and arg otherwise."""
+    return (arg.data if isinstance(arg, SharedArrayView) else arg for arg in args)
 
 
 class LoadSharedArray(AbstractContextManager):
@@ -95,10 +92,10 @@ class SharedArrayManager(AbstractContextManager):
             shared_memory.unlink()
         self.__shared_data = None
 
-    def __assert_active(self):
+    def assert_active(self):
         LOGGER.debug("SharedArrayManager.__assert_active()")
         if self.__shared_memory_blocks is None:
-            raise LogicError("Resource allocation using inactive object.")
+            raise LogicError("SharedArrayManager object is inactive.")
 
     def empty(self, shape, data_type):
         """Allocates shared memory block for a numpy.ndarray.
@@ -118,7 +115,7 @@ class SharedArrayManager(AbstractContextManager):
         LOGGER.debug(
             "SharedArrayManager.empty(shape=%s, data_type=%s)", shape, data_type
         )
-        self.__assert_active()
+        self.assert_active()
         itemsize = dtype(data_type).itemsize
         size = prod([*shape, itemsize])
         shared_memory = SharedMemory(create=True, size=size)

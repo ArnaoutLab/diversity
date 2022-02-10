@@ -37,6 +37,7 @@ from numpy import (
 
 from diversity.exceptions import ArgumentWarning, InvalidArgumentError
 from diversity.log import LOGGER
+from diversity.shared import extract_data_if_shared
 
 
 def get_file_delimiter(filepath):
@@ -122,6 +123,7 @@ def pivot_table(
     value_columns,
     pivot_ordering=None,
     index_ordering=None,
+    out=None,
 ):
     """Converts long to wide formatted data.
 
@@ -148,6 +150,8 @@ def pivot_table(
     index_ordering: Iterable
         Unique values of index column in desired order to determine
         ordering of resulting index. If None, values are sorted.
+    out: numpy.ndarray or diversity.shared.SharedArrayView
+        Array of target shape in which to store result.
 
     Returns
     -------
@@ -165,13 +169,15 @@ def pivot_table(
         ['bar-a', 'bar-b', 'bar-c', 'foo-a', 'foo-b', 'foo-c']
     """
     LOGGER.debug(
-        "pivot_table(%s, %s, %s, %s, pivot_ordering=%s, index_ordering=%s)",
+        "pivot_table(data_frame=%s, pivot_column=%s, index_column=%s,"
+        " value_columns=%s, pivot_ordering=%s, index_ordering=%s, out=%s)",
         data_frame,
         pivot_column,
         index_column,
         value_columns,
         pivot_ordering,
         index_ordering,
+        out,
     )
     index_ordering_, index_positions = unique_correspondence(
         items=data_frame[index_column].to_numpy(),
@@ -181,17 +187,24 @@ def pivot_table(
         items=data_frame[pivot_column].to_numpy(),
         ordered_unique_items=pivot_ordering,
     )
-    table = zeros(
-        (len(index_ordering_), len(pivot_ordering_) * len(value_columns)),
-        dtype=dtype("f8"),
-    )
+    if out is None:
+        out_ = zeros(
+            (len(index_ordering_), len(pivot_ordering_) * len(value_columns)),
+            dtype=dtype("f8"),
+        )
+    else:
+        out_ = extract_data_if_shared(out)
+        out_[:] = zeros(
+            (len(index_ordering_), len(pivot_ordering_) * len(value_columns)),
+            dtype=dtype("f8"),
+        )
     for i, j, values in zip(
         index_positions,
         len(value_columns) * pivot_positions,
         data_frame[value_columns].to_numpy(),
     ):
-        table[i, j : j + len(value_columns)] = values
-    return table
+        out_[i, j : j + len(value_columns)] = values
+    return out_
 
 
 def __validate_power_mean_args(weights, items, atol, weight_is_nonzero):

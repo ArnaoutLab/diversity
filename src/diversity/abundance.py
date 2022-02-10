@@ -18,9 +18,13 @@ make_abundance
 from abc import ABC, abstractmethod
 from functools import cache
 
-from numpy import dtype, empty
+from numpy import dtype, empty, ndarray
+from pandas import read_csv
 
+from diversity.exceptions import InvalidArgumentError
 from diversity.log import LOGGER
+from diversity.shared import SharedArrayManager, SharedArrayView
+from diversity.utilities import get_file_delimiter
 
 
 class IAbundance(ABC):
@@ -87,6 +91,54 @@ class IAbundance(ABC):
         pass
 
 
+def make_abundance(counts, shared_array_manager=None):
+    """Initializes a concrete subclass of IAbundance.
+
+    Parameters
+    ----------
+    counts: numpy.ndarray or diversity.shared.SharedArrayView
+        If numpy.ndarray, see diversity.abundance.Abundance.
+        If diversity.shared.SharedArrayView, see
+        diversity.abundance.SharedAbundance.
+    shared_array_manager: diversity.shared.SharedArrayManager
+        See diversity.abundance.SharedAbundance. Only relevant if a
+        shared array is passed as argument for counts.
+
+    Returns
+    -------
+    An instance of a concrete subclass of IAbundance.
+
+    Notes
+    -----
+    Valid parameter combinations are:
+    - counts: numpy.ndarray
+      shared_array_manager: Any
+    - counts: diversity.shared.SharedArrayView
+      shared_array_manager: diversity.shared.SharedArrayManager
+    """
+    LOGGER.debug(
+        "make_abundance(counts=%s, shared_array_manager=%s)",
+        counts,
+        shared_array_manager,
+    )
+    if isinstance(counts, ndarray):
+        abundance = Abundance(counts=counts)
+    elif isinstance(counts, SharedArrayView) and isinstance(
+        shared_array_manager, SharedArrayManager
+    ):
+        abundance = SharedAbundance(
+            counts=counts, shared_array_manager=shared_array_manager
+        )
+    else:
+        raise InvalidArgumentError(
+            "Invalid argument types for make_abundance; counts: %s,"
+            " shared_array_manager: %s",
+            type(counts),
+            type(shared_array_manager),
+        )
+    return abundance
+
+
 class Abundance(IAbundance):
     """Implements IAbundance for fast, but memory-heavy calculations.
 
@@ -149,8 +201,17 @@ class SharedAbundance(IAbundance):
             floats.
         shared_array_manager: diversity.shared.SharedArrayManager
             An active manager for creating shared arrays.
+
+        Notes
+        -----
+        Object will break once shared_array_manager or counts become
+        inactive.
         """
-        LOGGER.debug("SharedAbundance(counts=%s)", counts)
+        LOGGER.debug(
+            "SharedAbundance(counts=%s, shared_array_manager=%s)",
+            counts,
+            shared_array_manager,
+        )
         self.__shared_data = counts
         self.__shared_data.data /= self.__shared_data.data.sum()
         self.__storing_normalized_abundances = False
@@ -168,10 +229,19 @@ class SharedAbundance(IAbundance):
         if self.__storing_normalized_abundances:
             self.__shared_data.data *= self.__subcommunity_normalizing_constants
         self.__storing_normalized_abundances = False
+        return self.__shared_data.data
+
+    def shared_subcommunity_abundance(self):
+        """Returns diversity.shared.SharedArrayView of subcommunity abundances."""
+        self.subcommunity_abundance()
         return self.__shared_data
 
     def metacommunity_abundance(self):
         """Same as in diversity.metacommunity.IAbundance, except a shared array is returned."""
+        return self.__metacommunity_abundance.data
+
+    def shared_metacommunity_abundance(self):
+        """Returns diversity.shared.SharedView of metacommunity abundances."""
         return self.__metacommunity_abundance
 
     def subcommunity_normalizing_constants(self):
@@ -182,4 +252,9 @@ class SharedAbundance(IAbundance):
         if not self.__storing_normalized_abundances:
             self.__shared_data.data /= self.__subcommunity_normalizing_constants
         self.__storing_normalized_abundances = True
+        return self.__shared_data.data
+
+    def shared_normalized_subcommunity_abundance(self):
+        """Returns diversity.shared.SharedArrayView of normalized subcommunity abundances."""
+        self.normalized_subcommunity_abundance()
         return self.__shared_data
