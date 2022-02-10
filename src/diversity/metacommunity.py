@@ -28,15 +28,51 @@ from diversity.utilities import (
     subset_by_column,
 )
 
+
 def make_metacommunity(
+    counts,
+    subcommunities,
+    similarity_method=None,
+    subcommunity_column="subcommunity",
+    species_column="species",
+    count_column="count",
+    metacommunity_kwargs={},
+    abundance_kwargs={},
+    similarity_kwargs={}
+):
+    """Initializes a concrete subclass of IMetacommunity.
+
+    Parameters
+    ----------
+    counts: pandas.DataFrame, or str
+        Table with 3 columns: one column lists subcommunity identifiers,
+        one lists species identifiers, and the last lists counts of
+        species in corresponding subcommunities. Subcommunity-species
+        identifier pairs are assumed to be unique. Column headers are
+        specified by the subcommunity_column, species_column, and
+        count_column arguments.
+    subcommunities: collection of str objects supporting membership test
+        Names of subcommunities to include. Their union is the
+        metacommunity, and data for all other subcommunities is ignored.
+    similarity_method: pandas.DataFrame, str, or Callable
+        For similarity-sensitive diversity measures. Passed to
+        diversity.similarity.make_similarity along with
+        similarity_kwargs.
+    subcommunity_column, species_column, count_column: str
+        Column headers for subcommunity names, species names and
+        corresponding counts in counts table.
+    """
+    pass
+
+
+    # metacommunity_kwargs={shared_array_manager},
+    # similarity_kwargs={'chunk_size', features_filepath, shared_array_manager, num_processors},
+    # abundance_kwargs={shared_array_manager}
+
+def make_metacommunity_(
     counts,
     similarity_method,
     subcommunities=None,
-    shared_abundance=False,
-    chunk_size=1,
-    features_filepath=None,
-    shared_array_manager=None,
-    num_processors=None,
     subcommunity_column="subcommunity",
     species_column="species",
     count_column="count",

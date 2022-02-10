@@ -132,13 +132,13 @@ def make_similarity(
     """
     LOGGER.debug(
         "make_similarity(similarity_method=%s, species_subset=%s,"
-        " chunk_size=%s, features_filepath=%s, species_ordering=%s,"
+        " chunk_size=%s, features_filepath=%s, species_column=%s,"
         " shared_array_manager=%s, num_processors=%s)",
         similarity_method,
         species_subset,
         chunk_size,
         features_filepath,
-        species_ordering,
+        species_column,
         shared_array_manager,
         num_processors,
     )
