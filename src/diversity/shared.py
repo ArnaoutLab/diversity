@@ -16,8 +16,6 @@ Functions
 extract_data_if_shared
     Returns data of shared array as numpy array.
 """
-from abc import ABC, abstractmethod
-
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from math import prod
@@ -31,7 +29,12 @@ from diversity.exceptions import LogicError
 
 def extract_data_if_shared(*args):
     """Returns .data attribute of a SharedArrayView, and arg otherwise."""
-    return (arg.data if isinstance(arg, SharedArrayView) else arg for arg in args)
+    if len(args) > 1:
+        return tuple(
+            arg.data if isinstance(arg, SharedArrayView) else arg for arg in args
+        )
+    else:
+        return args[0].data if isinstance(args[0], SharedArrayView) else args[0]
 
 
 class LoadSharedArray(AbstractContextManager):

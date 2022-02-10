@@ -15,6 +15,7 @@ make_metacommunity
 
 from abc import ABC, abstractmethod
 from functools import cache
+from itertools import combinations
 
 from pandas import DataFrame, concat, unique
 from numpy import zeros, broadcast_to, divide
@@ -36,9 +37,9 @@ def make_metacommunity(
     subcommunity_column="subcommunity",
     species_column="species",
     count_column="count",
-    metacommunity_kwargs={},
+    shared_array_manager=None,
     abundance_kwargs={},
-    similarity_kwargs={}
+    similarity_kwargs={},
 ):
     """Initializes a concrete subclass of IMetacommunity.
 
@@ -50,127 +51,142 @@ def make_metacommunity(
         species in corresponding subcommunities. Subcommunity-species
         identifier pairs are assumed to be unique. Column headers are
         specified by the subcommunity_column, species_column, and
-        count_column arguments.
+        count_column arguments. Its data is passed to
+        diversity.abundance.make_abundance along with abundance_kwargs.
     subcommunities: collection of str objects supporting membership test
         Names of subcommunities to include. Their union is the
         metacommunity, and data for all other subcommunities is ignored.
     similarity_method: pandas.DataFrame, str, or Callable
         For similarity-sensitive diversity measures. Passed to
         diversity.similarity.make_similarity along with
-        similarity_kwargs.
+        similarity_kwargs and a species_subset argument determined by
+        subcommunities.
     subcommunity_column, species_column, count_column: str
         Column headers for subcommunity names, species names and
         corresponding counts in counts table.
-    """
-    pass
-
-
-    # metacommunity_kwargs={shared_array_manager},
-    # similarity_kwargs={'chunk_size', features_filepath, shared_array_manager, num_processors},
-    # abundance_kwargs={shared_array_manager}
-
-def make_metacommunity_(
-    counts,
-    similarity_method,
-    subcommunities=None,
-    subcommunity_column="subcommunity",
-    species_column="species",
-    count_column="count",
-):
-    """Builds a Metacommunity object from specified parameters.
-
-    Depending on the chosen counts argument, the subcommunity and
-    normalized subcommunity relative abundances are either
-    simultaneously stored in memory for memory-heavy but fast
-    computations (when using a pandas.DataFrame), or stored one at a
-    time in a shared memory block for large data sets (when providing a
-    filepath).
-
-    The similarity_method parameter value determines whether:
-        1. An in-memory similarity matrix is used, or
-        2. Similarities are read from a file, or
-        3. Similarities are computed on the fly without storing the
-           entire species similarity matrix in memory or on disk.
-
-    Parameters
-    ----------
-    counts: pandas.DataFrame, or str
-        Table or path to file containing table with 3 columns: one
-        column lists subcommunity identifiers, one lists species
-        identifiers, and the last lists counts of species in
-        corresponding subcommunities. Subcommunity-species identifier
-        pairs are assumed to be unique. If using Callable as
-        similarity_method, this must be a filepath. Both file and data
-        frame are assumed to have column headers as specified by the
-        subcommunity_column, species_column, and count_column arguments.
-    similarity_method: pandas.DataFrame, str, or Callable
-        For in-memory data frame, see diversity.similarity.SimilarityFromMemory,
-        for str filepath to similarity matrix, see
-        diversity.similarity.SimilarityFromFile, and for callable which
-        calculates similarities on the fly,
-        see diversity.similarity.SimilarityFromFunction.
-    subcommunities: collection of str objects supporting membership test
-        Names of subcommunities to include. Their union is the
-        metacommunity, and data for all other subcommunities is ignored.
-    chunk_size: int
-        See diversity.similarity.SimilarityFromFile. Only
-        relevant when using in-file similarity matrix (str filepath as
-        similarity_method).
-    features_filepath: str
-        Path to .tsv, or .csv file containing species features. Assumed
-        to have a header row, with species identifiers in a column with
-        header species_column. All other columns are assumed to be
-        features. This parameter is only relevant when similarities are
-        computed on the fly (when a Callable is used as the
-        similarity_method argument).
-    num_processors: int
-        See diversity.similarity.SimilarityFromFunction. Only relevant
-        when calculating similarities on the fly (when a Callable is
-        used as the similarity_method argument).
-    subcommunity_column, species_column, count_column: str
-        Used to specify non-default column headers in counts table.
+    shared_array_manager: diversity.shared.SharedArrayManager
+        See diversity.metacommunity.SharedSimilaritySensitiveMetacommunity.
+    abundance_kwargs: dict[str, Any]
+        Additional keyword arguments for diversity.abundance.make_abundance.
+    similarity_kwargs: dict[str, Any]
+        Additional keyword arguments for diversity.similarity.make_similarity.
 
     Returns
     -------
-    A diversity.metacommunity.Metacommunity object built according to
-    parameter specification.
+    An instance of a concrete subclass of IMetacommunity.
+
+    Notes
+    -----
+    Valid parameter combinations are:
+    - similarity_method, shared_array_manager: None
+    - similarity_method: diversity.similarity.ISimilarity
+      shared_array_manager: None
+    - similarity_method: diversity.similarity.ISimilarity
+      shared_array_manager: diversity.shared.SharedArrayManager
     """
     LOGGER.debug(
-        "make_metacommunity(counts=%s, similarity_method=%s,"
-        " subcommunities=%s, chunk_size=%s, features_filepath=%s,"
-        " num_processors=%s, subcommunity_column=%s, species_column=%s,"
-        " count_column=%s",
+        "make_metacommunity(counts=%s, subcommunities=%s,"
+        " similarity_method=%s, subcommunity_column=%s, species_column=%s,"
+        " count_column=%s shared_array_manager=%s, abundance_kwargs=%s,"
+        " similarity_kwargs=%s",
         counts,
-        similarity_method,
         subcommunities,
-        chunk_size,
-        features_filepath,
-        num_processors,
+        similarity_method,
         subcommunity_column,
         species_column,
         count_column,
+        shared_array_manager,
+        abundance_kwargs,
+        similarity_kwargs,
     )
-
     counts_subset = subset_by_column(counts, subcommunities, subcommunity_column)
     species_subset = unique(counts_subset[species_column])
-    similarity = make_similarity(similarity_matrix, species_subset, chunk_size)
-    abundance = Abundance(
-        pivot_table(
-            data_frame=counts_subset,
-            pivot_column=subcommunity_column,
-            index_column=species_column,
-            value_columns=[count_column],
-            index_ordering=similarity.species_order,
+
+    if similarity_method is None:
+        similarity = None
+        species_ordering = species_subset
+    else:
+        similarity = make_similarity(
+            similarity_method=similarity_method,
+            species_subset=species_subset,
+            **similarity_kwargs,
         )
+        species_ordering = similarity.species_ordering
+
+    if "shared_array_manager" in abundance_kwargs:
+        pivotted_counts = abundance_kwargs["shared_array_manager"].empty(
+            shape=(len(species_subset), len(subcommunities)), dtype=dtype("f8")
+        )
+    else:
+        pivotted_counts = empty(
+            shape=(len(species_subset), len(subcommunities)), dtype=dtype("f8")
+        )
+    subcommunity_ordering = array(subcommunities)
+    pivot_table(
+        data_frame=counts_subset,
+        pivot_column=subcommunity_column,
+        index_column=species_column,
+        value_columns=[count_column],
+        pivot_ordering=subcommunity_ordering,
+        index_ordering=species_ordering,
+        out=pivotted_counts,
     )
-    return Metacommunity(similarity, abundance)
+    abundance = make_abundance(counts=pivotted_counts, **abundance_kwargs)
+
+    if similarity is None and shared_array_manager is None:
+        metacommunity = SimilarityInsensitiveMetacommunity(
+            abundance=abundance, subcommunity_ordering=subcommunity_ordering
+        )
+    elif isinstance(similarity, ISimilarity) and shared_array_manager is None:
+        metacommunity = SimilaritySensitiveMetacommunity(
+            abundance=abundance,
+            subcommunity_ordering=subcommunity_ordering,
+            similarity=similarity,
+        )
+    elif isinstance(similarity, ISimilarity) and isinstance(
+        shared_array_manager, SharedArrayManager
+    ):
+        metacommunity = SharedSimilaritySensitiveMetacommunity(
+            abundance=abundance,
+            subcommunity_ordering=subcommunity_ordering,
+            similarity=similarity,
+            shared_array_manager=shared_array_manager,
+        )
+    else:
+        raise InvalidArgumentError(
+            "Invalid arguments: counts=%s, subcommunities=%s,"
+            " similarity_method=%s, subcommunity_column=%s, species_column=%s,"
+            " count_column=%s shared_array_manager=%s, abundance_kwargs=%s,"
+            " similarity_kwargs=%s"
+        )
+    return metacommunity
 
 
 def make_pairwise_metacommunities(
-    counts, similarity_matrix, subcommunity_column, **kwargs
+    counts,
+    subcommunity_column="subcommunity",
+    **kwargs,
 ):
+    """List of IMetacommunity instances for all subcommunity pairs.
+
+    Parameters
+    ----------
+    counts, subcommunity_column:
+        See diversity.metacommunity.make_metacommunity.
+    kwargs:
+        Passed along with counts and subcommunity_column to
+        diversity.metacommunity.make_metacommunity. "subcommunities"
+        parameter should not be specified here.
+
+    Returns
+    -------
+
+    """
     subcommunties_groups = counts.groupby(subcommunity_column)
     pairwise_metacommunities = []
+    for (name1, group1), (name2, group2) in combinations(subcommunties_groups):
+        counts = concat([group1, group2])
+        pair = make_metacommunity(counts, subcommunities={name1, name2})
     for i, (_, group_i) in enumerate(subcommunties_groups):
         for j, (_, group_j) in enumerate(subcommunties_groups):
             if j > i:
@@ -189,8 +205,9 @@ class IMetacommunity(ABC):
     """Interface for metacommunities and calculating their diversity."""
 
     @abstractmethod
-    def __init__(self, abundance):
+    def __init__(self, abundance, subcommunity_ordering):
         self.__abundance = abundance
+        self.subcommunity_ordering = subcommunity_ordering
         self.__measure_components = None
 
     @cache
@@ -227,7 +244,7 @@ class IMetacommunity(ABC):
         )
         result = power_mean(
             1 - viewpoint,
-            self.__abundance.normalized_subcommunity_abundance()
+            self.__abundance.normalized_subcommunity_abundance(),
             community_ratio,
         )
         if measure in ["beta", "normalized_beta"]:
@@ -240,7 +257,7 @@ class IMetacommunity(ABC):
         subcommunity_diversity = self.subcommunity_diversity(viewpoint, measure)
         return power_mean(
             1 - viewpoint,
-            self.__abundance.subcommunity_normalizing_constants()
+            self.__abundance.subcommunity_normalizing_constants(),
             subcommunity_diversity,
         )
 
@@ -262,7 +279,7 @@ class IMetacommunity(ABC):
             }
         )
         df.insert(0, "viewpoint", viewpoint)
-        df.insert(0, "community", self.__abundance.subcommunity_order)
+        df.insert(0, "community", self.subcommunity_order)
         return df
 
     def metacommunity_to_dataframe(self, viewpoint):
@@ -290,7 +307,7 @@ class IMetacommunity(ABC):
 class ISimilaritySensitiveMetacommunity(IMetacommunity):
     """Interface for calculating similarity-sensitive diversity."""
 
-    def __init__(self, abundance, similarity):
+    def __init__(self, abundance, subcommunity_ordering, similarity):
         """Initializes object.
 
         Parameters
@@ -298,10 +315,15 @@ class ISimilaritySensitiveMetacommunity(IMetacommunity):
         abundance: diversity.abundance.IAbundance
             Object whose (sub-/meta-)community species abundances are
             used.
+        subcommunity_ordering: numpy.ndarray
+            Ordered subcommunity identifiers. Ordering must correspond
+            to the ordering used by abundance.
         similarity: diversity.similarity.ISimilarity
             Object for calculating abundance-weighted similarities.
         """
-        super().__init__(abundance)
+        super().__init__(
+            abundance=abundance, subcommunity_ordering=subcommunity_ordering
+        )
         self.__similarity = similarity
         self.__measure_components = {
             "alpha": (1, self.subcommunity_similarity),
@@ -338,7 +360,7 @@ class ISimilaritySensitiveMetacommunity(IMetacommunity):
 class SimilarityInsensitiveMetacommunity(IMetacommunity):
     """Implements IMetacommunity for similarity-insensitive diversity."""
 
-    def __init__(self, abundance):
+    def __init__(self, abundance, subcommunity_ordering):
         """Initializes object.
 
         Parameters
@@ -347,7 +369,9 @@ class SimilarityInsensitiveMetacommunity(IMetacommunity):
             Object whose (sub-/meta-)community species abundances are
             used.
         """
-        super().__init__(abundance)
+        super().__init__(
+            abundance=abundance, subcommunity_ordering=subcommunity_ordering
+        )
         self.__measure_components = {
             "alpha": (1, self.__abundance.subcommunity_abundance),
             "rho": (
@@ -395,6 +419,7 @@ class SimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
             self.__abundance.normalized_subcommunity_abundance()
         )
 
+
 class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
     """Implements ISimilaritySensitiveMetacommunity using shared memory.
 
@@ -404,12 +429,14 @@ class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
     without copying.
     """
 
-    def __init__(self, abundance, similarity, shared_array_manager):
+    def __init__(
+        self, abundance, subcommunity_ordering, similarity, shared_array_manager
+    ):
         """Initializes object.
 
         Parameters
         ----------
-        abundance, similarity
+        abundance, subcommunity_ordering, similarity
             See diversity.metacommunity.ISimilaritySensitiveMetacommunity.
         shared_memory_manager: diversity.shared.SharedMemoryManager
             Active manager for obtaining shared arrays.
@@ -422,7 +449,11 @@ class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
           diversity.abundance.SharedAbundance object as argument for
           abundance.
         """
-        super().__init__(abundance=abundance, similarity=similarity)
+        super().__init__(
+            abundance=abundance,
+            subcommunity_ordering=subcommunity_ordering,
+            similarity=similarity,
+        )
         self.__storing_normalized_similarities = None
         self.__shared_array_manager = shared_array_manager
         self.__shared_similarity = self.__shared_array_manager.empty(
@@ -431,16 +462,15 @@ class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
         )
         self.__metacommunity_similarity = None
 
-
     def metacommunity_similarity(self):
-        self.__metacommunity_similarity is None:
+        if self.__metacommunity_similarity is None:
             self.__metacommunity_similarity = self.__shared_array_manager.empty(
                 shape=self.__abundance.metacommunity_abundance().shape,
                 dtype=self.__abundance.metacommunity_abundance().dtype,
             )
             self.__similarity.calculate_weighted_similarities(
                 self.__abundance.metacommunity_abundance(),
-                out=self.__metacommunity_similarity
+                out=self.__metacommunity_similarity,
             )
         return self.__metacommunity_similarity.data
 
@@ -448,11 +478,12 @@ class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
     def subcommunity_similarity(self):
         if self.__storing_normalized_similarities is None:
             self.__similarity.calculate_weighted_similarities(
-                self.__abundance.subcommunity_abundance(),
-                out=self.__shared_similarity
+                self.__abundance.subcommunity_abundance(), out=self.__shared_similarity
             )
         elif self.__storing_normalized_similarities:
-            self.__shared_similarity.data *= self.__abundance.subcommunity_normalizing_constants()
+            self.__shared_similarity.data *= (
+                self.__abundance.subcommunity_normalizing_constants()
+            )
         self.__storing_normalized_similarities = False
         return self.__shared_similarity.data
 
@@ -461,9 +492,11 @@ class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
         if self.__storing_normalized_similarities is None:
             self.__similarity.calculate_weighted_similarities(
                 self.__abundance.normalized_subcommunity_abundance(),
-                out=self.__shared_similarity
+                out=self.__shared_similarity,
             )
         elif not self.__storing_normalized_similarities:
-            self.__shared_similarity.data /= self.__abundance.subcommunity_normalizing_constants()
+            self.__shared_similarity.data /= (
+                self.__abundance.subcommunity_normalizing_constants()
+            )
         self.__storing_normalized_similarities = True
         return self.__shared_similarity.data

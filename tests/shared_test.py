@@ -15,23 +15,82 @@ from diversity.shared import (
 )
 
 EXTRACT_DATA_IF_SHARED_TEST_CASES = [
-    {"description": "list input", "arr": [1, 2, 3], "expect_data_attribute": False},
+    {
+        "description": "list input",
+        "args": ([1, 2, 3],),
+        "expect_data_attribute": False,
+    },
     {
         "description": "array input",
-        "arr": array([[1, 2], [3, 4]]),
+        "args": (array([[1, 2], [3, 4]]),),
         "expect_data_attribute": False,
     },
     {
         "description": "SharedArrayView input",
-        "arr": SharedArrayView(
-            spec=SharedArraySpec(
-                name="fake_name",
-                shape=(2, 3),
-                dtype=dtype("f8"),
+        "args": (
+            SharedArrayView(
+                spec=SharedArraySpec(
+                    name="fake_name",
+                    shape=(2, 3),
+                    dtype=dtype("f8"),
+                ),
+                memory_view=array([[1.1, 1.2, 1.3], [2.1, 2.2, 2.3]]).data,
             ),
-            memory_view=array([[1.1, 1.2, 1.3], [2.1, 2.2, 2.3]]).data,
         ),
         "expect_data_attribute": True,
+    },
+    {
+        "description": "multiple non-shared inputs",
+        "args": (
+            [1, 2, 3],
+            array([[1, 2], [3, 4]]),
+        ),
+        "expect_data_attribute": (False, False),
+    },
+    {
+        "description": "multiple shared inputs",
+        "args": (
+            SharedArrayView(
+                spec=SharedArraySpec(
+                    name="fake_name1",
+                    shape=(2, 3),
+                    dtype=dtype("f8"),
+                ),
+                memory_view=array([[1.1, 1.2, 1.3], [2.1, 2.2, 2.3]]).data,
+            ),
+            SharedArrayView(
+                spec=SharedArraySpec(
+                    name="fake_name2",
+                    shape=(3,),
+                    dtype=dtype("f8"),
+                ),
+                memory_view=array([11.1, 12.2, 13.3]).data,
+            ),
+        ),
+        "expect_data_attribute": (True, True),
+    },
+    {
+        "description": "multiple mixed inputs",
+        "args": (
+            SharedArrayView(
+                spec=SharedArraySpec(
+                    name="fake_name1",
+                    shape=(2, 3),
+                    dtype=dtype("f8"),
+                ),
+                memory_view=array([[1.1, 1.2, 1.3], [2.1, 2.2, 2.3]]).data,
+            ),
+            [1, 2, 3],
+            SharedArrayView(
+                spec=SharedArraySpec(
+                    name="fake_name2",
+                    shape=(3,),
+                    dtype=dtype("f8"),
+                ),
+                memory_view=array([11.1, 12.2, 13.3]).data,
+            ),
+        ),
+        "expect_data_attribute": (True, False, True),
     },
 ]
 
@@ -39,11 +98,20 @@ EXTRACT_DATA_IF_SHARED_TEST_CASES = [
 class TestExtractDataIfShared:
     @mark.parametrize("test_case", EXTRACT_DATA_IF_SHARED_TEST_CASES)
     def test_extract_data_if_shared(self, test_case):
-        extracted = extract_data_if_shared(test_case["arr"])
-        if test_case["expect_data_attribute"]:
-            assert extracted is test_case["arr"].data
+        extracted = extract_data_if_shared(*test_case["args"])
+        if type(test_case["expect_data_attribute"]) == bool:
+            if test_case["expect_data_attribute"]:
+                assert extracted is test_case["args"][0].data
+            else:
+                assert extracted is test_case["args"][0]
         else:
-            assert extracted is test_case["arr"]
+            for actual, expect_data_attribute, arg in zip(
+                extracted, test_case["expect_data_attribute"], test_case["args"]
+            ):
+                if expect_data_attribute:
+                    assert actual is arg.data
+                else:
+                    assert actual is arg
 
 
 LOAD_SHARED_ARRAY_TEST_CASES = [

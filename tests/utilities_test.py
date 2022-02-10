@@ -1,13 +1,14 @@
 """Tests for diversity.utilities."""
 from copy import deepcopy
 
-from numpy import allclose, array, dtype, inf
+from numpy import allclose, array, dtype, empty, inf, ones
 from pandas import DataFrame, Index
 from pandas.testing import assert_frame_equal
 from pytest import mark, raises, warns
 
 from diversity.exceptions import ArgumentWarning, InvalidArgumentError
 from diversity.log import LOGGER
+from diversity.shared import SharedArraySpec, SharedArrayView
 from diversity.utilities import (
     get_file_delimiter,
     partition_range,
@@ -202,6 +203,7 @@ PIVOT_TABLE_TEST_CASES = [
         "value_columns": ["value_col1", "value_col2"],
         "pivot_ordering": None,
         "index_ordering": None,
+        "out": None,
         "pivotted_table": array(
             [[1010, 11, 1020, 12, 1030, 13], [2010, 21, 2020, 22, 2030, 23]],
             dtype=dtype("f8"),
@@ -222,6 +224,7 @@ PIVOT_TABLE_TEST_CASES = [
         "value_columns": ["value_col1", "value_col2"],
         "pivot_ordering": None,
         "index_ordering": None,
+        "out": None,
         "pivotted_table": array(
             [[0, 0, 1020, 12, 1030, 13], [2010, 21, 0, 0, 2030, 23]],
             dtype=dtype("f8"),
@@ -243,6 +246,7 @@ PIVOT_TABLE_TEST_CASES = [
         "value_columns": ["value_col1", "value_col2"],
         "pivot_ordering": None,
         "index_ordering": None,
+        "out": None,
         "pivotted_table": array(
             [[0, 0, 1020, 12, 1030, 13], [2010, 21, 0, 0, 2030, 23]],
             dtype=dtype("f8"),
@@ -262,6 +266,7 @@ PIVOT_TABLE_TEST_CASES = [
         "value_columns": ["value_col"],
         "pivot_ordering": None,
         "index_ordering": None,
+        "out": None,
         "pivotted_table": array(
             [[1010, 1020, 1030], [0, 2020, 2030]],
             dtype=dtype("f8"),
@@ -282,6 +287,7 @@ PIVOT_TABLE_TEST_CASES = [
         "value_columns": ["value_col1", "value_col2"],
         "pivot_ordering": array(["b", "a", "c"]),
         "index_ordering": None,
+        "out": None,
         "pivotted_table": array(
             [[1020, 12, 0, 0, 1030, 13], [0, 0, 2010, 21, 2030, 23]],
             dtype=dtype("f8"),
@@ -302,6 +308,7 @@ PIVOT_TABLE_TEST_CASES = [
         "value_columns": ["value_col1", "value_col2"],
         "pivot_ordering": None,
         "index_ordering": array([2, 1]),
+        "out": None,
         "pivotted_table": array(
             [[2010, 21, 0, 0, 2030, 23], [0, 0, 1020, 12, 1030, 13]],
             dtype=dtype("f8"),
@@ -322,8 +329,58 @@ PIVOT_TABLE_TEST_CASES = [
         "value_columns": ["value_col1", "value_col2"],
         "pivot_ordering": array(["c", "a", "b"]),
         "index_ordering": array([2, 1]),
+        "out": None,
         "pivotted_table": array(
             [[2030, 23, 2010, 21, 0, 0], [1030, 13, 0, 0, 1020, 12]],
+            dtype=dtype("f8"),
+        ),
+    },
+    {
+        "description": "Some combinations missing; numpy array out argument",
+        "data_frame": DataFrame(
+            {
+                "pivot_col": ["a", "b", "c", "c"],
+                "index_col": [2, 1, 1, 2],
+                "value_col1": [2010, 1020, 1030, 2030],
+                "value_col2": [21, 12, 13, 23],
+            }
+        ),
+        "pivot_column": "pivot_col",
+        "index_column": "index_col",
+        "value_columns": ["value_col1", "value_col2"],
+        "pivot_ordering": None,
+        "index_ordering": None,
+        "out": ones(shape=(2, 6), dtype=int),
+        "pivotted_table": array(
+            [[0, 0, 1020, 12, 1030, 13], [2010, 21, 0, 0, 2030, 23]],
+            dtype=dtype("f8"),
+        ),
+    },
+    {
+        "description": "Some combinations missing; shared array out argument",
+        "data_frame": DataFrame(
+            {
+                "pivot_col": ["a", "b", "c", "c"],
+                "index_col": [2, 1, 1, 2],
+                "value_col1": [2010, 1020, 1030, 2030],
+                "value_col2": [21, 12, 13, 23],
+            }
+        ),
+        "pivot_column": "pivot_col",
+        "index_column": "index_col",
+        "value_columns": ["value_col1", "value_col2"],
+        "pivot_ordering": None,
+        "index_ordering": None,
+        "out": SharedArrayView(
+            spec=SharedArraySpec(
+                name="fake_name",
+                shape=(2, 6),
+                dtype=dtype("f8"),
+            ),
+            memory_view=ones(shape=(2, 6), dtype=dtype("i8")).data,
+        ),
+        "pivotted_table": array(
+            [[0, 0, 1020, 12, 1030, 13], [2010, 21, 0, 0, 2030, 23]],
             dtype=dtype("f8"),
         ),
     },
@@ -343,11 +400,15 @@ class TestPivotTable:
             value_columns=test_case["value_columns"],
             pivot_ordering=test_case["pivot_ordering"],
             index_ordering=test_case["index_ordering"],
+            out=test_case["out"],
         )
-        LOGGER.debug("pivotted_table: %s", pivotted_table)
-        LOGGER.debug('test_case["pivotted_table"]: %s', test_case["pivotted_table"])
         assert pivotted_table.shape == test_case["pivotted_table"].shape
         assert allclose(pivotted_table, test_case["pivotted_table"])
+        if test_case["out"] is not None:
+            if isinstance(test_case["out"], SharedArrayView):
+                assert pivotted_table is test_case["out"].data
+            else:
+                assert pivotted_table is test_case["out"]
 
 
 POWER_MEAN_TEST_CASES = [
