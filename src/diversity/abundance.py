@@ -19,76 +19,10 @@ from abc import ABC, abstractmethod
 from functools import cache
 
 from numpy import dtype, empty, ndarray
-from pandas import read_csv
 
 from diversity.exceptions import InvalidArgumentError
 from diversity.log import LOGGER
 from diversity.shared import SharedArrayManager, SharedArrayView
-from diversity.utilities import get_file_delimiter
-
-
-class IAbundance(ABC):
-    """Interface for relative abundances of species in a metacommunity.
-
-    A community consists of a set of species, each of which may appear
-    any (non-negative) number of times. A metacommunity consists of one
-    or more subcommunities and can be represented by the number of
-    appearances of each species in each of the subcommunities that the
-    species appears in.
-    """
-
-    @property
-    @abstractmethod
-    def subcommunity_abundance(self):
-        """Calculates the relative abundances in subcommunities.
-
-        Returns
-        -------
-        A numpy.ndarray of shape (n_species, n_subcommunities), where
-        rows correspond to unique species, columns correspond to
-        subcommunities and each element is the abundance of the species
-        in the subcommunity relative to the total metacommunity size.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def metacommunity_abundance(self):
-        """Calculates the relative abundances in metacommunity.
-
-        Returns
-        -------
-        A numpy.ndarray of shape (n_species, 1), where rows correspond
-        to unique species and each row contains the relative abundance
-        of the species in the metacommunity.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def subcommunity_normalizing_constants(self):
-        """Calculates subcommunity normalizing constants.
-
-        Returns
-        -------
-        A numpy.ndarray of shape (n_subcommunities,), with the fraction
-        of each subcommunity's size of the metacommunity.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def normalized_subcommunity_abundance(self):
-        """Calculates normalized relative abundances in subcommunities.
-
-        Returns
-        -------
-        A numpy.ndarray of shape (n_species, n_subcommunities), where
-        rows correspond to unique species, columns correspond to
-        subcommunities and each element is the abundance of the species
-        in the subcommunity relative to the subcommunity size.
-        """
-        pass
 
 
 def make_abundance(counts, shared_array_manager=None):
@@ -112,7 +46,7 @@ def make_abundance(counts, shared_array_manager=None):
     -----
     Valid parameter combinations are:
     - counts: numpy.ndarray
-      shared_array_manager: Any
+      shared_array_manager: None
     - counts: diversity.shared.SharedArrayView
       shared_array_manager: diversity.shared.SharedArrayManager
     """
@@ -121,7 +55,7 @@ def make_abundance(counts, shared_array_manager=None):
         counts,
         shared_array_manager,
     )
-    if isinstance(counts, ndarray):
+    if isinstance(counts, ndarray) and shared_array_manager is None:
         abundance = Abundance(counts=counts)
     elif isinstance(counts, SharedArrayView) and isinstance(
         shared_array_manager, SharedArrayManager
@@ -137,6 +71,66 @@ def make_abundance(counts, shared_array_manager=None):
             type(shared_array_manager),
         )
     return abundance
+
+
+class IAbundance(ABC):
+    """Interface for relative abundances of species in a metacommunity.
+
+    A community consists of a set of species, each of which may appear
+    any (non-negative) number of times. A metacommunity consists of one
+    or more subcommunities and can be represented by the number of
+    appearances of each species in each of the subcommunities that the
+    species appears in.
+    """
+
+    @abstractmethod
+    def subcommunity_abundance(self):
+        """Calculates the relative abundances in subcommunities.
+
+        Returns
+        -------
+        A numpy.ndarray of shape (n_species, n_subcommunities), where
+        rows correspond to unique species, columns correspond to
+        subcommunities and each element is the abundance of the species
+        in the subcommunity relative to the total metacommunity size.
+        """
+        pass
+
+    @abstractmethod
+    def metacommunity_abundance(self):
+        """Calculates the relative abundances in metacommunity.
+
+        Returns
+        -------
+        A numpy.ndarray of shape (n_species, 1), where rows correspond
+        to unique species and each row contains the relative abundance
+        of the species in the metacommunity.
+        """
+        pass
+
+    @abstractmethod
+    def subcommunity_normalizing_constants(self):
+        """Calculates subcommunity normalizing constants.
+
+        Returns
+        -------
+        A numpy.ndarray of shape (n_subcommunities,), with the fraction
+        of each subcommunity's size of the metacommunity.
+        """
+        pass
+
+    @abstractmethod
+    def normalized_subcommunity_abundance(self):
+        """Calculates normalized relative abundances in subcommunities.
+
+        Returns
+        -------
+        A numpy.ndarray of shape (n_species, n_subcommunities), where
+        rows correspond to unique species, columns correspond to
+        subcommunities and each element is the abundance of the species
+        in the subcommunity relative to the subcommunity size.
+        """
+        pass
 
 
 class Abundance(IAbundance):

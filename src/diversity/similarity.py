@@ -19,8 +19,8 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from multiprocessing import cpu_count, Pool
 
-from numpy import dtype, empty, flatnonzero, ndarray, where
-from pandas import DataFrame, Index, read_csv
+from numpy import dtype, empty, flatnonzero
+from pandas import DataFrame, read_csv
 
 from diversity.exceptions import InvalidArgumentError
 from diversity.log import LOGGER
@@ -36,48 +36,6 @@ from diversity.utilities import (
 )
 
 
-class ISimilarity(ABC):
-    """Interface for classes computing weighted similarities."""
-
-    @abstractmethod
-    def calculate_weighted_similarities(self, relative_abundances, out=None):
-        """Calculates weighted sums of similarities to each species.
-
-        Parameters
-        ----------
-        relative_abundances: numpy.ndarray or diversity.shared.SharedArrayView
-            Array of shape (n_species, n_communities), where rows
-            correspond to unique species, columns correspond to
-            (meta-/sub-) communities and each element is the relative
-            abundance of a species in a (meta-/sub-)community.
-        out: numpy.ndarray or diversity.shared.SharedArrayView
-            Array of same shape as relative_abundances in which the
-            result is stored, if desired.
-
-        Returns
-        -------
-        A 2-d numpy.ndarray of shape (n_species, n_communities), where
-        rows correspond to unique species, columns correspond to
-        (meta-/sub-) communities and each element is a sum of
-        similarities of all species to the row's species weighted by
-        their relative abundances in the respective communities.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def species_ordering(self):
-        """The ordering of species used by the object.
-
-        Returns
-        -------
-        A 1-d numpy.ndarray of species names in the ordering used for
-        the return value of the object's .calculate_weighted_similarities
-        method.
-        """
-        pass
-
-
 def make_similarity(
     similarity_method,
     species_subset,
@@ -91,8 +49,8 @@ def make_similarity(
 
     Parameters
     ----------
-    similarity_method: numpy.ndarray, str, or Callable
-        If numpy.ndarray, see diversity.similarity.SimilarityFromMemory.
+    similarity_method: pandas.DataFrame, str, or Callable
+        If pandas.DataFrame, see diversity.similarity.SimilarityFromMemory.
         If str, see diversity.similarity.SimilarityFromFile.
         If callable, see diversity.similarity.SimilarityFromFunction.
     species_subset: collection of str objects, which supports membership test
@@ -142,7 +100,7 @@ def make_similarity(
         shared_array_manager,
         num_processors,
     )
-    if isinstance(similarity_method, ndarray) and all(
+    if isinstance(similarity_method, DataFrame) and all(
         map(
             lambda arg: arg is None,
             (features_filepath, species_column, shared_array_manager, num_processors),
@@ -204,6 +162,48 @@ def make_similarity(
             type(num_processors),
         )
     return similarity
+
+
+class ISimilarity(ABC):
+    """Interface for classes computing weighted similarities."""
+
+    @abstractmethod
+    def calculate_weighted_similarities(self, relative_abundances, out=None):
+        """Calculates weighted sums of similarities to each species.
+
+        Parameters
+        ----------
+        relative_abundances: numpy.ndarray or diversity.shared.SharedArrayView
+            Array of shape (n_species, n_communities), where rows
+            correspond to unique species, columns correspond to
+            (meta-/sub-) communities and each element is the relative
+            abundance of a species in a (meta-/sub-)community.
+        out: numpy.ndarray or diversity.shared.SharedArrayView
+            Array of same shape as relative_abundances in which the
+            result is stored, if desired.
+
+        Returns
+        -------
+        A 2-d numpy.ndarray of shape (n_species, n_communities), where
+        rows correspond to unique species, columns correspond to
+        (meta-/sub-) communities and each element is a sum of
+        similarities of all species to the row's species weighted by
+        their relative abundances in the respective communities.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def species_ordering(self):
+        """The ordering of species used by the object.
+
+        Returns
+        -------
+        A 1-d numpy.ndarray of species names in the ordering used for
+        the return value of the object's .calculate_weighted_similarities
+        method.
+        """
+        pass
 
 
 class SimilarityFromFile(ISimilarity):
@@ -287,7 +287,9 @@ class SimilarityFromFile(ISimilarity):
 
     def calculate_weighted_similarities(self, relative_abundances, out=None):
         if out is None:
-            out = empty(relative_abundances.shape, dtype=dtype("f8"))
+            out = empty(
+                extract_data_if_shared(relative_abundances).shape, dtype=dtype("f8")
+            )
         out_, relative_abundances_ = extract_data_if_shared(out, relative_abundances)
         with read_csv(
             self.similarity_matrix,
@@ -459,6 +461,13 @@ class SimilarityFromFunction(ISimilarity):
             shared_array_manager,
             num_processors,
         )
+        if features.data.shape[0] != len(species_ordering):
+            raise InvalidArgumentError(
+                "Features and species ordering must be of the same"
+                " length (features, species_ordering): ",
+                features,
+                species_ordering,
+            )
         self.__features = features
         self.__species_ordering = species_ordering
         self.__similarity_function = self.ApplySimilarityFunction(similarity_function)
@@ -495,7 +504,7 @@ class SimilarityFromFunction(ISimilarity):
             relative_abundances_ = relative_abundances
         if out is None or not isinstance(out, SharedArrayView):
             out_ = self.__shared_array_manager.empty(
-                shape=relative_abundances.spec.shape, data_type=dtype("f8")
+                shape=relative_abundances_.spec.shape, data_type=dtype("f8")
             )
         else:
             out_ = out
@@ -567,7 +576,9 @@ class SimilarityFromMemory(ISimilarity):
 
     def calculate_weighted_similarities(self, relative_abundances, out=None):
         if out is None:
-            out = empty(relative_abundances.shape, dtype=dtype("f8"))
+            out = empty(
+                extract_data_if_shared(relative_abundances).shape, dtype=dtype("f8")
+            )
         out_, relative_abundances_ = extract_data_if_shared(out, relative_abundances)
         out_[:] = self.similarity_matrix.to_numpy() @ relative_abundances_
         return out_
