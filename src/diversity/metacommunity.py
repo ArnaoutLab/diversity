@@ -206,9 +206,9 @@ class IMetacommunity(ABC):
 
     @abstractmethod
     def __init__(self, abundance, subcommunity_ordering):
-        self.__abundance = abundance
+        self.abundance = abundance
         self.subcommunity_ordering = subcommunity_ordering
-        self.__measure_components = None
+        self.measure_components = None
 
     @cache
     def subcommunity_diversity(self, viewpoint, measure):
@@ -230,21 +230,21 @@ class IMetacommunity(ABC):
         Valid measure identifiers are: "alpha", "rho", "beta", "gamma",
         "normalized_alpha", "normalized_rho", and "normalized_beta".
         """
-        numerator, denominator = self.__measure_components[measure]
+        numerator, denominator = self.measure_components[measure]
         if callable(numerator):
             numerator = numerator()
         denominator = denominator()
         if measure == "gamma":
             denominator = broadcast_to(
                 denominator,
-                self.__abundance.normalized_subcommunity_abundance().shape,
+                self.abundance.normalized_subcommunity_abundance().shape,
             )
         community_ratio = divide(
             numerator, denominator, out=zeros(denominator.shape), where=denominator != 0
         )
         result = power_mean(
             1 - viewpoint,
-            self.__abundance.normalized_subcommunity_abundance(),
+            self.abundance.normalized_subcommunity_abundance(),
             community_ratio,
         )
         if measure in ["beta", "normalized_beta"]:
@@ -257,7 +257,7 @@ class IMetacommunity(ABC):
         subcommunity_diversity = self.subcommunity_diversity(viewpoint, measure)
         return power_mean(
             1 - viewpoint,
-            self.__abundance.subcommunity_normalizing_constants(),
+            self.abundance.subcommunity_normalizing_constants(),
             subcommunity_diversity,
         )
 
@@ -275,11 +275,11 @@ class IMetacommunity(ABC):
         df = DataFrame(
             {
                 key: self.subcommunity_diversity(viewpoint, key)
-                for key in self.__measure_components.keys()
+                for key in self.measure_components.keys()
             }
         )
         df.insert(0, "viewpoint", viewpoint)
-        df.insert(0, "community", self.subcommunity_order)
+        df.insert(0, "community", self.subcommunity_ordering)
         return df
 
     def metacommunity_to_dataframe(self, viewpoint):
@@ -296,11 +296,12 @@ class IMetacommunity(ABC):
         df = DataFrame(
             {
                 key: self.metacommunity_diversity(viewpoint, key)
-                for key in self.__measure_components.keys()
+                for key in self.measure_components.keys()
             },
             index=["metacommunity"],
         )
         df.insert(0, "viewpoint", viewpoint)
+        df.reset_index(level=0)
         return df
 
 
@@ -324,8 +325,8 @@ class ISimilaritySensitiveMetacommunity(IMetacommunity):
         super().__init__(
             abundance=abundance, subcommunity_ordering=subcommunity_ordering
         )
-        self.__similarity = similarity
-        self.__measure_components = {
+        self.similarity = similarity
+        self.measure_components = {
             "alpha": (1, self.subcommunity_similarity),
             "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
             "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
@@ -372,28 +373,28 @@ class SimilarityInsensitiveMetacommunity(IMetacommunity):
         super().__init__(
             abundance=abundance, subcommunity_ordering=subcommunity_ordering
         )
-        self.__measure_components = {
-            "alpha": (1, self.__abundance.subcommunity_abundance),
+        self.measure_components = {
+            "alpha": (1, self.abundance.subcommunity_abundance),
             "rho": (
-                self.__abundance.metacommunity_abundance,
-                self.__abundance.subcommunity_abundance,
+                self.abundance.metacommunity_abundance,
+                self.abundance.subcommunity_abundance,
             ),
             "beta": (
-                self.__abundance.metacommunity_abundance,
-                self.__abundance.subcommunity_abundance,
+                self.abundance.metacommunity_abundance,
+                self.abundance.subcommunity_abundance,
             ),
-            "gamma": (1, self.__abundance.metacommunity_abundance),
+            "gamma": (1, self.abundance.metacommunity_abundance),
             "normalized_alpha": (
                 1,
-                self.__abundance.normalized_subcommunity_abundance,
+                self.abundance.normalized_subcommunity_abundance,
             ),
             "normalized_rho": (
-                self.__abundance.metacommunity_abundance,
-                self.__abundance.normalized_subcommunity_abundance,
+                self.abundance.metacommunity_abundance,
+                self.abundance.normalized_subcommunity_abundance,
             ),
             "normalized_beta": (
-                self.__abundance.metacommunity_abundance,
-                self.__abundance.normalized_subcommunity_abundance,
+                self.abundance.metacommunity_abundance,
+                self.abundance.normalized_subcommunity_abundance,
             ),
         }
 
@@ -403,20 +404,20 @@ class SimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
 
     @cache
     def metacommunity_similarity(self):
-        return self.__similarity.calculate_weighted_similarities(
-            self.__abundance.metacommunity_abundance()
+        return self.similarity.calculate_weighted_similarities(
+            self.abundance.metacommunity_abundance()
         )
 
     @cache
     def subcommunity_similarity(self):
-        return self.__similarity.calculate_weighted_similarities(
-            self.__abundance.subcommunity_abundance()
+        return self.similarity.calculate_weighted_similarities(
+            self.abundance.subcommunity_abundance()
         )
 
     @cache
     def normalized_subcommunity_similarity(self):
-        return self.__similarity.calculate_weighted_similarities(
-            self.__abundance.normalized_subcommunity_abundance()
+        return self.similarity.calculate_weighted_similarities(
+            self.abundance.normalized_subcommunity_abundance()
         )
 
 
@@ -457,19 +458,19 @@ class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
         self.__storing_normalized_similarities = None
         self.__shared_array_manager = shared_array_manager
         self.__shared_similarity = self.__shared_array_manager.empty(
-            shape=self.__abundance.subcommunity_abundance().shape,
-            data_type=self.__abundance.subcommunity_abundance().dtype,
+            shape=self.abundance.subcommunity_abundance().shape,
+            data_type=self.abundance.subcommunity_abundance().dtype,
         )
         self.__metacommunity_similarity = None
 
     def metacommunity_similarity(self):
         if self.__metacommunity_similarity is None:
             self.__metacommunity_similarity = self.__shared_array_manager.empty(
-                shape=self.__abundance.metacommunity_abundance().shape,
-                dtype=self.__abundance.metacommunity_abundance().dtype,
+                shape=self.abundance.metacommunity_abundance().shape,
+                data_type=self.abundance.metacommunity_abundance().dtype,
             )
-            self.__similarity.calculate_weighted_similarities(
-                self.__abundance.metacommunity_abundance(),
+            self.similarity.calculate_weighted_similarities(
+                self.abundance.metacommunity_abundance(),
                 out=self.__metacommunity_similarity,
             )
         return self.__metacommunity_similarity.data
@@ -477,12 +478,12 @@ class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
     @cache
     def subcommunity_similarity(self):
         if self.__storing_normalized_similarities is None:
-            self.__similarity.calculate_weighted_similarities(
-                self.__abundance.subcommunity_abundance(), out=self.__shared_similarity
+            self.similarity.calculate_weighted_similarities(
+                self.abundance.subcommunity_abundance(), out=self.__shared_similarity
             )
         elif self.__storing_normalized_similarities:
             self.__shared_similarity.data *= (
-                self.__abundance.subcommunity_normalizing_constants()
+                self.abundance.subcommunity_normalizing_constants()
             )
         self.__storing_normalized_similarities = False
         return self.__shared_similarity.data
@@ -490,13 +491,13 @@ class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
     @cache
     def normalized_subcommunity_similarity(self):
         if self.__storing_normalized_similarities is None:
-            self.__similarity.calculate_weighted_similarities(
-                self.__abundance.normalized_subcommunity_abundance(),
+            self.similarity.calculate_weighted_similarities(
+                self.abundance.normalized_subcommunity_abundance(),
                 out=self.__shared_similarity,
             )
         elif not self.__storing_normalized_similarities:
             self.__shared_similarity.data /= (
-                self.__abundance.subcommunity_normalizing_constants()
+                self.abundance.subcommunity_normalizing_constants()
             )
         self.__storing_normalized_similarities = True
         return self.__shared_similarity.data

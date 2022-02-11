@@ -9,6 +9,7 @@ from pytest import fixture, mark, raises, warns
 from diversity.exceptions import ArgumentWarning, InvalidArgumentError
 from diversity.log import LOGGER
 from diversity.similarity import (
+    make_similarity,
     SimilarityFromFile,
     SimilarityFromFunction,
     SimilarityFromMemory,
@@ -24,16 +25,17 @@ class MockSimilarityFromFile(MockClass):
     pass
 
 
+FAKE_SPECIES_ORDERING = "fake_ordering"
+
+
 class MockSimilarityFromFunction(MockClass):
-    pass
+    @staticmethod
+    def read_shared_features(**kwargs):
+        return (kwargs, FAKE_SPECIES_ORDERING)
 
 
 class MockSimilarityFromMemory(MockClass):
     pass
-
-
-def fake_read_shared_features(*kwargs):
-    return (kwargs, kwargs)
 
 
 def sim_func(a, b):
@@ -290,7 +292,103 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
 ]
 
-CONTINUTE HERE
+
+class TestMakeSimilarity:
+    @fixture(params=MAKE_SIMILARITY_TEST_CASES)
+    def test_case(self, request, monkeypatch, shared_array_manager):
+        with monkeypatch.context() as patched_context:
+            for target, mock_class in [
+                ("diversity.similarity.SimilarityFromFile", MockSimilarityFromFile),
+                (
+                    "diversity.similarity.SimilarityFromFunction",
+                    MockSimilarityFromFunction,
+                ),
+                ("diversity.similarity.SimilarityFromMemory", MockSimilarityFromMemory),
+            ]:
+                patched_context.setattr(target, mock_class)
+            test_case_ = {
+                key: request.param[key]
+                for key in [
+                    "similarity_method",
+                    "species_subset",
+                    "chunk_size",
+                    "features_filepath",
+                    "species_column",
+                    "num_processors",
+                    "expect_raise",
+                    "expected_return_type",
+                ]
+            }
+            if request.param["shared_array_manager"]:
+                test_case_["shared_array_manager"] = shared_array_manager
+            else:
+                test_case_["shared_array_manager"] = None
+            if request.param["expected_return_type"] == MockSimilarityFromFile:
+                test_case_["expected_init_kwargs"] = {
+                    "similarity_matrix": test_case_["similarity_method"],
+                    "species_subset": test_case_["species_subset"],
+                    "chunk_size": test_case_["chunk_size"],
+                }
+            elif request.param["expected_return_type"] == MockSimilarityFromFunction:
+                test_case_["expected_read_shared_features_kwargs"] = {
+                    "filepath": test_case_["features_filepath"],
+                    "species_column": test_case_["species_column"],
+                    "species_subset": test_case_["species_subset"],
+                    "shared_array_manager": test_case_["shared_array_manager"],
+                }
+                test_case_["expected_init_kwargs"] = {
+                    "similarity_function": test_case_["similarity_method"],
+                    "features": test_case_["expected_read_shared_features_kwargs"],
+                    "species_ordering": FAKE_SPECIES_ORDERING,
+                    "shared_array_manager": test_case_["shared_array_manager"],
+                    "num_processors": test_case_["num_processors"],
+                }
+            else:
+                test_case_["expected_init_kwargs"] = {
+                    "similarity_matrix": test_case_["similarity_method"],
+                    "species_subset": test_case_["species_subset"],
+                }
+            yield test_case_
+
+    def test_make_similarity(self, test_case):
+        if test_case["expect_raise"]:
+            with raises(InvalidArgumentError):
+                make_similarity(
+                    similarity_method=test_case["similarity_method"],
+                    species_subset=test_case["species_subset"],
+                    chunk_size=test_case["chunk_size"],
+                    features_filepath=test_case["features_filepath"],
+                    species_column=test_case["species_column"],
+                    shared_array_manager=test_case["shared_array_manager"],
+                    num_processors=test_case["num_processors"],
+                )
+        else:
+            similarity = make_similarity(
+                similarity_method=test_case["similarity_method"],
+                species_subset=test_case["species_subset"],
+                chunk_size=test_case["chunk_size"],
+                features_filepath=test_case["features_filepath"],
+                species_column=test_case["species_column"],
+                shared_array_manager=test_case["shared_array_manager"],
+                num_processors=test_case["num_processors"],
+            )
+            assert isinstance(similarity, test_case["expected_return_type"])
+            for key, arg in test_case["expected_init_kwargs"].items():
+                if (
+                    key == "features"
+                    and test_case["expected_return_type"] == MockSimilarityFromFunction
+                ):
+                    for read_features_key, read_features_arg in arg.items():
+                        assert (
+                            read_features_arg
+                            is test_case["expected_read_shared_features_kwargs"][
+                                read_features_key
+                            ]
+                        )
+                else:
+                    assert similarity.kwargs[key] is arg
+
+
 SIMILARITY_FROM_FILE_TEST_CASES = [
     {
         "description": "tsv file; 2 communities",
@@ -1220,7 +1318,6 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "All rows; 2 columns",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
-        "valid_features_index": array([0, 1, 2]),
         "row_start": 0,
         "row_stop": 3,
         "weighted_similarities": zeros(shape=(3, 2), dtype=dtype("f8")),
@@ -1237,7 +1334,6 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "Single row; 2 columns",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
-        "valid_features_index": array([0, 1, 2]),
         "row_start": 1,
         "row_stop": 2,
         "weighted_similarities": zeros(shape=(3, 2), dtype=dtype("f8")),
@@ -1254,7 +1350,6 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "Some rows; 2 columns",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
-        "valid_features_index": array([0, 1, 2]),
         "row_start": 1,
         "row_stop": 3,
         "weighted_similarities": zeros(shape=(3, 2), dtype=dtype("f8")),
@@ -1271,7 +1366,6 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "No rows; 2 columns",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
-        "valid_features_index": array([0, 1, 2]),
         "row_start": 0,
         "row_stop": 0,
         "weighted_similarities": zeros(shape=(3, 2), dtype=dtype("f8")),
@@ -1288,7 +1382,6 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "All rows; 1 column",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
-        "valid_features_index": array([0, 1, 2]),
         "row_start": 0,
         "row_stop": 3,
         "weighted_similarities": zeros(shape=(3, 1), dtype=dtype("f8")),
@@ -1311,7 +1404,6 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "Single row; 1 column",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
-        "valid_features_index": array([0, 1, 2]),
         "row_start": 2,
         "row_stop": 3,
         "weighted_similarities": zeros(shape=(3, 1), dtype=dtype("f8")),
@@ -1334,7 +1426,6 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "Some rows; 1 column",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
-        "valid_features_index": array([0, 1, 2]),
         "row_start": 0,
         "row_stop": 2,
         "weighted_similarities": zeros(shape=(3, 1), dtype=dtype("f8")),
@@ -1357,7 +1448,6 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
     {
         "description": "No rows; 1 column",
         "func": sim_func,  # lambda a, b: 1 / sum(a * b)
-        "valid_features_index": array([0, 1, 2]),
         "row_start": 1,
         "row_stop": 1,
         "weighted_similarities": zeros(shape=(3, 1), dtype=dtype("f8")),
@@ -1376,20 +1466,6 @@ SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
                 [0.0],
             ]
         ),
-    },
-    {
-        "description": "Some rows; 2 columns; some invalid species",
-        "func": sim_func,  # lambda a, b: 1 / sum(a * b)
-        "valid_features_index": array([0, 2]),
-        "row_start": 1,
-        "row_stop": 3,
-        "weighted_similarities": zeros(shape=(2, 2), dtype=dtype("f8")),
-        "features": array([[1, 2], [3, 5], [7, 11]]),
-        "relative_abundances": array([[1 / 1000, 1 / 100], [10, 100]]),
-        "expected_weighted_similarities": array([[0.0, 0.0], [0.05885801, 0.58858012]]),
-        # similarity matrix
-        # [0.2          , 0.03448275862]
-        # [0.03448275862, 0.005882352941]
     },
 ]
 
@@ -1415,7 +1491,6 @@ class TestSimilarityFromFunctionApplysimilarityFunction:
             for key in [
                 "description",
                 "func",
-                "valid_features_index",
                 "row_start",
                 "row_stop",
                 "expected_weighted_similarities",
@@ -1433,7 +1508,7 @@ class TestSimilarityFromFunctionApplysimilarityFunction:
     def test_call(self, test_case):
         """Tests .__call__."""
         apply_similarity_function = SimilarityFromFunction.ApplySimilarityFunction(
-            test_case["func"], test_case["valid_features_index"]
+            func=test_case["func"]
         )
         apply_similarity_function(
             test_case["row_start"],

@@ -125,7 +125,9 @@ def make_similarity(
         )
     ):
         similarity = SimilarityFromFile(
-            similarity_matrix=similarity_method, species_subset=species_subset
+            similarity_matrix=similarity_method,
+            species_subset=species_subset,
+            chunk_size=chunk_size,
         )
     elif (
         callable(similarity_method)
@@ -470,7 +472,9 @@ class SimilarityFromFunction(ISimilarity):
             )
         self.__features = features
         self.__species_ordering = species_ordering
-        self.__similarity_function = self.ApplySimilarityFunction(similarity_function)
+        self.__similarity_function = self.ApplySimilarityFunction(
+            func=similarity_function
+        )
         self.__shared_array_manager = shared_array_manager
         self.__num_processors = self.__get_num_processors(num_processors)
 

@@ -71,11 +71,11 @@ class TestMakeAbundance:
     @fixture(params=MAKE_ABUNDANCE_TEST_CASES)
     def test_case(self, request, monkeypatch, shared_array_manager):
         with monkeypatch.context() as patched_context:
-            for target, new_class in [
+            for target, mock_class in [
                 ("diversity.abundance.Abundance", MockAbundance),
                 ("diversity.abundance.SharedAbundance", MockSharedAbundance),
             ]:
-                patched_context.setattr(target, new_class)
+                patched_context.setattr(target, mock_class)
             test_case_ = {
                 key: request.param[key]
                 for key in [
@@ -91,13 +91,12 @@ class TestMakeAbundance:
 
             if request.param["expected_return_type"] == MockAbundance:
                 test_case_["expected_init_kwargs"] = {"counts": request.param["counts"]}
-                yield test_case_
             else:
                 test_case_["expected_init_kwargs"] = {
                     "counts": request.param["counts"],
                     "shared_array_manager": shared_array_manager,
                 }
-                yield test_case_
+            yield test_case_
 
     def test_make_abundance(self, test_case):
         if test_case["expect_raise"]:
