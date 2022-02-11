@@ -41,6 +41,11 @@ def main(args):
         args.input_filepath,
         sep=delimiter,
         usecols=[args.subcommunity_column, args.species_column, args.count_column],
+        dtype={
+            args.subcommunity_column: str,
+            args.species_column: str,
+            args.count_column: int,
+        },
     )
 
     LOGGER.debug(f"data: {species_counts}")

@@ -281,7 +281,7 @@ class SimilarityFromFile(ISimilarity):
         species_ordering = species[species_subset_indices]
         usecols = flatnonzero(species_subset_indices)
         skiprows = flatnonzero(~species_subset_indices) + 1
-        return species_ordering, usecols, skiprows
+        return (species_ordering, usecols, skiprows)
 
     @cached_property
     def species_ordering(self):
