@@ -4,14 +4,17 @@ from copy import deepcopy
 from numpy import (
     allclose,
     array,
+    array_equal,
     dtype,
     isclose,
+    unique,
 )
 from pandas import DataFrame, Index
 from pandas.testing import assert_frame_equal
-from pytest import fixture
+from pytest import fixture, raises
 
 from diversity.abundance import Abundance, SharedAbundance
+from diversity.exceptions import InvalidArgumentError
 from diversity.log import LOGGER
 from diversity.metacommunity import (
     make_metacommunity,
@@ -20,7 +23,11 @@ from diversity.metacommunity import (
     SharedSimilaritySensitiveMetacommunity,
 )
 from diversity.shared import SharedArrayManager, SharedArrayView
-from diversity.similarity import SimilarityFromFunction, SimilarityFromMemory
+from diversity.similarity import (
+    ISimilarity,
+    SimilarityFromFunction,
+    SimilarityFromMemory,
+)
 
 
 def sim_func(a, b):
@@ -36,6 +43,814 @@ def sim_func(a, b):
         ("species_3", "species_3"): 1.0,
     }
     return distance_table[(a[0], b[0])]
+
+
+class MockObject:
+    pass
+
+
+class MockClass:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+
+class FakeSimilarity:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.species_ordering = unique(kwargs["species_subset"])
+
+
+class MockSimilarityInsensitiveMetacommunity(MockClass):
+    pass
+
+
+class MockSimilaritySensitiveMetacommunity(MockClass):
+    pass
+
+
+class MockSharedSimilaritySensitiveMetacommunity(MockClass):
+    pass
+
+
+def mock_make_abundance(**kwargs):
+    return MockClass(**kwargs)
+
+
+def mock_make_similarity(**kwargs):
+    return FakeSimilarity(**kwargs)
+
+
+MAKE_METACOMMUNITY_TEST_CASES = [
+    {
+        "description": "SimilarityInsensitiveMetacommunity",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": None,
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": False,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSimilarityInsensitiveMetacommunity,
+        "expected_keywords": {"abundance", "subcommunity_ordering"},
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": None,
+    },
+    {
+        "description": "SimilarityInsensitiveMetacommunity; subset",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_3", "subcommunity_1"]),
+        "similarity_method": None,
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": False,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSimilarityInsensitiveMetacommunity,
+        "expected_keywords": {"abundance", "subcommunity_ordering"},
+        "expected_counts": array([[0, 2], [0, 5], [3, 0]]),
+        "expected_subcommunity_ordering": array(["subcommunity_3", "subcommunity_1"]),
+        "expected_species_subset": None,
+    },
+    {
+        "description": "SimilarityInsensitiveMetacommunity; abundance kwargs",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": None,
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": False,
+        "abundance_kwargs": {"mock": MockObject(), "object": MockObject()},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSimilarityInsensitiveMetacommunity,
+        "expected_keywords": {"abundance", "subcommunity_ordering"},
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": None,
+    },
+    {
+        "description": "SimilaritySensitiveMetacommunity",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": DataFrame(
+            data=array(
+                [
+                    [1, 0.5, 0.1],
+                    [0.5, 1, 0.2],
+                    [0.1, 0.2, 1],
+                ]
+            ),
+            columns=["species_1", "species_2", "species_3"],
+            index=["species_1", "species_2", "species_3"],
+        ),
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": False,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSimilaritySensitiveMetacommunity,
+        "expected_keywords": {"abundance", "subcommunity_ordering", "similarity"},
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": array(["species_1", "species_2", "species_3"]),
+    },
+    {
+        "description": "SharedSimilaritySensitiveMetacommunity; similarity kwargs",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": DataFrame(
+            data=array(
+                [
+                    [1, 0.5, 0.1],
+                    [0.5, 1, 0.2],
+                    [0.1, 0.2, 1],
+                ]
+            ),
+            columns=["species_1", "species_2", "species_3"],
+            index=["species_1", "species_2", "species_3"],
+        ),
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": False,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {"mock": MockObject(), "object": MockObject()},
+        "expect_raise": False,
+        "expected_return_type": MockSimilaritySensitiveMetacommunity,
+        "expected_keywords": {"abundance", "subcommunity_ordering", "similarity"},
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": array(["species_1", "species_2", "species_3"]),
+    },
+    {
+        "description": "SimilaritySensitiveMetacommunity; subset",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_3"]),
+        "similarity_method": DataFrame(
+            data=array(
+                [
+                    [1, 0.5, 0.1],
+                    [0.5, 1, 0.2],
+                    [0.1, 0.2, 1],
+                ]
+            ),
+            columns=["species_1", "species_2", "species_3"],
+            index=["species_1", "species_2", "species_3"],
+        ),
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": False,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSimilaritySensitiveMetacommunity,
+        "expected_keywords": {"abundance", "subcommunity_ordering", "similarity"},
+        "expected_counts": array([[3]]),
+        "expected_subcommunity_ordering": array(["subcommunity_3"]),
+        "expected_species_subset": array(["species_3"]),
+    },
+    {
+        "description": "SimilaritySensitiveMetacommunity; abundance kwargs",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": DataFrame(
+            data=array(
+                [
+                    [1, 0.5, 0.1],
+                    [0.5, 1, 0.2],
+                    [0.1, 0.2, 1],
+                ]
+            ),
+            columns=["species_1", "species_2", "species_3"],
+            index=["species_1", "species_2", "species_3"],
+        ),
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": False,
+        "abundance_kwargs": {"mock": MockObject(), "object": MockObject()},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSimilaritySensitiveMetacommunity,
+        "expected_keywords": {"abundance", "subcommunity_ordering", "similarity"},
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": array(["species_1", "species_2", "species_3"]),
+    },
+    {
+        "description": "SharedSimilaritySensitiveMetacommunity",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": DataFrame(
+            data=array(
+                [
+                    [1, 0.5, 0.1],
+                    [0.5, 1, 0.2],
+                    [0.1, 0.2, 1],
+                ]
+            ),
+            columns=["species_1", "species_2", "species_3"],
+            index=["species_1", "species_2", "species_3"],
+        ),
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": True,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSharedSimilaritySensitiveMetacommunity,
+        "expected_keywords": {
+            "abundance",
+            "subcommunity_ordering",
+            "similarity",
+            "shared_array_manager",
+        },
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": array(["species_1", "species_2", "species_3"]),
+    },
+    {
+        "description": "SharedSimilaritySensitiveMetacommunity; similarity kwargs",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": DataFrame(
+            data=array(
+                [
+                    [1, 0.5, 0.1],
+                    [0.5, 1, 0.2],
+                    [0.1, 0.2, 1],
+                ]
+            ),
+            columns=["species_1", "species_2", "species_3"],
+            index=["species_1", "species_2", "species_3"],
+        ),
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": True,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {"mock": MockObject(), "object": MockObject()},
+        "expect_raise": False,
+        "expected_return_type": MockSharedSimilaritySensitiveMetacommunity,
+        "expected_keywords": {
+            "abundance",
+            "subcommunity_ordering",
+            "similarity",
+            "shared_array_manager",
+        },
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": array(["species_1", "species_2", "species_3"]),
+    },
+    {
+        "description": "SharedSimilaritySensitiveMetacommunity; subset",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_3"]),
+        "similarity_method": DataFrame(
+            data=array(
+                [
+                    [1, 0.5, 0.1],
+                    [0.5, 1, 0.2],
+                    [0.1, 0.2, 1],
+                ]
+            ),
+            columns=["species_1", "species_2", "species_3"],
+            index=["species_1", "species_2", "species_3"],
+        ),
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": True,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSharedSimilaritySensitiveMetacommunity,
+        "expected_keywords": {
+            "abundance",
+            "subcommunity_ordering",
+            "similarity",
+            "shared_array_manager",
+        },
+        "expected_counts": array([[3]]),
+        "expected_subcommunity_ordering": array(["subcommunity_3"]),
+        "expected_species_subset": array(["species_3"]),
+    },
+    {
+        "description": "SharedSimilaritySensitiveMetacommunity; abundance kwargs",
+        "counts": DataFrame(
+            {
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": DataFrame(
+            data=array(
+                [
+                    [1, 0.5, 0.1],
+                    [0.5, 1, 0.2],
+                    [0.1, 0.2, 1],
+                ]
+            ),
+            columns=["species_1", "species_2", "species_3"],
+            index=["species_1", "species_2", "species_3"],
+        ),
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": True,
+        "abundance_kwargs": {"mock": MockObject(), "object": MockObject()},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSharedSimilaritySensitiveMetacommunity,
+        "expected_keywords": {
+            "abundance",
+            "subcommunity_ordering",
+            "similarity",
+            "shared_array_manager",
+        },
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": array(["species_1", "species_2", "species_3"]),
+    },
+    {
+        "description": "Non-default subcommunity column",
+        "counts": DataFrame(
+            {
+                "subcommunity_": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_4",
+                    "subcommunity_4",
+                    "subcommunity_5",
+                    "subcommunity_6",
+                    "subcommunity_7",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": None,
+        "subcommunity_column": "subcommunity_",
+        "species_column": "species",
+        "count_column": "count",
+        "shared_array_manager": False,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSimilarityInsensitiveMetacommunity,
+        "expected_keywords": {"abundance", "subcommunity_ordering"},
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": None,
+    },
+    {
+        "description": "Non-default species column",
+        "counts": DataFrame(
+            {
+                "species_": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_4",
+                    "species_1",
+                    "species_2",
+                    "species_2",
+                    "species_3",
+                ],
+                "count": [2, 5, 4, 3, 2, 3],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": None,
+        "subcommunity_column": "subcommunity",
+        "species_column": "species_",
+        "count_column": "count",
+        "shared_array_manager": False,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSimilarityInsensitiveMetacommunity,
+        "expected_keywords": {"abundance", "subcommunity_ordering"},
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": None,
+    },
+    {
+        "description": "Non-default count column",
+        "counts": DataFrame(
+            {
+                "count_": [2, 5, 4, 3, 2, 3],
+                "subcommunity": [
+                    "subcommunity_1",
+                    "subcommunity_1",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_2",
+                    "subcommunity_3",
+                ],
+                "species": [
+                    "species_1",
+                    "species_2",
+                    "species_1",
+                    "species_2",
+                    "species_3",
+                    "species_3",
+                ],
+                "count": [4, 7, 3, 5, 6, 12],
+            }
+        ),
+        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
+        "similarity_method": None,
+        "subcommunity_column": "subcommunity",
+        "species_column": "species",
+        "count_column": "count_",
+        "shared_array_manager": False,
+        "abundance_kwargs": {},
+        "similarity_kwargs": {},
+        "expect_raise": False,
+        "expected_return_type": MockSimilarityInsensitiveMetacommunity,
+        "expected_keywords": {"abundance", "subcommunity_ordering"},
+        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
+        "expected_subcommunity_ordering": array(
+            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
+        ),
+        "expected_species_subset": None,
+    },
+]
+
+
+class TestMakeMetacommunity:
+    @fixture(params=MAKE_METACOMMUNITY_TEST_CASES)
+    def test_case(self, request, monkeypatch, shared_array_manager):
+        with monkeypatch.context() as patched_context:
+            for target, mocked in [
+                (
+                    "diversity.metacommunity.SimilarityInsensitiveMetacommunity",
+                    MockSimilarityInsensitiveMetacommunity,
+                ),
+                (
+                    "diversity.metacommunity.SimilaritySensitiveMetacommunity",
+                    MockSimilaritySensitiveMetacommunity,
+                ),
+                (
+                    "diversity.metacommunity.SharedSimilaritySensitiveMetacommunity",
+                    MockSharedSimilaritySensitiveMetacommunity,
+                ),
+                ("diversity.metacommunity.make_abundance", mock_make_abundance),
+                ("diversity.metacommunity.make_similarity", mock_make_similarity),
+                ("diversity.metacommunity.ISimilarity", FakeSimilarity),
+            ]:
+                patched_context.setattr(target, mocked)
+            test_case_ = deepcopy(request.param)
+            if request.param["shared_array_manager"]:
+                test_case_["shared_array_manager"] = shared_array_manager
+            else:
+                test_case_["shared_array_manager"] = None
+            if "shared_array_manager" in request.param["abundance_kwargs"]:
+                request.param["abundance_kwargs"][
+                    "shared_array_manager"
+                ] = shared_array_manager
+            yield test_case_
+
+    def test_make_metacommunity(self, test_case):
+        if test_case["expect_raise"]:
+            with raises(InvalidArgumentError):
+                make_metacommunity(
+                    counts=test_case["counts"],
+                    subcommunities=test_case["subcommunities"],
+                    similarity_method=test_case["similarity_method"],
+                    subcommunity_column=test_case["subcommunity_column"],
+                    species_column=test_case["species_column"],
+                    count_column=test_case["count_column"],
+                    shared_array_manager=test_case["shared_array_manager"],
+                    abundance_kwargs=test_case["abundance_kwargs"],
+                    similarity_kwargs=test_case["similarity_kwargs"],
+                )
+        else:
+            metacommunity = make_metacommunity(
+                counts=test_case["counts"],
+                subcommunities=test_case["subcommunities"],
+                similarity_method=test_case["similarity_method"],
+                subcommunity_column=test_case["subcommunity_column"],
+                species_column=test_case["species_column"],
+                count_column=test_case["count_column"],
+                shared_array_manager=test_case["shared_array_manager"],
+                abundance_kwargs=test_case["abundance_kwargs"],
+                similarity_kwargs=test_case["similarity_kwargs"],
+            )
+            assert isinstance(metacommunity, test_case["expected_return_type"])
+            assert set(metacommunity.kwargs.keys()) == test_case["expected_keywords"]
+            assert array_equal(
+                metacommunity.kwargs["abundance"].kwargs["counts"],
+                test_case["expected_counts"],
+            )
+            assert set(metacommunity.kwargs["abundance"].kwargs.keys()) == {
+                "counts",
+                *test_case["abundance_kwargs"].keys(),
+            }
+            for key, arg in test_case["abundance_kwargs"].items():
+                assert metacommunity.kwargs["abundance"].kwargs[key] is arg
+            assert array_equal(
+                metacommunity.kwargs["subcommunity_ordering"],
+                test_case["expected_subcommunity_ordering"],
+            )
+            if test_case["shared_array_manager"] is not None:
+                assert (
+                    metacommunity.kwargs["shared_array_manager"]
+                    is test_case["shared_array_manager"]
+                )
+            if test_case["similarity_method"] is not None:
+                assert (
+                    metacommunity.kwargs["similarity"].kwargs["similarity_method"]
+                    is test_case["similarity_method"]
+                )
+                array_equal(
+                    metacommunity.kwargs["similarity"].kwargs["species_subset"],
+                    test_case["expected_species_subset"],
+                )
+                assert set(metacommunity.kwargs["similarity"].kwargs.keys()) == {
+                    "similarity_method",
+                    "species_subset",
+                    *test_case["similarity_kwargs"].keys(),
+                }
+                for key, arg in test_case["similarity_kwargs"].items():
+                    assert metacommunity.kwargs["similarity"].kwargs[key] is arg
 
 
 SIMILARITY_INSENSITIVE_METACOMMUNITY_TEST_CASES = [

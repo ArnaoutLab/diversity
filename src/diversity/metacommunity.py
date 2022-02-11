@@ -15,14 +15,15 @@ make_metacommunity
 
 from abc import ABC, abstractmethod
 from functools import cache
-from itertools import combinations
 
-from pandas import DataFrame, concat, unique
-from numpy import zeros, broadcast_to, divide
+from pandas import DataFrame, Index, unique
+from numpy import broadcast_to, divide, dtype, empty, zeros
 
-from diversity.abundance import Abundance
+from diversity.abundance import make_abundance
+from diversity.exceptions import InvalidArgumentError
 from diversity.log import LOGGER
-from diversity.similarity import make_similarity
+from diversity.shared import SharedArrayManager
+from diversity.similarity import ISimilarity, make_similarity
 from diversity.utilities import (
     pivot_table,
     power_mean,
@@ -45,7 +46,7 @@ def make_metacommunity(
 
     Parameters
     ----------
-    counts: pandas.DataFrame, or str
+    counts: pandas.DataFrame
         Table with 3 columns: one column lists subcommunity identifiers,
         one lists species identifiers, and the last lists counts of
         species in corresponding subcommunities. Subcommunity-species
@@ -53,7 +54,7 @@ def make_metacommunity(
         specified by the subcommunity_column, species_column, and
         count_column arguments. Its data is passed to
         diversity.abundance.make_abundance along with abundance_kwargs.
-    subcommunities: collection of str objects supporting membership test
+    subcommunities: numpy.ndarray
         Names of subcommunities to include. Their union is the
         metacommunity, and data for all other subcommunities is ignored.
     similarity_method: pandas.DataFrame, str, or Callable
@@ -74,15 +75,6 @@ def make_metacommunity(
     Returns
     -------
     An instance of a concrete subclass of IMetacommunity.
-
-    Notes
-    -----
-    Valid parameter combinations are:
-    - similarity_method, shared_array_manager: None
-    - similarity_method: diversity.similarity.ISimilarity
-      shared_array_manager: None
-    - similarity_method: diversity.similarity.ISimilarity
-      shared_array_manager: diversity.shared.SharedArrayManager
     """
     LOGGER.debug(
         "make_metacommunity(counts=%s, subcommunities=%s,"
@@ -99,7 +91,9 @@ def make_metacommunity(
         abundance_kwargs,
         similarity_kwargs,
     )
-    counts_subset = subset_by_column(counts, subcommunities, subcommunity_column)
+    counts_subset = subset_by_column(
+        data_frame=counts, column=subcommunity_column, subset=subcommunities
+    )
     species_subset = unique(counts_subset[species_column])
 
     if similarity_method is None:
@@ -121,13 +115,12 @@ def make_metacommunity(
         pivotted_counts = empty(
             shape=(len(species_subset), len(subcommunities)), dtype=dtype("f8")
         )
-    subcommunity_ordering = array(subcommunities)
     pivot_table(
         data_frame=counts_subset,
         pivot_column=subcommunity_column,
         index_column=species_column,
         value_columns=[count_column],
-        pivot_ordering=subcommunity_ordering,
+        pivot_ordering=subcommunities,
         index_ordering=species_ordering,
         out=pivotted_counts,
     )
@@ -135,12 +128,12 @@ def make_metacommunity(
 
     if similarity is None and shared_array_manager is None:
         metacommunity = SimilarityInsensitiveMetacommunity(
-            abundance=abundance, subcommunity_ordering=subcommunity_ordering
+            abundance=abundance, subcommunity_ordering=subcommunities
         )
     elif isinstance(similarity, ISimilarity) and shared_array_manager is None:
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=abundance,
-            subcommunity_ordering=subcommunity_ordering,
+            subcommunity_ordering=subcommunities,
             similarity=similarity,
         )
     elif isinstance(similarity, ISimilarity) and isinstance(
@@ -148,7 +141,7 @@ def make_metacommunity(
     ):
         metacommunity = SharedSimilaritySensitiveMetacommunity(
             abundance=abundance,
-            subcommunity_ordering=subcommunity_ordering,
+            subcommunity_ordering=subcommunities,
             similarity=similarity,
             shared_array_manager=shared_array_manager,
         )
@@ -160,45 +153,6 @@ def make_metacommunity(
             " similarity_kwargs=%s"
         )
     return metacommunity
-
-
-def make_pairwise_metacommunities(
-    counts,
-    subcommunity_column="subcommunity",
-    **kwargs,
-):
-    """List of IMetacommunity instances for all subcommunity pairs.
-
-    Parameters
-    ----------
-    counts, subcommunity_column:
-        See diversity.metacommunity.make_metacommunity.
-    kwargs:
-        Passed along with counts and subcommunity_column to
-        diversity.metacommunity.make_metacommunity. "subcommunities"
-        parameter should not be specified here.
-
-    Returns
-    -------
-
-    """
-    subcommunties_groups = counts.groupby(subcommunity_column)
-    pairwise_metacommunities = []
-    for (name1, group1), (name2, group2) in combinations(subcommunties_groups):
-        counts = concat([group1, group2])
-        pair = make_metacommunity(counts, subcommunities={name1, name2})
-    for i, (_, group_i) in enumerate(subcommunties_groups):
-        for j, (_, group_j) in enumerate(subcommunties_groups):
-            if j > i:
-                counts = concat([group_i, group_j])
-                pair_ij = make_metacommunity(
-                    counts,
-                    similarity_matrix,
-                    subcommunity_column=subcommunity_column,
-                    **kwargs,
-                )
-                pairwise_metacommunities.append(pair_ij)
-    return pairwise_metacommunities
 
 
 class IMetacommunity(ABC):
@@ -298,10 +252,10 @@ class IMetacommunity(ABC):
                 key: self.metacommunity_diversity(viewpoint, key)
                 for key in self.measure_components.keys()
             },
-            index=["metacommunity"],
+            index=Index(["metacommunity"], name="community"),
         )
         df.insert(0, "viewpoint", viewpoint)
-        df.reset_index(level=0)
+        df.reset_index(inplace=True)
         return df
 
 

@@ -311,6 +311,12 @@ def subset_by_column(data_frame, column, subset):
 
     If subset is None, entire data_frame is returned.
     """
+    LOGGER.debug(
+        "subset_by_column(data_frame=%s, column=%s, subset=%s)",
+        data_frame,
+        column,
+        subset,
+    )
     if subset is None:
         return data_frame
     return data_frame[data_frame[column].isin(subset)]
