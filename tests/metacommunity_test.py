@@ -900,7 +900,7 @@ SIMILARITY_INSENSITIVE_METACOMMUNITY_TEST_CASES = [
                 "viewpoint": [0],
                 "community": ["metacommunity"],
             },
-            index=["metacommunity"],
+            index=range(1),
         ),
     },
     {
@@ -947,7 +947,7 @@ SIMILARITY_INSENSITIVE_METACOMMUNITY_TEST_CASES = [
                 "viewpoint": [2],
                 "community": ["metacommunity"],
             },
-            index=["metacommunity"],
+            index=range(1),
         ),
     },
 ]
@@ -1286,7 +1286,7 @@ SIMILARITY_SENSITIVE_METACOMMUNITY_TEST_CASES = [
                 "viewpoint": 0,
                 "community": ["metacommunity"],
             },
-            index=["metacommunity"],
+            index=range(1),
         ),
     },
     {
@@ -1368,7 +1368,7 @@ SIMILARITY_SENSITIVE_METACOMMUNITY_TEST_CASES = [
                 "viewpoint": [2],
                 "community": ["metacommunity"],
             },
-            index=["metacommunity"],
+            index=range(1),
         ),
     },
     {
@@ -1450,7 +1450,7 @@ SIMILARITY_SENSITIVE_METACOMMUNITY_TEST_CASES = [
                 "viewpoint": [2],
                 "community": ["metacommunity"],
             },
-            index=["metacommunity"],
+            index=range(1),
         ),
     },
 ]
