@@ -9,6 +9,7 @@ from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger
 
+from numpy import array, unique
 from pandas import read_csv, concat
 
 from diversity.metacommunity import make_metacommunity
@@ -40,18 +41,28 @@ def main(args):
         args.input_filepath,
         sep=delimiter,
         usecols=[args.subcommunity_column, args.species_column, args.count_column],
+        dtype={
+            args.subcommunity_column: str,
+            args.species_column: str,
+            args.count_column: int,
+        },
     )
 
     LOGGER.debug(f"data: {species_counts}")
 
+    if args.subcommunities is None:
+        subcommunities = unique(species_counts[args.subcommunity_column])
+    else:
+        subcommunities = array(args.subcommunities)
+
     meta = make_metacommunity(
-        species_counts,
-        similarity_matrix=args.similarity_matrix_filepath,
-        subcommunities=args.subcommunities,
-        chunk_size=args.chunk_size,
+        counts=species_counts,
+        subcommunities=subcommunities,
+        similarity_method=args.similarity_matrix_filepath,
         subcommunity_column=args.subcommunity_column,
         species_column=args.species_column,
         count_column=args.count_column,
+        similarity_kwargs={"chunk_size": args.chunk_size},
     )
 
     community_views = []

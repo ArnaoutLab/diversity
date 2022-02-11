@@ -5,6 +5,7 @@ from numpy import inf
 from pytest import mark
 
 from diversity.__main__ import main
+from diversity.log import LOGGER
 
 MAIN_TEST_CASES = [
     {
@@ -187,7 +188,7 @@ MAIN_TEST_CASES = [
             species_column="species",
             count_column="count",
             chunk_size=1,
-            subcommunities={"subcommunity_1", "subcommunity_2"},
+            subcommunities=["subcommunity_1", "subcommunity_2"],
         ),
         "input_filecontents": (
             "species\tsubcommunity\tcount\n"
