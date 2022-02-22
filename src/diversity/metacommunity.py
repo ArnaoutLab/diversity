@@ -33,7 +33,7 @@ from diversity.utilities import (
 
 def make_metacommunity(
     counts,
-    subcommunities,
+    subcommunities=None,
     similarity_method=None,
     subcommunity_column="subcommunity",
     species_column="species",
@@ -91,9 +91,10 @@ def make_metacommunity(
         abundance_kwargs,
         similarity_kwargs,
     )
-    counts_subset = subset_by_column(
-        data_frame=counts, column=subcommunity_column, subset=subcommunities
-    )
+    counts_subset = subset_by_column(data_frame=counts, 
+    column=subcommunity_column, subset=subcommunities)
+    if subcommunities is None:
+        subcommunities = counts_subset[subcommunity_column].unique()
     species_subset = unique(counts_subset[species_column])
 
     if similarity_method is None:
