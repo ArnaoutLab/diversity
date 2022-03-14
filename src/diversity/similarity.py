@@ -57,7 +57,7 @@ def make_similarity(
         The species to include. Only similarities between pairs of
         species from this collection are used.
     chunk_size: int
-        See diversity.similarity.SimilarityFromFunction. Only relevant
+        See diversity.similarity.SimilarityFromFile. Only relevant
         if a str is passed as argument for similarity_method.
     features_filepath, species_column: str
         See diversity.similarity.SimilarityFromFunction.read_shared_features.
