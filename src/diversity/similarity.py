@@ -354,10 +354,7 @@ class SimilarityFromFunction(ISimilarity):
             filepath,
             sep=delimiter,
             index_col=species_column,
-            skiprows=lambda species: (
-                species not in species_subset and species != species_column
-            ),
-        )
+        ).loc[species_subset]
         features = shared_array_manager.from_array(features_df.to_numpy())
         species_ordering = features_df.index
         return (features, species_ordering)
