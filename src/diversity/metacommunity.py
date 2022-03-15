@@ -91,8 +91,9 @@ def make_metacommunity(
         abundance_kwargs,
         similarity_kwargs,
     )
-    counts_subset = subset_by_column(data_frame=counts, 
-    column=subcommunity_column, subset=subcommunities)
+    counts_subset = subset_by_column(
+        data_frame=counts, column=subcommunity_column, subset=subcommunities
+    )
     if subcommunities is None:
         subcommunities = counts_subset[subcommunity_column].unique()
     species_subset = unique(counts_subset[species_column])
@@ -110,7 +111,7 @@ def make_metacommunity(
 
     if "shared_array_manager" in abundance_kwargs:
         pivotted_counts = abundance_kwargs["shared_array_manager"].empty(
-            shape=(len(species_subset), len(subcommunities)), dtype=dtype("f8")
+            shape=(len(species_subset), len(subcommunities)), data_type=dtype("f8")
         )
     else:
         pivotted_counts = empty(

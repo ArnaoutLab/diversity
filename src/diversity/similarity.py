@@ -21,6 +21,7 @@ from multiprocessing import cpu_count, Pool
 
 from numpy import dtype, empty, flatnonzero
 from pandas import DataFrame, read_csv
+from pandas.api.types import is_numeric_dtype, is_string_dtype
 
 from diversity.exceptions import InvalidArgumentError
 from diversity.log import LOGGER
@@ -323,7 +324,11 @@ class SimilarityFromFunction(ISimilarity):
         filepath: str
             Path to .csv or .tsv file where one column contains species
             names and all other columns contain the features of the
-            corresponding species.
+            corresponding species. Must contain numeric or str datatypes
+            only. More complex datatypes will cause issues. If at least
+            one column is not numeric, all columns will be converted to
+            string data. If all columns are numeric, all columns will be
+            converted to 64-bit floats.
         species_column: str
             Column header for column in features file which contains the
             species names.
@@ -355,7 +360,18 @@ class SimilarityFromFunction(ISimilarity):
             sep=delimiter,
             index_col=species_column,
         ).loc[species_subset]
-        features = shared_array_manager.from_array(features_df.to_numpy())
+        if all(is_numeric_dtype(features_df[col]) for col in features_df.columns):
+            features = shared_array_manager.from_array(
+                features_df.to_numpy(dtype=dtype("f8"))
+            )
+        else:
+            features = shared_array_manager.from_array(
+                features_df.to_numpy(
+                    dtype=dtype(
+                        f"<U{max(features_df[col].astype(str).str.len().max() for col in features_df.columns)}"
+                    )
+                )
+            )
         species_ordering = features_df.index
         return (features, species_ordering)
 
