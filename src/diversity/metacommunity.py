@@ -96,7 +96,7 @@ def make_metacommunity(
     )
     if subcommunities is None:
         subcommunities = counts_subset[subcommunity_column].unique()
-    species_subset = unique(counts_subset[species_column])
+    species_subset = unique(counts_subset[species_column]).astype(str)
 
     if similarity_method is None:
         similarity = None
