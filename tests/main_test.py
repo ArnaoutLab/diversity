@@ -238,11 +238,7 @@ class TestMain:
         test_case[
             "args"
         ].input_filepath = f"{tmp_path}/{test_case['args'].input_filepath}"
-        test_case[
-            "args"
-        ].similarity_matrix_filepath = (
-            f"{tmp_path}/{test_case['args'].similarity_matrix_filepath}"
-        )
+        test_case["args"].similarity = f"{tmp_path}/{test_case['args'].similarity}"
         test_case[
             "args"
         ].output_filepath = f"{tmp_path}/{test_case['args'].output_filepath}"
@@ -252,7 +248,7 @@ class TestMain:
             test_case["input_filecontents"],
         )
         self.write_file(
-            test_case["args"].similarity_matrix_filepath,
+            test_case["args"].similarity,
             test_case["similarities_filecontents"],
         )
 

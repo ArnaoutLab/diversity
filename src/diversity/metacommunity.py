@@ -34,7 +34,7 @@ from diversity.utilities import (
 def make_metacommunity(
     counts,
     subcommunities=None,
-    similarity_method=None,
+    similarity=None,
     subcommunity_column="subcommunity",
     species_column="species",
     count_column="count",
@@ -57,7 +57,7 @@ def make_metacommunity(
     subcommunities: numpy.ndarray
         Names of subcommunities to include. Their union is the
         metacommunity, and data for all other subcommunities is ignored.
-    similarity_method: pandas.DataFrame, str, or Callable
+    similarity: pandas.DataFrame, str, or Callable
         For similarity-sensitive diversity measures. Passed to
         diversity.similarity.make_similarity along with
         similarity_kwargs and a species_subset argument determined by
@@ -78,12 +78,12 @@ def make_metacommunity(
     """
     LOGGER.debug(
         "make_metacommunity(counts=%s, subcommunities=%s,"
-        " similarity_method=%s, subcommunity_column=%s, species_column=%s,"
+        " similarity=%s, subcommunity_column=%s, species_column=%s,"
         " count_column=%s shared_array_manager=%s, abundance_kwargs=%s,"
         " similarity_kwargs=%s",
         counts,
         subcommunities,
-        similarity_method,
+        similarity,
         subcommunity_column,
         species_column,
         count_column,
@@ -98,12 +98,12 @@ def make_metacommunity(
         subcommunities = counts_subset[subcommunity_column].unique()
     species_subset = unique(counts_subset[species_column])
 
-    if similarity_method is None:
+    if similarity is None:
         similarity = None
         species_ordering = species_subset
     else:
         similarity = make_similarity(
-            similarity_method=similarity_method,
+            similarity=similarity,
             species_subset=species_subset,
             **similarity_kwargs,
         )
@@ -150,7 +150,7 @@ def make_metacommunity(
     else:
         raise InvalidArgumentError(
             "Invalid arguments: counts=%s, subcommunities=%s,"
-            " similarity_method=%s, subcommunity_column=%s, species_column=%s,"
+            " similarity=%s, subcommunity_column=%s, species_column=%s,"
             " count_column=%s shared_array_manager=%s, abundance_kwargs=%s,"
             " similarity_kwargs=%s"
         )

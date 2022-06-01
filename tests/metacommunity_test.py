@@ -105,7 +105,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": None,
+        "similarity": None,
         "subcommunity_column": "subcommunity",
         "species_column": "species",
         "count_column": "count",
@@ -145,7 +145,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_3", "subcommunity_1"]),
-        "similarity_method": None,
+        "similarity": None,
         "subcommunity_column": "subcommunity",
         "species_column": "species",
         "count_column": "count",
@@ -183,7 +183,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": None,
+        "similarity": None,
         "subcommunity_column": "subcommunity",
         "species_column": "species",
         "count_column": "count",
@@ -223,7 +223,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -273,7 +273,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -323,7 +323,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_3"]),
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -371,7 +371,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -421,7 +421,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -476,7 +476,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -531,7 +531,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_3"]),
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -584,7 +584,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -647,7 +647,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": None,
+        "similarity": None,
         "subcommunity_column": "subcommunity_",
         "species_column": "species",
         "count_column": "count",
@@ -695,7 +695,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": None,
+        "similarity": None,
         "subcommunity_column": "subcommunity",
         "species_column": "species_",
         "count_column": "count",
@@ -736,7 +736,7 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             }
         ),
         "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "similarity_method": None,
+        "similarity": None,
         "subcommunity_column": "subcommunity",
         "species_column": "species",
         "count_column": "count_",
@@ -794,7 +794,7 @@ class TestMakeMetacommunity:
                 make_metacommunity(
                     counts=test_case["counts"],
                     subcommunities=test_case["subcommunities"],
-                    similarity_method=test_case["similarity_method"],
+                    similarity=test_case["similarity"],
                     subcommunity_column=test_case["subcommunity_column"],
                     species_column=test_case["species_column"],
                     count_column=test_case["count_column"],
@@ -806,7 +806,7 @@ class TestMakeMetacommunity:
             metacommunity = make_metacommunity(
                 counts=test_case["counts"],
                 subcommunities=test_case["subcommunities"],
-                similarity_method=test_case["similarity_method"],
+                similarity=test_case["similarity"],
                 subcommunity_column=test_case["subcommunity_column"],
                 species_column=test_case["species_column"],
                 count_column=test_case["count_column"],
@@ -835,17 +835,17 @@ class TestMakeMetacommunity:
                     metacommunity.kwargs["shared_array_manager"]
                     is test_case["shared_array_manager"]
                 )
-            if test_case["similarity_method"] is not None:
+            if test_case["similarity"] is not None:
                 assert (
-                    metacommunity.kwargs["similarity"].kwargs["similarity_method"]
-                    is test_case["similarity_method"]
+                    metacommunity.kwargs["similarity"].kwargs["similarity"]
+                    is test_case["similarity"]
                 )
                 array_equal(
                     metacommunity.kwargs["similarity"].kwargs["species_subset"],
                     test_case["expected_species_subset"],
                 )
                 assert set(metacommunity.kwargs["similarity"].kwargs.keys()) == {
-                    "similarity_method",
+                    "similarity",
                     "species_subset",
                     *test_case["similarity_kwargs"].keys(),
                 }
@@ -1179,7 +1179,7 @@ SIMILARITY_SENSITIVE_METACOMMUNITY_TEST_CASES = [
         ),
         "subcommunity_ordering": array(["subcommunity_1", "subcommunity_2"]),
         "similarity": SimilarityFromMemory(
-            similarity_matrix=DataFrame(
+            similarity=DataFrame(
                 data=array(
                     [
                         [1.0, 0.5, 0.5, 0.7, 0.7, 0.7],
@@ -1294,7 +1294,7 @@ SIMILARITY_SENSITIVE_METACOMMUNITY_TEST_CASES = [
         "abundance": {"counts": array([[1, 5], [3, 0], [0, 1]], dtype=dtype("f8"))},
         "subcommunity_ordering": array(["subcommunity_1", "subcommunity_2"]),
         "similarity": SimilarityFromMemory(
-            similarity_matrix=DataFrame(
+            similarity=DataFrame(
                 data=array([[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0]]),
                 columns=[
                     "species_1",

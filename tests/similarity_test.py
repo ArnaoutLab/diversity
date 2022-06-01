@@ -1,7 +1,7 @@
 """Tests for diversity.similarity."""
 from multiprocessing import cpu_count
 
-from numpy import allclose, array, array_equal, dtype, empty, ones, zeros
+from numpy import allclose, array, array_equal, dtype, ones, zeros
 from pandas import DataFrame, Index
 from pandas.testing import assert_frame_equal
 from pytest import fixture, mark, raises, warns
@@ -45,7 +45,7 @@ def sim_func(a, b):
 MAKE_SIMILARITY_TEST_CASES = [
     {
         "description": "SimilarityFromMemory",
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -67,7 +67,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFile",
-        "similarity_method": "fake_similarities_file.tsv",
+        "similarity": "fake_similarities_file.tsv",
         "species_subset": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "features_filepath": None,
@@ -79,7 +79,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFile with non-default chunk_size",
-        "similarity_method": "fake_similarities_file.tsv",
+        "similarity": "fake_similarities_file.tsv",
         "species_subset": ["species_1", "species_2", "species_3"],
         # Make chunk_size large to avoid builtin optimization assigning precomputed reference
         "chunk_size": 1228375972486598237,
@@ -92,7 +92,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFunction",
-        "similarity_method": sim_func,
+        "similarity": sim_func,
         "species_subset": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "features_filepath": "fake_features_file.tsv",
@@ -104,7 +104,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFunction with non-default num_processors",
-        "similarity_method": sim_func,
+        "similarity": sim_func,
         "species_subset": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "features_filepath": "fake_features_file.tsv",
@@ -117,7 +117,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromMemory with non-default features_filepath",
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -139,7 +139,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromMemory with non-default species_column",
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -161,7 +161,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromMemory with non-default shared_array_manager",
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -183,7 +183,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromMemory with non-default num_processors",
-        "similarity_method": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -205,7 +205,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFile with non-default features_filepath",
-        "similarity_method": "fake_similarities_file.tsv",
+        "similarity": "fake_similarities_file.tsv",
         "species_subset": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "features_filepath": "fake_features_file.tsv",
@@ -217,7 +217,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFile with non-default species_column",
-        "similarity_method": "fake_similarities_file.tsv",
+        "similarity": "fake_similarities_file.tsv",
         "species_subset": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "features_filepath": None,
@@ -229,7 +229,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFile with non-default shared_array_manager",
-        "similarity_method": "fake_similarities_file.tsv",
+        "similarity": "fake_similarities_file.tsv",
         "species_subset": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "features_filepath": None,
@@ -241,7 +241,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFile with non-default num_processors",
-        "similarity_method": "fake_similarities_file.tsv",
+        "similarity": "fake_similarities_file.tsv",
         "species_subset": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "features_filepath": None,
@@ -253,7 +253,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFunction with missing features_filepath",
-        "similarity_method": sim_func,
+        "similarity": sim_func,
         "species_subset": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "features_filepath": None,
@@ -266,7 +266,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFunction with missing species_column",
-        "similarity_method": sim_func,
+        "similarity": sim_func,
         "species_subset": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "features_filepath": "fake_features_file.tsv",
@@ -279,7 +279,7 @@ MAKE_SIMILARITY_TEST_CASES = [
     },
     {
         "description": "SimilarityFromFunction with missing shared_array_manager",
-        "similarity_method": sim_func,
+        "similarity": sim_func,
         "species_subset": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "features_filepath": "fake_features_file.tsv",
@@ -309,7 +309,7 @@ class TestMakeSimilarity:
             test_case_ = {
                 key: request.param[key]
                 for key in [
-                    "similarity_method",
+                    "similarity",
                     "species_subset",
                     "chunk_size",
                     "features_filepath",
@@ -325,7 +325,7 @@ class TestMakeSimilarity:
                 test_case_["shared_array_manager"] = None
             if request.param["expected_return_type"] == MockSimilarityFromFile:
                 test_case_["expected_init_kwargs"] = {
-                    "similarity_matrix": test_case_["similarity_method"],
+                    "similarity": test_case_["similarity"],
                     "species_subset": test_case_["species_subset"],
                     "chunk_size": test_case_["chunk_size"],
                 }
@@ -337,7 +337,7 @@ class TestMakeSimilarity:
                     "shared_array_manager": test_case_["shared_array_manager"],
                 }
                 test_case_["expected_init_kwargs"] = {
-                    "similarity_function": test_case_["similarity_method"],
+                    "similarity": test_case_["similarity"],
                     "features": test_case_["expected_read_shared_features_kwargs"],
                     "species_ordering": FAKE_SPECIES_ORDERING,
                     "shared_array_manager": test_case_["shared_array_manager"],
@@ -345,16 +345,16 @@ class TestMakeSimilarity:
                 }
             else:
                 test_case_["expected_init_kwargs"] = {
-                    "similarity_matrix": test_case_["similarity_method"],
+                    "similarity": test_case_["similarity"],
                     "species_subset": test_case_["species_subset"],
                 }
             yield test_case_
 
     def test_make_similarity(self, test_case):
         if test_case["expect_raise"]:
-            with raises(InvalidArgumentError):
+            with raises(TypeError):
                 make_similarity(
-                    similarity_method=test_case["similarity_method"],
+                    similarity=test_case["similarity"],
                     species_subset=test_case["species_subset"],
                     chunk_size=test_case["chunk_size"],
                     features_filepath=test_case["features_filepath"],
@@ -364,7 +364,7 @@ class TestMakeSimilarity:
                 )
         else:
             similarity = make_similarity(
-                similarity_method=test_case["similarity_method"],
+                similarity=test_case["similarity"],
                 species_subset=test_case["species_subset"],
                 chunk_size=test_case["chunk_size"],
                 features_filepath=test_case["features_filepath"],
@@ -695,7 +695,7 @@ class TestSimilarityFromFile:
                 "expect_warning",
             ]
         }
-        test_case_["similarity_matrix"] = filepath
+        test_case_["similarity"] = filepath
         if request.param["shared_abundances"]:
             test_case_["relative_abundances"] = shared_array_manager.from_array(
                 request.param["relative_abundances"]
@@ -715,20 +715,20 @@ class TestSimilarityFromFile:
         if test_case["expect_warning"]:
             with warns(ArgumentWarning):
                 similarity = SimilarityFromFile(
-                    similarity_matrix=test_case["similarity_matrix"],
+                    similarity=test_case["similarity"],
                     species_subset=test_case["species_subset"],
                     chunk_size=test_case["chunk_size"],
                 )
         else:
             similarity = SimilarityFromFile(
-                similarity_matrix=test_case["similarity_matrix"],
+                similarity=test_case["similarity"],
                 species_subset=test_case["species_subset"],
                 chunk_size=test_case["chunk_size"],
             )
         assert array_equal(
             similarity.species_ordering, test_case["expected_species_ordering"]
         )
-        assert similarity.similarity_matrix == test_case["similarity_matrix"]
+        assert similarity.similarity == test_case["similarity"]
         assert similarity.chunk_size == test_case["chunk_size"]
 
     def test_calculate_weighted_similarities(self, test_case):
@@ -736,13 +736,13 @@ class TestSimilarityFromFile:
         if test_case["expect_warning"]:
             with warns(ArgumentWarning):
                 similarity = SimilarityFromFile(
-                    similarity_matrix=test_case["similarity_matrix"],
+                    similarity=test_case["similarity"],
                     species_subset=test_case["species_subset"],
                     chunk_size=test_case["chunk_size"],
                 )
         else:
             similarity = SimilarityFromFile(
-                similarity_matrix=test_case["similarity_matrix"],
+                similarity=test_case["similarity"],
                 species_subset=test_case["species_subset"],
                 chunk_size=test_case["chunk_size"],
             )
@@ -752,7 +752,7 @@ class TestSimilarityFromFile:
         )
         assert weighted_similarities.shape == test_case["weighted_similarities"].shape
         assert allclose(weighted_similarities, test_case["weighted_similarities"])
-        with open(test_case["similarity_matrix"], "r") as file:
+        with open(test_case["similarity"], "r") as file:
             similarities_filecontents = file.read()
         assert similarities_filecontents == test_case["similarities_filecontents"]
         if test_case["out"] is not None:
@@ -1259,7 +1259,7 @@ class TestSimilarityFromFunction:
         if test_case["expect_raise"]:
             with raises(InvalidArgumentError):
                 SimilarityFromFunction(
-                    similarity_function=test_case["similarity_function"],
+                    similarity=test_case["similarity_function"],
                     features=test_case["features"],
                     species_ordering=test_case["species_ordering"],
                     shared_array_manager=test_case["shared_array_manager"],
@@ -1267,7 +1267,7 @@ class TestSimilarityFromFunction:
                 )
         else:
             similarity = SimilarityFromFunction(
-                similarity_function=test_case["similarity_function"],
+                similarity=test_case["similarity_function"],
                 features=test_case["features"],
                 species_ordering=test_case["species_ordering"],
                 shared_array_manager=test_case["shared_array_manager"],
@@ -1279,39 +1279,29 @@ class TestSimilarityFromFunction:
 
     def test_calculate_weighted_similarities(self, test_case, tmp_path):
         """Tests .calculate_weighted_similarities."""
-        if test_case["expect_raise"]:
-            with raises(InvalidArgumentError):
-                SimilarityFromFunction(
-                    similarity_function=test_case["similarity_function"],
-                    features=test_case["features"],
-                    species_ordering=test_case["species_ordering"],
-                    shared_array_manager=test_case["shared_array_manager"],
-                    num_processors=test_case["num_processors"],
-                )
-        else:
-            similarity = SimilarityFromFunction(
-                similarity_function=test_case["similarity_function"],
-                features=test_case["features"],
-                species_ordering=test_case["species_ordering"],
-                shared_array_manager=test_case["shared_array_manager"],
-                num_processors=test_case["num_processors"],
-            )
-            weighted_similarities = similarity.calculate_weighted_similarities(
-                relative_abundances=test_case["relative_abundances"],
-                out=test_case["out"],
-            )
-            assert (
-                weighted_similarities.data.shape
-                == test_case["expected_weighted_similarities"].shape
-            )
-            assert allclose(
-                weighted_similarities.data, test_case["expected_weighted_similarities"]
-            )
-            if test_case["out"] is not None:
-                if test_case["shared_out"]:
-                    assert weighted_similarities is test_case["out"].data
-                else:
-                    assert weighted_similarities is test_case["out"]
+        similarity = SimilarityFromFunction(
+            similarity=test_case["similarity_function"],
+            features=test_case["features"],
+            species_ordering=test_case["species_ordering"],
+            shared_array_manager=test_case["shared_array_manager"],
+            num_processors=test_case["num_processors"],
+        )
+        weighted_similarities = similarity.calculate_weighted_similarities(
+            relative_abundances=test_case["relative_abundances"],
+            out=test_case["out"],
+        )
+        assert (
+            weighted_similarities.data.shape
+            == test_case["expected_weighted_similarities"].shape
+        )
+        assert allclose(
+            weighted_similarities.data, test_case["expected_weighted_similarities"]
+        )
+        if test_case["out"] is not None:
+            if test_case["shared_out"]:
+                assert weighted_similarities is test_case["out"].data
+            else:
+                assert weighted_similarities is test_case["out"]
 
 
 SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
@@ -1526,7 +1516,7 @@ class TestSimilarityFromFunctionApplysimilarityFunction:
 SIMILARITY_FROM_MEMORY_TEST_CASES = [
     {
         "description": "2 communities",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -1560,7 +1550,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "shared abundances",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -1594,7 +1584,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "numpy array out",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -1628,7 +1618,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "shared array out",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -1662,7 +1652,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "1 community",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -1694,7 +1684,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "2 communities; shuffled index",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [0.5, 1, 0.2],
@@ -1728,7 +1718,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "shared abundances; shuffled index",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [0.5, 1, 0.2],
@@ -1762,7 +1752,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "numpy array out; shuffled index",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [0.5, 1, 0.2],
@@ -1796,7 +1786,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "shared array out; shuffled index",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [0.5, 1, 0.2],
@@ -1830,7 +1820,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "1 community; shuffled index",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -1862,7 +1852,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "species subset",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -1893,7 +1883,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "shared abundances; species subset",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -1924,7 +1914,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "numpy array out; species subset",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -1955,7 +1945,7 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
     },
     {
         "description": "shared array out; species subset",
-        "similarity_matrix": DataFrame(
+        "similarity": DataFrame(
             data=array(
                 [
                     [1, 0.5, 0.1],
@@ -1995,7 +1985,7 @@ class TestSimilarityFromMemory:
         test_case_ = {
             key: request.param[key]
             for key in [
-                "similarity_matrix",
+                "similarity",
                 "species_subset",
                 "expected_species_ordering",
                 "expected_similarity_matrix",
@@ -2020,20 +2010,20 @@ class TestSimilarityFromMemory:
     def test_init(self, test_case):
         """Tests initializer."""
         similarity = SimilarityFromMemory(
-            similarity_matrix=test_case["similarity_matrix"],
+            similarity=test_case["similarity"],
             species_subset=test_case["species_subset"],
         )
         assert array_equal(
             similarity.species_ordering, test_case["expected_species_ordering"]
         )
         assert_frame_equal(
-            similarity.similarity_matrix, test_case["expected_similarity_matrix"]
+            similarity.similarity, test_case["expected_similarity_matrix"]
         )
 
     def test_calculate_weighted_similarities(self, test_case, tmp_path):
         """Tests .calculate_weighted_similarities."""
         similarity = SimilarityFromMemory(
-            similarity_matrix=test_case["similarity_matrix"],
+            similarity=test_case["similarity"],
             species_subset=test_case["species_subset"],
         )
         weighted_similarities = similarity.calculate_weighted_similarities(

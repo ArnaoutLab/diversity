@@ -18,10 +18,11 @@ make_similarity
 from abc import ABC, abstractmethod
 from functools import cached_property
 from multiprocessing import cpu_count, Pool
+from types import FunctionType
 
-from numpy import dtype, empty, flatnonzero
+from numpy import dtype, empty, flatnonzero, memmap, ndarray
 from pandas import DataFrame, read_csv
-from pandas.api.types import is_numeric_dtype, is_string_dtype
+from pandas.api.types import is_numeric_dtype
 
 from diversity.exceptions import InvalidArgumentError
 from diversity.log import LOGGER
@@ -38,7 +39,7 @@ from diversity.utilities import (
 
 
 def make_similarity(
-    similarity_method,
+    similarity,
     species_subset,
     chunk_size=1,
     features_filepath=None,
@@ -50,7 +51,7 @@ def make_similarity(
 
     Parameters
     ----------
-    similarity_method: pandas.DataFrame, str, or Callable
+    similarity: pandas.DataFrame, str, or Callable
         If pandas.DataFrame, see diversity.similarity.SimilarityFromMemory.
         If str, see diversity.similarity.SimilarityFromFile.
         If callable, see diversity.similarity.SimilarityFromFunction.
@@ -59,14 +60,14 @@ def make_similarity(
         species from this collection are used.
     chunk_size: int
         See diversity.similarity.SimilarityFromFile. Only relevant
-        if a str is passed as argument for similarity_method.
+        if a str is passed as argument for similarity.
     features_filepath, species_column: str
         See diversity.similarity.SimilarityFromFunction.read_shared_features.
         Only relevant if a callable is passed as argument for
-        similarity_method.
+        similarity.
     shared_array_manager, num_processors:
         See diversity.similarity.SimilarityFromFunction. Only relevant
-        if a callable is passed as argument for similarity_method.
+        if a callable is passed as argument for similarity.
 
     Returns
     -------
@@ -76,13 +77,13 @@ def make_similarity(
     -----
     Valid parameter combinations are:
     (species_subset is required in all cases)
-    - similarity_method: numpy.ndarray
+    - similarity: numpy.ndarray
       chunk_size: Any
       all others default
-    - similarity_method: str
+    - similarity: str
       chunk_size: int
       all others default
-    - similarity_method: Callable
+    - similarity: Callable
       chunk_size: Any
       features_filepath, species_column:
         see diversity.similarity.SimilarityFromFunction.read_shared_features
@@ -90,10 +91,10 @@ def make_similarity(
         see diversity.similarity.SimilarityFromFunction.
     """
     LOGGER.debug(
-        "make_similarity(similarity_method=%s, species_subset=%s,"
+        "make_similarity(similarity=%s, species_subset=%s,"
         " chunk_size=%s, features_filepath=%s, species_column=%s,"
         " shared_array_manager=%s, num_processors=%s)",
-        similarity_method,
+        similarity,
         species_subset,
         chunk_size,
         features_filepath,
@@ -101,69 +102,36 @@ def make_similarity(
         shared_array_manager,
         num_processors,
     )
-    if isinstance(similarity_method, DataFrame) and all(
-        map(
-            lambda arg: arg is None,
-            (features_filepath, species_column, shared_array_manager, num_processors),
-        )
-    ):
-        similarity = SimilarityFromMemory(
-            similarity_matrix=similarity_method, species_subset=species_subset
-        )
-    elif (
-        isinstance(similarity_method, str)
-        and isinstance(chunk_size, int)
-        and all(
-            map(
-                lambda arg: arg is None,
-                (
-                    features_filepath,
-                    species_column,
-                    shared_array_manager,
-                    num_processors,
-                ),
-            )
-        )
-    ):
-        similarity = SimilarityFromFile(
-            similarity_matrix=similarity_method,
-            species_subset=species_subset,
-            chunk_size=chunk_size,
-        )
-    elif (
-        callable(similarity_method)
-        and isinstance(features_filepath, str)
-        and isinstance(species_column, str)
-        and isinstance(shared_array_manager, SharedArrayManager)
-        and (num_processors is None or isinstance(num_processors, int))
-    ):
-        features, species_ordering = SimilarityFromFunction.read_shared_features(
+
+    kwargs = {
+        "similarity": similarity,
+        "species_subset": species_subset,
+        "chunk_size": chunk_size,
+        "features_filepath": features_filepath,
+        "species_column": species_column,
+        "shared_array_manager": shared_array_manager,
+        "num_processors": num_processors,
+    }
+    kwargs = {name: arg for name, arg in kwargs.items() if arg is not None}
+    methods = {
+        DataFrame: SimilarityFromMemory,
+        ndarray: SimilarityFromMemory,
+        memmap: SimilarityFromMemory,
+        str: SimilarityFromFile,
+        FunctionType: SimilarityFromFunction,
+    }
+    similarity_class = methods[type(similarity)]
+    # FIXME can this go inside of the __init__ of SimilarityFromFunction? Seems too specific to be called here.
+    if isinstance(similarity_class, SimilarityFromFunction):
+        features, species_ordering = similarity_class.read_shared_features(
             filepath=features_filepath,
             species_column=species_column,
             species_subset=species_subset,
             shared_array_manager=shared_array_manager,
         )
-        similarity = SimilarityFromFunction(
-            similarity_function=similarity_method,
-            features=features,
-            species_ordering=species_ordering,
-            shared_array_manager=shared_array_manager,
-            num_processors=num_processors,
-        )
-    else:
-        raise InvalidArgumentError(
-            "Invalid argument types for make_similarity;"
-            " similarity_method: %s, species_subset: %s,"
-            " chunk_size: %s, features_filepath: %s, species_column: %s,"
-            " shared_array_manager: %s, num_processors: %s",
-            type(similarity_method),
-            type(species_subset),
-            type(chunk_size),
-            type(features_filepath),
-            type(species_column),
-            type(shared_array_manager),
-            type(num_processors),
-        )
+        kwargs["features"] = features
+        kwargs["species_ordering"] = species_ordering
+    similarity = similarity_class(**kwargs)
     return similarity
 
 
@@ -217,12 +185,12 @@ class SimilarityFromFile(ISimilarity):
     memory load.
     """
 
-    def __init__(self, similarity_matrix, species_subset, chunk_size=1):
+    def __init__(self, similarity, species_subset, chunk_size=1):
         """Initializes object.
 
         Parameters
         ----------
-        similarity_matrix: str
+        similarity: str
             Path to similarities file containing a square matrix of
             similarities between species, together with a header
             containing the unique species names in the matrix's row and
@@ -234,13 +202,13 @@ class SimilarityFromFile(ISimilarity):
             Number of rows to read from similarity matrix at a time.
         """
         LOGGER.debug(
-            "SimilarityFromFile(similarity_matrix=%s, species_subset=%s, chunk_size=%s",
-            similarity_matrix,
+            "SimilarityFromFile(similarity=%s, species_subset=%s, chunk_size=%s",
+            similarity,
             species_subset,
             chunk_size,
         )
-        self.similarity_matrix = similarity_matrix
-        self.__delimiter = get_file_delimiter(self.similarity_matrix)
+        self.similarity = similarity
+        self.__delimiter = get_file_delimiter(self.similarity)
         self.chunk_size = chunk_size
         (
             self.__species_ordering,
@@ -275,7 +243,7 @@ class SimilarityFromFile(ISimilarity):
             "SimilarityFromFile.__get_species_ordering(%s, %s)" % (self, species_subset)
         )
         with read_csv(
-            self.similarity_matrix, delimiter=self.__delimiter, chunksize=1
+            self.similarity, delimiter=self.__delimiter, chunksize=1
         ) as similarity_matrix_chunks:
             species = next(similarity_matrix_chunks).columns.astype(str)
         species_subset_indices = species.isin(species_subset)
@@ -295,7 +263,7 @@ class SimilarityFromFile(ISimilarity):
             )
         out_, relative_abundances_ = extract_data_if_shared(out, relative_abundances)
         with read_csv(
-            self.similarity_matrix,
+            self.similarity,
             delimiter=self.__delimiter,
             chunksize=self.chunk_size,
             usecols=self.__usecols,
@@ -313,7 +281,7 @@ class SimilarityFromFile(ISimilarity):
 class SimilarityFromFunction(ISimilarity):
     """Implements ISimilarity using a similarity function."""
 
-    @staticmethod
+    # @staticmethod
     def read_shared_features(
         filepath, species_column, species_subset, shared_array_manager
     ):
@@ -436,7 +404,7 @@ class SimilarityFromFunction(ISimilarity):
 
     def __init__(
         self,
-        similarity_function,
+        similarity,
         features,
         species_ordering,
         shared_array_manager,
@@ -446,7 +414,7 @@ class SimilarityFromFunction(ISimilarity):
 
         Parameters
         ----------
-        similarity_function: Callable
+        similarity: Callable
             Callable to determine similarity between species. Must take
             two items from the features argument and return a numeric
             similarity value. Must be pickleable.
@@ -467,10 +435,10 @@ class SimilarityFromFunction(ISimilarity):
         features_spec and species_ordering are read correctly.
         """
         LOGGER.debug(
-            "SimilarityFromFunction(similarity_function=%s,"
+            "SimilarityFromFunction(similarity=%s,"
             " features=%s, species_ordering=%s,"
             " shared_array_manager=%s, num_processors=%s)",
-            similarity_function,
+            similarity,
             features,
             species_ordering,
             shared_array_manager,
@@ -485,9 +453,7 @@ class SimilarityFromFunction(ISimilarity):
             )
         self.__features = features
         self.__species_ordering = species_ordering
-        self.__similarity_function = self.ApplySimilarityFunction(
-            func=similarity_function
-        )
+        self.__similarity_function = self.ApplySimilarityFunction(func=similarity)
         self.__shared_array_manager = shared_array_manager
         self.__num_processors = self.__get_num_processors(num_processors)
 
@@ -561,7 +527,7 @@ class SimilarityFromFunction(ISimilarity):
 class SimilarityFromMemory(ISimilarity):
     """Implements Similarity using similarities stored in memory."""
 
-    def __init__(self, similarity_matrix, species_subset):
+    def __init__(self, similarity, species_subset):
         """Initializes object.
 
         similarity_matrix: pandas.DataFrame
@@ -573,9 +539,9 @@ class SimilarityFromMemory(ISimilarity):
             included.
         """
         self.__species_ordering = self.__get_species_ordering(
-            similarity_matrix, species_subset
+            similarity, species_subset
         )
-        self.similarity_matrix = self.__reindex_similarity_matrix(similarity_matrix)
+        self.similarity = self.__reindex_similarity_matrix(similarity)
 
     @property
     def species_ordering(self):
@@ -597,5 +563,5 @@ class SimilarityFromMemory(ISimilarity):
                 extract_data_if_shared(relative_abundances).shape, dtype=dtype("f8")
             )
         out_, relative_abundances_ = extract_data_if_shared(out, relative_abundances)
-        out_[:] = self.similarity_matrix.to_numpy() @ relative_abundances_
+        out_[:] = self.similarity.to_numpy() @ relative_abundances_
         return out_
