@@ -13,7 +13,7 @@ MAIN_TEST_CASES = [
         "args": Namespace(
             input_filepath="counts.tsv",
             output_filepath="diversities.tsv",
-            similarity_matrix_filepath="similarities.tsv",
+            similarity="similarities.tsv",
             viewpoint=[0],
             log_level="WARNING",
             subcommunity_column="subcommunity",
@@ -52,7 +52,7 @@ MAIN_TEST_CASES = [
         "args": Namespace(
             input_filepath="foo_counts.tsv",
             output_filepath="bar_counts.tsv",
-            similarity_matrix_filepath="baz_similarities.tsv",
+            similarity="baz_similarities.tsv",
             viewpoint=[2, 101, 102, inf],
             log_level="WARNING",
             subcommunity_column="subcommunity",
@@ -95,7 +95,7 @@ MAIN_TEST_CASES = [
         "args": Namespace(
             input_filepath="foo_counts.tsv",
             output_filepath="bar_counts.tsv",
-            similarity_matrix_filepath="baz_similarities.tsv",
+            similarity="baz_similarities.tsv",
             viewpoint=[2, 101, 102, inf],
             log_level="WARNING",
             subcommunity_column="subcommunity_",
@@ -138,7 +138,7 @@ MAIN_TEST_CASES = [
         "args": Namespace(
             input_filepath="foo_counts.tsv",
             output_filepath="bar_counts.tsv",
-            similarity_matrix_filepath="baz_similarities.tsv",
+            similarity="baz_similarities.tsv",
             viewpoint=[2, 101, 102, inf],
             log_level="WARNING",
             subcommunity_column="subcommunity",
@@ -181,7 +181,7 @@ MAIN_TEST_CASES = [
         "args": Namespace(
             input_filepath="foo_counts.tsv",
             output_filepath="bar_counts.tsv",
-            similarity_matrix_filepath="baz_similarities.tsv",
+            similarity="baz_similarities.tsv",
             viewpoint=[2, 101, 102, inf],
             log_level="WARNING",
             subcommunity_column="subcommunity",

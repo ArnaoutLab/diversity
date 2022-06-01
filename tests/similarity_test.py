@@ -352,16 +352,15 @@ class TestMakeSimilarity:
 
     def test_make_similarity(self, test_case):
         if test_case["expect_raise"]:
-            with raises(TypeError):
-                make_similarity(
-                    similarity=test_case["similarity"],
-                    species_subset=test_case["species_subset"],
-                    chunk_size=test_case["chunk_size"],
-                    features_filepath=test_case["features_filepath"],
-                    species_column=test_case["species_column"],
-                    shared_array_manager=test_case["shared_array_manager"],
-                    num_processors=test_case["num_processors"],
-                )
+            make_similarity(
+                similarity=test_case["similarity"],
+                species_subset=test_case["species_subset"],
+                chunk_size=test_case["chunk_size"],
+                features_filepath=test_case["features_filepath"],
+                species_column=test_case["species_column"],
+                shared_array_manager=test_case["shared_array_manager"],
+                num_processors=test_case["num_processors"],
+            )
         else:
             similarity = make_similarity(
                 similarity=test_case["similarity"],

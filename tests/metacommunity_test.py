@@ -1378,7 +1378,7 @@ SIMILARITY_SENSITIVE_METACOMMUNITY_TEST_CASES = [
         ),
         "subcommunity_ordering": array(["subcommunity_1", "subcommunity_2"]),
         "similarity": {
-            "similarity_function": sim_func,
+            "similarity": sim_func,
             "features": array(
                 [
                     ["species_1"],
@@ -1474,7 +1474,7 @@ class TestSimilaritySensitiveMetacommunity:
                 kwargs = {
                     key: request.param["similarity"][key]
                     for key in [
-                        "similarity_function",
+                        "similarity",
                         "species_ordering",
                         "num_processors",
                     ]
@@ -1771,7 +1771,7 @@ class TestSharedSimilaritySensitiveMetacommunity:
                 kwargs = {
                     key: request.param["similarity"][key]
                     for key in [
-                        "similarity_function",
+                        "similarity",
                         "species_ordering",
                         "num_processors",
                     ]
