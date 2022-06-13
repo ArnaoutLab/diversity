@@ -108,7 +108,11 @@ def make_similarity(
     )
     from_file = (
         SimilarityFromFile,
-        {"similarity": similarity, "species_subset": species_subset, "chunk_size": chunk_size},
+        {
+            "similarity": similarity,
+            "species_subset": species_subset,
+            "chunk_size": chunk_size,
+        },
     )
     from_function = (
         SimilarityFromFunction.from_features_file,

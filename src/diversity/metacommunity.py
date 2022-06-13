@@ -126,25 +126,31 @@ def make_metacommunity(
         out=pivotted_counts,
     )
     abundance = make_abundance(counts=pivotted_counts, **abundance_kwargs)
-    kwargs = {
-        "abundance": abundance,
-        "subcommunities": subcommunities,
-        "similarity": similarity,
-        "shared_array_manager": shared_array_manager,
-    }
-    kwargs = {kw: arg for kw, arg in kwargs.items() if arg is not None}
+
+    common_kwargs = {"abundance": abundance, "subcommunity_ordering": subcommunities}
+    frequency_sensitive = (
+        FrequencySensitiveMetacommunity,
+        common_kwargs,
+    )
+    similarity_sensitive = (
+        SimilaritySensitiveMetacommunity,
+        {**common_kwargs, "similarity": similarity},
+    )
+    shared_similarity_sensitive = (
+        SharedSimilaritySensitiveMetacommunity,
+        {**common_kwargs, "similarity": similarity, "shared_array_manager": shared_array_manager},
+    )
     strategies = {
-        (abundance, subcommunities): FrequencySensitiveMetacommunity,
-        (abundance, subcommunities, similarity): SimilaritySensitiveMetacommunity,
-        (
-            abundance,
-            subcommunities,
-            similarity,
-            shared_array_manager,
-        ): SharedSimilaritySensitiveMetacommunity,
+        (False, type(None)): frequency_sensitive,
+        (True, type(None)): similarity_sensitive,
+        (True, SharedArrayManager): shared_similarity_sensitive,
     }
-    metacommunity_class, args = strategies[kwargs]
-    metacommunity = metacommunity_class(args)
+    strategy_choice = strategies[(
+        isinstance(similarity, ISimilarity),
+        type(shared_array_manager),
+    )]
+    metacommunity_class, kwargs = strategy_choice
+    metacommunity = metacommunity_class(**kwargs)
     return metacommunity
 
 
