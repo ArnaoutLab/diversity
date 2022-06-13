@@ -102,18 +102,24 @@ def make_similarity(
         num_processors,
     )
 
-    from_memory = (SimilarityFromMemory, (similarity, species_subset))
-    from_file = (SimilarityFromFile, (similarity, species_subset, chunk_size))
+    from_memory = (
+        SimilarityFromMemory,
+        {"similarity": similarity, "species_subset": species_subset},
+    )
+    from_file = (
+        SimilarityFromFile,
+        {"similarity": similarity, "species_subset": species_subset, "chunk_size": chunk_size},
+    )
     from_function = (
         SimilarityFromFunction.from_features_file,
-        (
-            similarity,
-            num_processors,
-            features_filepath,
-            species_column,
-            species_subset,
-            shared_array_manager,
-        ),
+        {
+            "similarity": similarity,
+            "num_processors": num_processors,
+            "features_filepath": features_filepath,
+            "species_column": species_column,
+            "species_subset": species_subset,
+            "shared_array_manager": shared_array_manager,
+        },
     )
     strategies = {
         DataFrame: from_memory,
@@ -123,9 +129,10 @@ def make_similarity(
         FunctionType: from_function,
     }
     strategy_choice = strategies[type(similarity)]
-    similarity_class, args = strategy_choice
-    args = (arg for arg in args if arg is not None)
-    similarity = similarity_class(*args)
+    similarity_class, kwargs = strategy_choice
+    # args = (arg for arg in args if arg is not None)
+    LOGGER.debug(f"similarity_class: {similarity_class}")
+    similarity = similarity_class(**kwargs)
     return similarity
 
 

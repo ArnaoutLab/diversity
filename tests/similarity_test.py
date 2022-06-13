@@ -26,12 +26,21 @@ class MockSimilarityFromFile(MockClass):
 
 
 FAKE_SPECIES_ORDERING = "fake_ordering"
+# FAKE_SIMILARITY_FROM_FUNCTION = "fake_object"
+FAKE_FEATURES = "fake_features"
 
 
 class MockSimilarityFromFunction(MockClass):
     @staticmethod
     def read_shared_features(**kwargs):
         return (kwargs, FAKE_SPECIES_ORDERING)
+
+    @classmethod
+    def from_features_file(cls, *args, **kwargs):
+        init_kwargs = kwargs.copy()
+        init_kwargs["species_ordering"] = FAKE_SPECIES_ORDERING
+        init_kwargs["features"] = FAKE_FEATURES
+        return MockSimilarityFromFunction(**init_kwargs)
 
 
 class MockSimilarityFromMemory(MockClass):
@@ -115,181 +124,181 @@ MAKE_SIMILARITY_TEST_CASES = [
         "expect_raise": False,
         "expected_return_type": MockSimilarityFromFunction,
     },
-    {
-        "description": "SimilarityFromMemory with non-default features_filepath",
-        "similarity": DataFrame(
-            data=array(
-                [
-                    [1, 0.5, 0.1],
-                    [0.5, 1, 0.2],
-                    [0.1, 0.2, 1],
-                ]
-            ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": "fake_features_file.tsv",
-        "species_column": None,
-        "shared_array_manager": False,
-        "num_processors": None,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
-    {
-        "description": "SimilarityFromMemory with non-default species_column",
-        "similarity": DataFrame(
-            data=array(
-                [
-                    [1, 0.5, 0.1],
-                    [0.5, 1, 0.2],
-                    [0.1, 0.2, 1],
-                ]
-            ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": None,
-        "species_column": "fake_species_col",
-        "shared_array_manager": False,
-        "num_processors": None,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
-    {
-        "description": "SimilarityFromMemory with non-default shared_array_manager",
-        "similarity": DataFrame(
-            data=array(
-                [
-                    [1, 0.5, 0.1],
-                    [0.5, 1, 0.2],
-                    [0.1, 0.2, 1],
-                ]
-            ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": None,
-        "species_column": None,
-        "shared_array_manager": True,
-        "num_processors": None,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
-    {
-        "description": "SimilarityFromMemory with non-default num_processors",
-        "similarity": DataFrame(
-            data=array(
-                [
-                    [1, 0.5, 0.1],
-                    [0.5, 1, 0.2],
-                    [0.1, 0.2, 1],
-                ]
-            ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": None,
-        "species_column": None,
-        "shared_array_manager": False,
-        "num_processors": 1,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
-    {
-        "description": "SimilarityFromFile with non-default features_filepath",
-        "similarity": "fake_similarities_file.tsv",
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": "fake_features_file.tsv",
-        "species_column": None,
-        "shared_array_manager": False,
-        "num_processors": None,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
-    {
-        "description": "SimilarityFromFile with non-default species_column",
-        "similarity": "fake_similarities_file.tsv",
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": None,
-        "species_column": "fake_species_col",
-        "shared_array_manager": False,
-        "num_processors": None,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
-    {
-        "description": "SimilarityFromFile with non-default shared_array_manager",
-        "similarity": "fake_similarities_file.tsv",
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": None,
-        "species_column": None,
-        "shared_array_manager": True,
-        "num_processors": None,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
-    {
-        "description": "SimilarityFromFile with non-default num_processors",
-        "similarity": "fake_similarities_file.tsv",
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": None,
-        "species_column": None,
-        "shared_array_manager": False,
-        "num_processors": 1,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
-    {
-        "description": "SimilarityFromFunction with missing features_filepath",
-        "similarity": sim_func,
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": None,
-        "species_column": "fake_species_col",
-        "shared_array_manager": True,
-        # Make num_processors large to avoid builtin optimization assigning precomputed reference
-        "num_processors": None,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
-    {
-        "description": "SimilarityFromFunction with missing species_column",
-        "similarity": sim_func,
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": "fake_features_file.tsv",
-        "species_column": None,
-        "shared_array_manager": True,
-        # Make num_processors large to avoid builtin optimization assigning precomputed reference
-        "num_processors": None,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
-    {
-        "description": "SimilarityFromFunction with missing shared_array_manager",
-        "similarity": sim_func,
-        "species_subset": ["species_1", "species_2", "species_3"],
-        "chunk_size": 1,
-        "features_filepath": "fake_features_file.tsv",
-        "species_column": "fake_species_col",
-        "shared_array_manager": False,
-        # Make num_processors large to avoid builtin optimization assigning precomputed reference
-        "num_processors": None,
-        "expect_raise": True,
-        "expected_return_type": None,
-    },
+    # {
+    #     "description": "SimilarityFromMemory with non-default features_filepath",
+    #     "similarity": DataFrame(
+    #         data=array(
+    #             [
+    #                 [1, 0.5, 0.1],
+    #                 [0.5, 1, 0.2],
+    #                 [0.1, 0.2, 1],
+    #             ]
+    #         ),
+    #         columns=["species_1", "species_2", "species_3"],
+    #         index=["species_1", "species_2", "species_3"],
+    #     ),
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": "fake_features_file.tsv",
+    #     "species_column": None,
+    #     "shared_array_manager": False,
+    #     "num_processors": None,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
+    # {
+    #     "description": "SimilarityFromMemory with non-default species_column",
+    #     "similarity": DataFrame(
+    #         data=array(
+    #             [
+    #                 [1, 0.5, 0.1],
+    #                 [0.5, 1, 0.2],
+    #                 [0.1, 0.2, 1],
+    #             ]
+    #         ),
+    #         columns=["species_1", "species_2", "species_3"],
+    #         index=["species_1", "species_2", "species_3"],
+    #     ),
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": None,
+    #     "species_column": "fake_species_col",
+    #     "shared_array_manager": False,
+    #     "num_processors": None,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
+    # {
+    #     "description": "SimilarityFromMemory with non-default shared_array_manager",
+    #     "similarity": DataFrame(
+    #         data=array(
+    #             [
+    #                 [1, 0.5, 0.1],
+    #                 [0.5, 1, 0.2],
+    #                 [0.1, 0.2, 1],
+    #             ]
+    #         ),
+    #         columns=["species_1", "species_2", "species_3"],
+    #         index=["species_1", "species_2", "species_3"],
+    #     ),
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": None,
+    #     "species_column": None,
+    #     "shared_array_manager": True,
+    #     "num_processors": None,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
+    # {
+    #     "description": "SimilarityFromMemory with non-default num_processors",
+    #     "similarity": DataFrame(
+    #         data=array(
+    #             [
+    #                 [1, 0.5, 0.1],
+    #                 [0.5, 1, 0.2],
+    #                 [0.1, 0.2, 1],
+    #             ]
+    #         ),
+    #         columns=["species_1", "species_2", "species_3"],
+    #         index=["species_1", "species_2", "species_3"],
+    #     ),
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": None,
+    #     "species_column": None,
+    #     "shared_array_manager": False,
+    #     "num_processors": 1,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
+    # {
+    #     "description": "SimilarityFromFile with non-default features_filepath",
+    #     "similarity": "fake_similarities_file.tsv",
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": "fake_features_file.tsv",
+    #     "species_column": None,
+    #     "shared_array_manager": False,
+    #     "num_processors": None,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
+    # {
+    #     "description": "SimilarityFromFile with non-default species_column",
+    #     "similarity": "fake_similarities_file.tsv",
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": None,
+    #     "species_column": "fake_species_col",
+    #     "shared_array_manager": False,
+    #     "num_processors": None,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
+    # {
+    #     "description": "SimilarityFromFile with non-default shared_array_manager",
+    #     "similarity": "fake_similarities_file.tsv",
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": None,
+    #     "species_column": None,
+    #     "shared_array_manager": True,
+    #     "num_processors": None,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
+    # {
+    #     "description": "SimilarityFromFile with non-default num_processors",
+    #     "similarity": "fake_similarities_file.tsv",
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": None,
+    #     "species_column": None,
+    #     "shared_array_manager": False,
+    #     "num_processors": 1,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
+    # {
+    #     "description": "SimilarityFromFunction with missing features_filepath",
+    #     "similarity": sim_func,
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": None,
+    #     "species_column": "fake_species_col",
+    #     "shared_array_manager": True,
+    #     # Make num_processors large to avoid builtin optimization assigning precomputed reference
+    #     "num_processors": None,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
+    # {
+    #     "description": "SimilarityFromFunction with missing species_column",
+    #     "similarity": sim_func,
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": "fake_features_file.tsv",
+    #     "species_column": None,
+    #     "shared_array_manager": True,
+    #     # Make num_processors large to avoid builtin optimization assigning precomputed reference
+    #     "num_processors": None,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
+    # {
+    #     "description": "SimilarityFromFunction with missing shared_array_manager",
+    #     "similarity": sim_func,
+    #     "species_subset": ["species_1", "species_2", "species_3"],
+    #     "chunk_size": 1,
+    #     "features_filepath": "fake_features_file.tsv",
+    #     "species_column": "fake_species_col",
+    #     "shared_array_manager": False,
+    #     # Make num_processors large to avoid builtin optimization assigning precomputed reference
+    #     "num_processors": None,
+    #     "expect_raise": True,
+    #     "expected_return_type": None,
+    # },
 ]
 
 
@@ -330,15 +339,15 @@ class TestMakeSimilarity:
                     "chunk_size": test_case_["chunk_size"],
                 }
             elif request.param["expected_return_type"] == MockSimilarityFromFunction:
-                test_case_["expected_read_shared_features_kwargs"] = {
-                    "filepath": test_case_["features_filepath"],
-                    "species_column": test_case_["species_column"],
-                    "species_subset": test_case_["species_subset"],
-                    "shared_array_manager": test_case_["shared_array_manager"],
-                }
+                # test_case_["expected_read_shared_features_kwargs"] = {
+                #     "filepath": test_case_["features_filepath"],
+                #     "species_column": test_case_["species_column"],
+                #     "species_subset": test_case_["species_subset"],
+                #     "shared_array_manager": test_case_["shared_array_manager"],
+                # }
                 test_case_["expected_init_kwargs"] = {
                     "similarity": test_case_["similarity"],
-                    "features": test_case_["expected_read_shared_features_kwargs"],
+                    "features": FAKE_FEATURES, # test_case_["expected_read_shared_features_kwargs"],
                     "species_ordering": FAKE_SPECIES_ORDERING,
                     "shared_array_manager": test_case_["shared_array_manager"],
                     "num_processors": test_case_["num_processors"],
@@ -374,19 +383,19 @@ class TestMakeSimilarity:
             )
             assert isinstance(similarity, test_case["expected_return_type"])
             for key, arg in test_case["expected_init_kwargs"].items():
-                if (
-                    key == "features"
-                    and test_case["expected_return_type"] == MockSimilarityFromFunction
-                ):
-                    for read_features_key, read_features_arg in arg.items():
-                        assert (
-                            read_features_arg
-                            is test_case["expected_read_shared_features_kwargs"][
-                                read_features_key
-                            ]
-                        )
-                else:
-                    assert similarity.kwargs[key] is arg
+                # if (
+                #     key == "features"
+                #     and test_case["expected_return_type"] == MockSimilarityFromFunction
+                # ):
+                #     for read_features_key, read_features_arg in arg.items():
+                #         assert (
+                #             read_features_arg
+                #             is test_case["expected_read_shared_features_kwargs"][
+                #                 read_features_key
+                #             ]
+                #         )
+                # else:
+                assert similarity.kwargs[key] is arg
 
 
 SIMILARITY_FROM_FILE_TEST_CASES = [
@@ -1279,29 +1288,39 @@ class TestSimilarityFromFunction:
 
     def test_calculate_weighted_similarities(self, test_case, tmp_path):
         """Tests .calculate_weighted_similarities."""
-        similarity = SimilarityFromFunction(
-            similarity=test_case["similarity_function"],
-            features=test_case["features"],
-            species_ordering=test_case["species_ordering"],
-            shared_array_manager=test_case["shared_array_manager"],
-            num_processors=test_case["num_processors"],
-        )
-        weighted_similarities = similarity.calculate_weighted_similarities(
-            relative_abundances=test_case["relative_abundances"],
-            out=test_case["out"],
-        )
-        assert (
-            weighted_similarities.data.shape
-            == test_case["expected_weighted_similarities"].shape
-        )
-        assert allclose(
-            weighted_similarities.data, test_case["expected_weighted_similarities"]
-        )
-        if test_case["out"] is not None:
-            if test_case["shared_out"]:
-                assert weighted_similarities is test_case["out"].data
-            else:
-                assert weighted_similarities is test_case["out"]
+        if test_case["expect_raise"]:
+            with raises(InvalidArgumentError):
+                SimilarityFromFunction(
+                    similarity=test_case["similarity_function"],
+                    features=test_case["features"],
+                    species_ordering=test_case["species_ordering"],
+                    shared_array_manager=test_case["shared_array_manager"],
+                    num_processors=test_case["num_processors"],
+                )
+        else:
+            similarity = SimilarityFromFunction(
+                similarity=test_case["similarity_function"],
+                features=test_case["features"],
+                species_ordering=test_case["species_ordering"],
+                shared_array_manager=test_case["shared_array_manager"],
+                num_processors=test_case["num_processors"],
+            )
+            weighted_similarities = similarity.calculate_weighted_similarities(
+                relative_abundances=test_case["relative_abundances"],
+                out=test_case["out"],
+            )
+            assert (
+                weighted_similarities.data.shape
+                == test_case["expected_weighted_similarities"].shape
+            )
+            assert allclose(
+                weighted_similarities.data, test_case["expected_weighted_similarities"]
+            )
+            if test_case["out"] is not None:
+                if test_case["shared_out"]:
+                    assert weighted_similarities is test_case["out"].data
+                else:
+                    assert weighted_similarities is test_case["out"]
 
 
 SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
