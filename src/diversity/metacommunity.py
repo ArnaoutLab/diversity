@@ -99,7 +99,6 @@ def make_metacommunity(
     species_subset = unique(counts_subset[species_column])
 
     if similarity is None:
-        similarity = None
         species_ordering = species_subset
     else:
         similarity = make_similarity(
@@ -129,7 +128,7 @@ def make_metacommunity(
     abundance = make_abundance(counts=pivotted_counts, **abundance_kwargs)
 
     if similarity is None and shared_array_manager is None:
-        metacommunity = SimilarityInsensitiveMetacommunity(
+        metacommunity = FrequencySensitiveMetacommunity(
             abundance=abundance, subcommunity_ordering=subcommunities
         )
     elif isinstance(similarity, ISimilarity) and shared_array_manager is None:
@@ -314,7 +313,7 @@ class ISimilaritySensitiveMetacommunity(IMetacommunity):
         pass
 
 
-class SimilarityInsensitiveMetacommunity(IMetacommunity):
+class FrequencySensitiveMetacommunity(IMetacommunity):
     """Implements IMetacommunity for similarity-insensitive diversity."""
 
     def __init__(self, abundance, subcommunity_ordering):

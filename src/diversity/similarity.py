@@ -106,9 +106,10 @@ def make_similarity(
     from_memory = (SimilarityFromMemory, (similarity, species_subset))
     from_file = (SimilarityFromFile, (similarity, species_subset, chunk_size))
     from_function = (
-        SimilarityFromFunction,
+        SimilarityFromFunction.from_features_file,
         (
             similarity,
+            num_processors,
             features_filepath,
             species_column,
             species_subset,
@@ -278,9 +279,8 @@ class SimilarityFromFunction(ISimilarity):
     def __init__(
         self,
         similarity,
-        features_filepath,
-        species_subset,
-        species_column,
+        features,
+        species_ordering,
         shared_array_manager,
         num_processors=None,
     ):
@@ -313,18 +313,10 @@ class SimilarityFromFunction(ISimilarity):
             " features=%s, species_ordering=%s,"
             " shared_array_manager=%s, num_processors=%s)",
             similarity,
-            features_filepath,
-            species_subset,
-            species_column,
+            features,
+            species_ordering,
             shared_array_manager,
             num_processors,
-        )
-        # FIXME not sure if this works here
-        features, species_ordering = self.read_shared_features(
-            filepath=features_filepath,
-            species_column=species_column,
-            species_subset=species_subset,
-            shared_array_manager=shared_array_manager,
         )
         if features.data.shape[0] != len(species_ordering):
             raise InvalidArgumentError(
@@ -339,6 +331,7 @@ class SimilarityFromFunction(ISimilarity):
         self.__shared_array_manager = shared_array_manager
         self.__num_processors = self.__get_num_processors(num_processors)
 
+    @staticmethod
     def read_shared_features(
         filepath, species_column, species_subset, shared_array_manager
     ):
@@ -399,6 +392,30 @@ class SimilarityFromFunction(ISimilarity):
             )
         species_ordering = features_df.index
         return (features, species_ordering)
+
+    @classmethod
+    def from_features_file(
+        cls,
+        similarity_method,
+        num_processors,
+        features_filepath,
+        species_column,
+        species_subset,
+        shared_array_manager,
+    ):
+        features, species_ordering = SimilarityFromFunction.read_shared_features(
+            filepath=features_filepath,
+            species_column=species_column,
+            species_subset=species_subset,
+            shared_array_manager=shared_array_manager,
+        )
+        return cls(
+            similarity_function=similarity_method,
+            features=features,
+            species_ordering=species_ordering,
+            shared_array_manager=shared_array_manager,
+            num_processors=num_processors,
+        )
 
     class ApplySimilarityFunction:
         """Applies similarity function to a chunk of data."""
