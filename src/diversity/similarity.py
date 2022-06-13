@@ -29,7 +29,6 @@ from diversity.log import LOGGER
 from diversity.shared import (
     extract_data_if_shared,
     LoadSharedArray,
-    SharedArrayManager,
     SharedArrayView,
 )
 from diversity.utilities import (

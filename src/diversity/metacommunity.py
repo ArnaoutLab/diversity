@@ -126,33 +126,25 @@ def make_metacommunity(
         out=pivotted_counts,
     )
     abundance = make_abundance(counts=pivotted_counts, **abundance_kwargs)
-
-    if similarity is None and shared_array_manager is None:
-        metacommunity = FrequencySensitiveMetacommunity(
-            abundance=abundance, subcommunity_ordering=subcommunities
-        )
-    elif isinstance(similarity, ISimilarity) and shared_array_manager is None:
-        metacommunity = SimilaritySensitiveMetacommunity(
-            abundance=abundance,
-            subcommunity_ordering=subcommunities,
-            similarity=similarity,
-        )
-    elif isinstance(similarity, ISimilarity) and isinstance(
-        shared_array_manager, SharedArrayManager
-    ):
-        metacommunity = SharedSimilaritySensitiveMetacommunity(
-            abundance=abundance,
-            subcommunity_ordering=subcommunities,
-            similarity=similarity,
-            shared_array_manager=shared_array_manager,
-        )
-    else:
-        raise InvalidArgumentError(
-            "Invalid arguments: counts=%s, subcommunities=%s,"
-            " similarity=%s, subcommunity_column=%s, species_column=%s,"
-            " count_column=%s shared_array_manager=%s, abundance_kwargs=%s,"
-            " similarity_kwargs=%s"
-        )
+    kwargs = {
+        "abundance": abundance,
+        "subcommunities": subcommunities,
+        "similarity": similarity,
+        "shared_array_manager": shared_array_manager,
+    }
+    kwargs = {kw: arg for kw, arg in kwargs.items() if arg is not None}
+    strategies = {
+        (abundance, subcommunities): FrequencySensitiveMetacommunity,
+        (abundance, subcommunities, similarity): SimilaritySensitiveMetacommunity,
+        (
+            abundance,
+            subcommunities,
+            similarity,
+            shared_array_manager,
+        ): SharedSimilaritySensitiveMetacommunity,
+    }
+    metacommunity_class, args = strategies[kwargs]
+    metacommunity = metacommunity_class(args)
     return metacommunity
 
 
