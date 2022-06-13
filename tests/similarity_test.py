@@ -25,9 +25,9 @@ class MockSimilarityFromFile(MockClass):
     pass
 
 
-FAKE_SPECIES_ORDERING = "fake_"
+FAKE_SPECIES_ORDERING = "fake_ordering"
 # FAKE_SIMILARITY_FROM_FUNCTION = "fake_object"
-FAKE_FEATURES = "fake_"
+FAKE_FEATURES = "fake_features"
 
 
 class MockSimilarityFromFunction(MockClass):
@@ -1288,29 +1288,39 @@ class TestSimilarityFromFunction:
 
     def test_calculate_weighted_similarities(self, test_case, tmp_path):
         """Tests .calculate_weighted_similarities."""
-        similarity = SimilarityFromFunction(
-            similarity=test_case["similarity_function"],
-            features=test_case["features"],
-            species_ordering=test_case["species_ordering"],
-            shared_array_manager=test_case["shared_array_manager"],
-            num_processors=test_case["num_processors"],
-        )
-        weighted_similarities = similarity.calculate_weighted_similarities(
-            relative_abundances=test_case["relative_abundances"],
-            out=test_case["out"],
-        )
-        assert (
-            weighted_similarities.data.shape
-            == test_case["expected_weighted_similarities"].shape
-        )
-        assert allclose(
-            weighted_similarities.data, test_case["expected_weighted_similarities"]
-        )
-        if test_case["out"] is not None:
-            if test_case["shared_out"]:
-                assert weighted_similarities is test_case["out"].data
-            else:
-                assert weighted_similarities is test_case["out"]
+        if test_case["expect_raise"]:
+            with raises(InvalidArgumentError):
+                SimilarityFromFunction(
+                    similarity=test_case["similarity_function"],
+                    features=test_case["features"],
+                    species_ordering=test_case["species_ordering"],
+                    shared_array_manager=test_case["shared_array_manager"],
+                    num_processors=test_case["num_processors"],
+                )
+        else:
+            similarity = SimilarityFromFunction(
+                similarity=test_case["similarity_function"],
+                features=test_case["features"],
+                species_ordering=test_case["species_ordering"],
+                shared_array_manager=test_case["shared_array_manager"],
+                num_processors=test_case["num_processors"],
+            )
+            weighted_similarities = similarity.calculate_weighted_similarities(
+                relative_abundances=test_case["relative_abundances"],
+                out=test_case["out"],
+            )
+            assert (
+                weighted_similarities.data.shape
+                == test_case["expected_weighted_similarities"].shape
+            )
+            assert allclose(
+                weighted_similarities.data, test_case["expected_weighted_similarities"]
+            )
+            if test_case["out"] is not None:
+                if test_case["shared_out"]:
+                    assert weighted_similarities is test_case["out"].data
+                else:
+                    assert weighted_similarities is test_case["out"]
 
 
 SIMILARITY_FROM_FUNCTION_APPLY_SIMILARITY_FUNCTION_TEST_CASES = [
