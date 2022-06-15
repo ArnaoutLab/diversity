@@ -1893,6 +1893,49 @@ class TestSimilarityFromMemory:
         assert array_equal(similarity.species_ordering, species_subset)
         assert allclose(similarity.similarity, similarity_matrix)
 
+    def test_init_with_numpy_array_but_no_species_subset(self):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        with raises(InvalidArgumentError):
+            similarity = SimilarityFromMemory(
+                similarity=similarity_matrix,
+            )
+
+    def test_init_with_numpy_array_but_non_sequence_species_subset(self):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        species_subset = {"a", "b", "c"}
+        with raises(InvalidArgumentError):
+            similarity = SimilarityFromMemory(
+                similarity=similarity_matrix,
+                species_subset=species_subset,
+            )
+
+    def test_init_with_numpy_array_but_too_short_sequence_species_subset(self):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        species_subset = ["a", "b"]
+        with raises(InvalidArgumentError):
+            similarity = SimilarityFromMemory(
+                similarity=similarity_matrix,
+                species_subset=species_subset,
+            )
+
     def test_calculate_weighted_similarities_with_numpy_array(self):
         similarity_matrix = array(
             [
@@ -1936,6 +1979,192 @@ class TestSimilarityFromMemory:
         species_subset = ["a", "b", "c"]
         similarity = SimilarityFromMemory(
             similarity=similarity_matrix,
+            species_subset=species_subset,
+        )
+        relative_abundances = array(
+            [
+                [0.7, 0.3],
+                [0.1, 0.3],
+                [0.2, 0.4],
+            ]
+        )
+        out = empty(
+            dtype=dtype("f8"),
+            shape=(
+                similarity_matrix.shape[0],
+                relative_abundances.shape[1],
+            ),
+        )
+        weighted_similarities = similarity.calculate_weighted_similarities(
+            relative_abundances,
+            out=out,
+        )
+        expected_weighted_similarities = array(
+            [
+                [0.81, 0.61],
+                [0.77, 0.65],
+                [0.29, 0.49],
+            ]
+        )
+        assert allclose(weighted_similarities, expected_weighted_similarities)
+        assert weighted_similarities is out
+
+    def test_init_with_numpy_memmap(self, tmp_path):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        memmapped_similarity_matrix = memmap(
+            tmp_path / "similarity_matrix.npy",
+            dtype=dtype("f8"),
+            mode="w+",
+            offset=0,
+            shape=similarity_matrix.shape,
+            order="C",
+        )
+        memmapped_similarity_matrix[:,:] = similarity_matrix
+        species_subset = ["a", "b", "c"]
+        similarity = SimilarityFromMemory(
+            similarity=memmapped_similarity_matrix,
+            species_subset=species_subset,
+        )
+        assert array_equal(similarity.species_ordering, species_subset)
+        assert allclose(similarity.similarity, similarity_matrix)
+
+    def test_init_with_numpy_memmap_but_no_species_subset(self, tmp_path):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        memmapped_similarity_matrix = memmap(
+            tmp_path / "similarity_matrix.npy",
+            dtype=dtype("f8"),
+            mode="w+",
+            offset=0,
+            shape=similarity_matrix.shape,
+            order="C",
+        )
+        memmapped_similarity_matrix[:,:] = similarity_matrix
+        with raises(InvalidArgumentError):
+            similarity = SimilarityFromMemory(
+                similarity=memmapped_similarity_matrix,
+            )
+
+    def test_init_with_numpy_memmap_but_non_sequence_species_subset(self, tmp_path):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        memmapped_similarity_matrix = memmap(
+            tmp_path / "similarity_matrix.npy",
+            dtype=dtype("f8"),
+            mode="w+",
+            offset=0,
+            shape=similarity_matrix.shape,
+            order="C",
+        )
+        memmapped_similarity_matrix[:,:] = similarity_matrix
+        species_subset = {"a", "b", "c"}
+        with raises(InvalidArgumentError):
+            similarity = SimilarityFromMemory(
+                similarity=memmapped_similarity_matrix,
+                species_subset=species_subset,
+            )
+
+    def test_init_with_numpy_memmap_but_too_short_sequence_species_subset(self, tmp_path):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        memmapped_similarity_matrix = memmap(
+            tmp_path / "similarity_matrix.npy",
+            dtype=dtype("f8"),
+            mode="w+",
+            offset=0,
+            shape=similarity_matrix.shape,
+            order="C",
+        )
+        memmapped_similarity_matrix[:,:] = similarity_matrix
+        species_subset = ["a", "b"]
+        with raises(InvalidArgumentError):
+            similarity = SimilarityFromMemory(
+                similarity=memmapped_similarity_matrix,
+                species_subset=species_subset,
+            )
+
+    def test_calculate_weighted_similarities_with_numpy_memmap(self, tmp_path):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        memmapped_similarity_matrix = memmap(
+            tmp_path / "similarity_matrix.npy",
+            dtype=dtype("f8"),
+            mode="w+",
+            offset=0,
+            shape=similarity_matrix.shape,
+            order="C",
+        )
+        memmapped_similarity_matrix[:,:] = similarity_matrix
+        species_subset = ["a", "b", "c"]
+        similarity = SimilarityFromMemory(
+            similarity=memmapped_similarity_matrix,
+            species_subset=species_subset,
+        )
+        relative_abundances = array(
+            [
+                [0.7, 0.3],
+                [0.1, 0.3],
+                [0.2, 0.4],
+            ]
+        )
+        weighted_similarities = similarity.calculate_weighted_similarities(
+            relative_abundances,
+        )
+        expected_weighted_similarities = array(
+            [
+                [0.81, 0.61],
+                [0.77, 0.65],
+                [0.29, 0.49],
+            ]
+        )
+        assert allclose(weighted_similarities, expected_weighted_similarities)
+
+    def test_calculate_weighted_similarities_with_numpy_array(self, tmp_path):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        memmapped_similarity_matrix = memmap(
+            tmp_path / "similarity_matrix.npy",
+            dtype=dtype("f8"),
+            mode="w+",
+            offset=0,
+            shape=similarity_matrix.shape,
+            order="C",
+        )
+        memmapped_similarity_matrix[:,:] = similarity_matrix
+        species_subset = ["a", "b", "c"]
+        similarity = SimilarityFromMemory(
+            similarity=memmapped_similarity_matrix,
             species_subset=species_subset,
         )
         relative_abundances = array(
