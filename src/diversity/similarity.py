@@ -16,12 +16,13 @@ make_similarity
     Chooses and creates instance of concrete ISimilarity implementation.
 """
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from functools import cached_property
 from multiprocessing import cpu_count, Pool
 from types import FunctionType
 
-from numpy import dtype, empty, flatnonzero, memmap, ndarray
-from pandas import DataFrame, read_csv
+from numpy import array, dtype, empty, flatnonzero, memmap, ndarray
+from pandas import DataFrame, Index, MultiIndex, read_csv, Series
 from pandas.api.types import is_numeric_dtype
 
 from diversity.exceptions import InvalidArgumentError
@@ -35,6 +36,9 @@ from diversity.utilities import (
     get_file_delimiter,
     partition_range,
 )
+
+for nonregistered_sequence_type in [ndarray, Series, Index, MultiIndex]:
+    Sequence.register(nonregistered_sequence_type)
 
 
 def make_similarity(
@@ -306,7 +310,7 @@ class SimilarityFromFunction(ISimilarity):
             Shared array containing one row of feature values per
             species.
         species_ordering: pandas.Index
-            The species corresponding in order to the rows in the data
+            The species corresponding in order of the rows in the data
             stored in the shared features array.
         shared_array_manager: diversity.shared.SharedArrayManager
             An active manager for creating shared arrays.
@@ -559,13 +563,16 @@ class SimilarityFromMemory(ISimilarity):
     def __init__(self, similarity, species_subset=None):
         """Initializes object.
 
-        similarity_matrix: pandas.DataFrame
+        similarity: pandas.DataFrame, numpy.ndarray, or numpy.memmap
             Similarities between species. Columns and index must be
             species names corresponding to the values in their rows and
             columns.
-        species: Set
-            Set of species to include. If None, all species are
-            included.
+        species_subset: Sequence, or collection of str objects, which supports membership test
+            The species to include. Only similarities from columns and
+            rows corresponding to these species are used. If
+            numpy.ndarray, or numpy.memmap is used as the matrix, then
+            species_subset must be a Sequence of the same length as
+            rows/columns in the similarity matrix.
         """
         self.__species_ordering = self.__get_species_ordering(
             similarity, species_subset
@@ -577,15 +584,32 @@ class SimilarityFromMemory(ISimilarity):
         return self.__species_ordering
 
     def __get_species_ordering(self, similarity_matrix, species_subset):
-        species = similarity_matrix.columns.astype(str)
-        species_subset = map(str, species_subset)
-        species_subset_indices = species.isin(species_subset)
-        return species[species_subset_indices]
+        if type(similarity_matrix) in {ndarray, memmap}:
+            if species_subset is None or not isinstance(species_subset, Sequence):
+                raise InvalidArgumentError(
+                    "Must provide sequence of species when using numpy.ndarray"
+                    " or numpy.memmap as similarity matrix."
+                )
+            elif len(species_subset) != similarity_matrix.shape[0]:
+                raise InvalidArgumentError(
+                    "Number of species must correspond to dimensions of"
+                    " similarity matrix."
+                )
+            else:
+                return array([*map(str, species_subset)])
+        else:
+            str_matrix_species = similarity_matrix.columns.astype(str)
+            str_species_subset = map(str, species_subset)
+            matrix_species_indexer = str_matrix_species.isin(str_species_subset)
+            return str_matrix_species[matrix_species_indexer]
 
     def __reindex_similarity_matrix(self, similarity_matrix):
-        return similarity_matrix.reindex(
-            index=self.species_ordering, columns=self.species_ordering, copy=False
-        )
+        if type(similarity_matrix) in {ndarray, memmap}:
+            return similarity_matrix
+        else:
+            return similarity_matrix.reindex(
+                index=self.species_ordering, columns=self.species_ordering, copy=False
+            ).to_numpy()
 
     def calculate_weighted_similarities(self, relative_abundances, out=None):
         if out is None:
@@ -593,5 +617,5 @@ class SimilarityFromMemory(ISimilarity):
                 extract_data_if_shared(relative_abundances).shape, dtype=dtype("f8")
             )
         out_, relative_abundances_ = extract_data_if_shared(out, relative_abundances)
-        out_[:] = self.similarity.to_numpy() @ relative_abundances_
+        out_[:] = self.similarity @ relative_abundances_
         return out_

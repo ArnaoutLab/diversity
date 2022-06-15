@@ -1,7 +1,7 @@
 """Tests for diversity.similarity."""
 from multiprocessing import cpu_count
 
-from numpy import allclose, array, array_equal, dtype, memmap, ones, zeros
+from numpy import allclose, array, array_equal, dtype, empty, memmap, ones, zeros
 from pandas import DataFrame, Index
 from pandas.testing import assert_frame_equal
 from pytest import fixture, mark, raises, warns
@@ -1425,17 +1425,13 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
         ),
         "species_subset": ["species_1", "species_2", "species_3"],
         "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.5, 0.1],
                     [0.5, 1, 0.2],
                     [0.1, 0.2, 1],
                 ]
             ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": False,
         "out": None,
@@ -1459,17 +1455,13 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
         ),
         "species_subset": ["species_1", "species_2", "species_3"],
         "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.5, 0.1],
                     [0.5, 1, 0.2],
                     [0.1, 0.2, 1],
                 ]
             ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": True,
         "out": None,
@@ -1493,17 +1485,13 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
         ),
         "species_subset": ["species_1", "species_2", "species_3"],
         "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.5, 0.1],
                     [0.5, 1, 0.2],
                     [0.1, 0.2, 1],
                 ]
             ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": False,
         "out": ones(shape=(3, 2), dtype=dtype("f8")),
@@ -1527,17 +1515,13 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
         ),
         "species_subset": ["species_1", "species_2", "species_3"],
         "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.5, 0.1],
                     [0.5, 1, 0.2],
                     [0.1, 0.2, 1],
                 ]
             ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": False,
         "out": ones(shape=(3, 2), dtype=dtype("f8")),
@@ -1559,17 +1543,13 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_1", "species_2", "species_3"],
         ),
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.5, 0.1],
                     [0.5, 1, 0.2],
                     [0.1, 0.2, 1],
                 ]
             ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
         "species_subset": ["species_1", "species_2", "species_3"],
         "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000], [1 / 10], [10]]),
@@ -1592,17 +1572,13 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             index=["species_2", "species_1", "species_3"],
         ),
         "species_subset": ["species_2", "species_1", "species_3"],
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.5, 0.1],
                     [0.5, 1, 0.2],
                     [0.1, 0.2, 1],
                 ]
             ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
         "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": False,
@@ -1626,17 +1602,13 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             index=["species_2", "species_1", "species_3"],
         ),
         "species_subset": ["species_2", "species_1", "species_3"],
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.5, 0.1],
                     [0.5, 1, 0.2],
                     [0.1, 0.2, 1],
                 ]
             ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
         "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": True,
@@ -1660,17 +1632,13 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             index=["species_2", "species_1", "species_3"],
         ),
         "species_subset": ["species_2", "species_1", "species_3"],
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.5, 0.1],
                     [0.5, 1, 0.2],
                     [0.1, 0.2, 1],
                 ]
             ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
         "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": False,
@@ -1694,17 +1662,13 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             index=["species_2", "species_1", "species_3"],
         ),
         "species_subset": ["species_2", "species_1", "species_3"],
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.5, 0.1],
                     [0.5, 1, 0.2],
                     [0.1, 0.2, 1],
                 ]
             ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
         "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": False,
@@ -1728,17 +1692,13 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             index=["species_1", "species_3", "species_2"],
         ),
         "species_subset": ["species_1", "species_2", "species_3"],
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.5, 0.1],
                     [0.5, 1, 0.2],
                     [0.1, 0.2, 1],
                 ]
             ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
         "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000], [1 / 10], [10]]),
         "shared_abundances": False,
@@ -1761,16 +1721,12 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
         ),
         "species_subset": ["species_2", "species_3"],
         "expected_species_ordering": ["species_2", "species_3"],
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.2],
                     [0.2, 1],
                 ]
             ),
-            columns=["species_2", "species_3"],
-            index=["species_2", "species_3"],
-        ),
         "relative_abundances": array([[1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": False,
         "out": None,
@@ -1792,16 +1748,12 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
         ),
         "species_subset": ["species_2", "species_3"],
         "expected_species_ordering": ["species_2", "species_3"],
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.2],
                     [0.2, 1],
                 ]
             ),
-            columns=["species_2", "species_3"],
-            index=["species_2", "species_3"],
-        ),
         "relative_abundances": array([[1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": True,
         "out": None,
@@ -1823,16 +1775,12 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
         ),
         "species_subset": ["species_2", "species_3"],
         "expected_species_ordering": ["species_2", "species_3"],
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.2],
                     [0.2, 1],
                 ]
             ),
-            columns=["species_2", "species_3"],
-            index=["species_2", "species_3"],
-        ),
         "relative_abundances": array([[1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": False,
         "out": ones(shape=(2, 2), dtype=dtype("f8")),
@@ -1854,16 +1802,12 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
         ),
         "species_subset": ["species_2", "species_3"],
         "expected_species_ordering": ["species_2", "species_3"],
-        "expected_similarity_matrix": DataFrame(
-            data=array(
+        "expected_similarity_matrix": array(
                 [
                     [1, 0.2],
                     [0.2, 1],
                 ]
             ),
-            columns=["species_2", "species_3"],
-            index=["species_2", "species_3"],
-        ),
         "relative_abundances": array([[1 / 10, 1 / 1], [10, 100]]),
         "shared_abundances": False,
         "out": ones(shape=(2, 2), dtype=dtype("f8")),
@@ -1912,7 +1856,7 @@ class TestSimilarityFromMemory:
         assert array_equal(
             similarity.species_ordering, test_case["expected_species_ordering"]
         )
-        assert_frame_equal(
+        assert allclose(
             similarity.similarity, test_case["expected_similarity_matrix"]
         )
 
@@ -1932,3 +1876,93 @@ class TestSimilarityFromMemory:
                 assert weighted_similarities is test_case["out"].data
             else:
                 assert weighted_similarities is test_case["out"]
+
+    def test_init_with_numpy_array(self):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        species_subset = ["a", "b", "c"]
+        similarity = SimilarityFromMemory(
+            similarity=similarity_matrix,
+            species_subset=species_subset,
+        )
+        assert array_equal(similarity.species_ordering, species_subset)
+        assert allclose(similarity.similarity, similarity_matrix)
+
+    def test_calculate_weighted_similarities_with_numpy_array(self):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        species_subset = ["a", "b", "c"]
+        similarity = SimilarityFromMemory(
+            similarity=similarity_matrix,
+            species_subset=species_subset,
+        )
+        relative_abundances = array(
+            [
+                [0.7, 0.3],
+                [0.1, 0.3],
+                [0.2, 0.4],
+            ]
+        )
+        weighted_similarities = similarity.calculate_weighted_similarities(
+            relative_abundances,
+        )
+        expected_weighted_similarities = array(
+            [
+                [0.81, 0.61],
+                [0.77, 0.65],
+                [0.29, 0.49],
+            ]
+        )
+        assert allclose(weighted_similarities, expected_weighted_similarities)
+
+    def test_calculate_weighted_similarities_with_numpy_array(self):
+        similarity_matrix = array(
+            [
+                [1.0, 0.9, 0.1],
+                [0.9, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
+        species_subset = ["a", "b", "c"]
+        similarity = SimilarityFromMemory(
+            similarity=similarity_matrix,
+            species_subset=species_subset,
+        )
+        relative_abundances = array(
+            [
+                [0.7, 0.3],
+                [0.1, 0.3],
+                [0.2, 0.4],
+            ]
+        )
+        out = empty(
+            dtype=dtype("f8"),
+            shape=(
+                similarity_matrix.shape[0],
+                relative_abundances.shape[1],
+            ),
+        )
+        weighted_similarities = similarity.calculate_weighted_similarities(
+            relative_abundances,
+            out=out,
+        )
+        expected_weighted_similarities = array(
+            [
+                [0.81, 0.61],
+                [0.77, 0.65],
+                [0.29, 0.49],
+            ]
+        )
+        assert allclose(weighted_similarities, expected_weighted_similarities)
+        assert weighted_similarities is out
+
