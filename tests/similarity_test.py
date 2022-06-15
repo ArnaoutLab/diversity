@@ -239,6 +239,7 @@ class TestMakeSimilarity:
     def test_make_similarity(self, test_case):
         if test_case["expect_raise"]:
             with raises(InvalidArgumentError):
+                breakpoint()
                 make_similarity(
                     similarity=test_case["similarity"],
                     species_subset=test_case["species_subset"],
