@@ -16,7 +16,6 @@ make_abundance
     Chooses and creates instance of concrete IAbundance implementation.
 """
 from abc import ABC, abstractmethod
-from functools import cache
 
 from numpy import dtype, empty, ndarray
 
@@ -153,25 +152,37 @@ class Abundance(IAbundance):
         """
         LOGGER.debug("Abundance(counts=%s", counts)
         self.counts = counts
+        self._subcommunity_abundance = None
+        self._metacommunity_abundance = None
+        self._subcommunity_normalizing_constants = None
+        self._normalized_subcommunity_abundance = None
 
-    @cache
     def subcommunity_abundance(self):
-        total_abundance = self.counts.sum()
-        relative_abundances = empty(shape=self.counts.shape, dtype=dtype("f8"))
-        relative_abundances[:] = self.counts / total_abundance
-        return relative_abundances
+        if self._subcommunity_abundance is None:
+            total_abundance = self.counts.sum()
+            relative_abundances = empty(shape=self.counts.shape, dtype=dtype("f8"))
+            relative_abundances[:] = self.counts / total_abundance
+            self._subcommunity_abundance = relative_abundances
+        return self._subcommunity_abundance
 
-    @cache
     def metacommunity_abundance(self):
-        return self.subcommunity_abundance().sum(axis=1, keepdims=True)
+        if self._metacommunity_abundance is None:
+            self._metacommunity_abundance = self.subcommunity_abundance().sum(
+                axis=1, keepdims=True)
+        return self._metacommunity_abundance
 
-    @cache
     def subcommunity_normalizing_constants(self):
-        return self.subcommunity_abundance().sum(axis=0)
+        if self._subcommunity_normalizing_constants is None:
+            self._subcommunity_normalizing_constants = self.subcommunity_abundance().sum(
+                axis=0)
+        return self._subcommunity_normalizing_constants
 
-    @cache
     def normalized_subcommunity_abundance(self):
-        return self.subcommunity_abundance() / self.subcommunity_normalizing_constants()
+        if self._normalized_subcommunity_abundance is None:
+            num = self.subcommunity_abundance() 
+            denom = self.subcommunity_normalizing_constants()
+            self._normalized_subcommunity_abundance = num/denom
+        return self._normalized_subcommunity_abundance
 
 
 class SharedAbundance(IAbundance):

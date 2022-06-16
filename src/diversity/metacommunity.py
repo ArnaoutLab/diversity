@@ -165,8 +165,9 @@ class IMetacommunity(ABC):
         self.abundance = abundance
         self.subcommunity_ordering = subcommunity_ordering
         self.measure_components = None
+        self._subcommunity_diversities = {}
+        self._metacommunity_diversities = {}
 
-    @cache
     def subcommunity_diversity(self, viewpoint, measure):
         """Calculates subcommunity diversity measures.
 
@@ -186,36 +187,39 @@ class IMetacommunity(ABC):
         Valid measure identifiers are: "alpha", "rho", "beta", "gamma",
         "normalized_alpha", "normalized_rho", and "normalized_beta".
         """
-        numerator, denominator = self.measure_components[measure]
-        if callable(numerator):
-            numerator = numerator()
-        denominator = denominator()
-        if measure == "gamma":
-            denominator = broadcast_to(
-                denominator,
-                self.abundance.normalized_subcommunity_abundance().shape,
+        if (viewpoint, measure) not in self._subcommunity_diversities:
+            numerator, denominator = self.measure_components[measure]
+            if callable(numerator):
+                numerator = numerator()
+            denominator = denominator()
+            if measure == "gamma":
+                denominator = broadcast_to(
+                    denominator,
+                    self.abundance.normalized_subcommunity_abundance().shape,
+                )
+            community_ratio = divide(
+                numerator, denominator, out=zeros(denominator.shape), where=denominator != 0
             )
-        community_ratio = divide(
-            numerator, denominator, out=zeros(denominator.shape), where=denominator != 0
-        )
-        result = power_mean(
-            1 - viewpoint,
-            self.abundance.normalized_subcommunity_abundance(),
-            community_ratio,
-        )
-        if measure in ["beta", "normalized_beta"]:
-            return 1 / result
-        return result
+            result = power_mean(
+                1 - viewpoint,
+                self.abundance.normalized_subcommunity_abundance(),
+                community_ratio,
+            )
+            if measure in ["beta", "normalized_beta"]:
+                result = 1 / result
+            self._subcommunity_diversities[(viewpoint, measure)] = result
+        return self._subcommunity_diversities[(viewpoint, measure)]
 
-    @cache
     def metacommunity_diversity(self, viewpoint, measure):
         """Calculates metcommunity diversity measures."""
-        subcommunity_diversity = self.subcommunity_diversity(viewpoint, measure)
-        return power_mean(
-            1 - viewpoint,
-            self.abundance.subcommunity_normalizing_constants(),
-            subcommunity_diversity,
-        )
+        if (viewpoint, measure) not in self._metacommunity_diversities:
+            subcommunity_diversity = self.subcommunity_diversity(viewpoint, measure)
+            self._metacommunity_diversities[(viewpoint, measure)] =  power_mean(
+                1 - viewpoint,
+                self.abundance.subcommunity_normalizing_constants(),
+                subcommunity_diversity,
+            )
+        return self._metacommunity_diversities[(viewpoint, measure)]
 
     def subcommunities_to_dataframe(self, viewpoint):
         """Table containing all subcommunity diversity values.
