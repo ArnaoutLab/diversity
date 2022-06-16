@@ -361,24 +361,37 @@ class SimilarityInsensitiveMetacommunity(IMetacommunity):
 
 class SimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
     """Implements ISimilaritySensitiveMetacommunity for fast but memory heavy calculations."""
+    def __init__(self, abundance, subcommunity_ordering, similarity):
+        super().__init__(
+            abundance=abundance, 
+            subcommunity_ordering=subcommunity_ordering,
+            similarity=similarity
+        )
+        self._metacommunity_similarity = None
+        self._subcommunity_similarity = None
+        self._normalized_subcommunity_similarity = None
 
-    @cache
     def metacommunity_similarity(self):
-        return self.similarity.calculate_weighted_similarities(
-            self.abundance.metacommunity_abundance()
-        )
+        if self._metacommunity_similarity is None:
+            self._metacommunity_similarity = self.similarity.calculate_weighted_similarities(
+                self.abundance.metacommunity_abundance()
+                )
+        return self._metacommunity_similarity
 
-    @cache
     def subcommunity_similarity(self):
-        return self.similarity.calculate_weighted_similarities(
-            self.abundance.subcommunity_abundance()
-        )
+        if self._subcommunity_similarity is None:
+            self._subcommunity_similarity = self.similarity.calculate_weighted_similarities(
+                self.abundance.subcommunity_abundance()
+                )
+        return self._subcommunity_similarity
 
-    @cache
     def normalized_subcommunity_similarity(self):
-        return self.similarity.calculate_weighted_similarities(
-            self.abundance.normalized_subcommunity_abundance()
-        )
+        if self._normalized_subcommunity_similarity is None:
+            result = self.similarity.calculate_weighted_similarities(
+                self.abundance.normalized_subcommunity_abundance()
+                )
+            self._normalized_subcommunity_similarity = result
+        return self._normalized_subcommunity_similarity
 
 
 class SharedSimilaritySensitiveMetacommunity(ISimilaritySensitiveMetacommunity):
