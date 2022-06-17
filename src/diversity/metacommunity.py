@@ -57,11 +57,14 @@ def make_metacommunity(
     subcommunities: numpy.ndarray
         Names of subcommunities to include. Their union is the
         metacommunity, and data for all other subcommunities is ignored.
-    similarity: pandas.DataFrame, str, or Callable
+    similarity: pandas.DataFrame, str, Callable, numpy.ndarray, or numpy.memmap
         For similarity-sensitive diversity measures. Passed to
         diversity.similarity.make_similarity along with
         similarity_kwargs and a species_subset argument determined by
-        subcommunities.
+        subcommunities. When numpy.ndarray or numpy.memmap is used, the
+        ordering of species in the species_subset subset argument for
+        diversity.similarity.make_similarity corresponds to the ordering
+        of species in counts.
     subcommunity_column, species_column, count_column: str
         Column headers for subcommunity names, species names and
         corresponding counts in counts table.
