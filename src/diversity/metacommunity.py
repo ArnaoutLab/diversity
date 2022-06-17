@@ -141,17 +141,23 @@ def make_metacommunity(
     )
     shared_similarity_sensitive = (
         SharedSimilaritySensitiveMetacommunity,
-        {**common_kwargs, "similarity": similarity, "shared_array_manager": shared_array_manager},
+        {
+            **common_kwargs,
+            "similarity": similarity,
+            "shared_array_manager": shared_array_manager,
+        },
     )
     strategies = {
         (False, type(None)): frequency_sensitive,
         (True, type(None)): similarity_sensitive,
         (True, SharedArrayManager): shared_similarity_sensitive,
     }
-    strategy_choice = strategies[(
-        isinstance(similarity, ISimilarity),
-        type(shared_array_manager),
-    )]
+    strategy_choice = strategies[
+        (
+            isinstance(similarity, ISimilarity),
+            type(shared_array_manager),
+        )
+    ]
     metacommunity_class, kwargs = strategy_choice
     metacommunity = metacommunity_class(**kwargs)
     return metacommunity
