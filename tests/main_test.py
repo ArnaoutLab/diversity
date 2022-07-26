@@ -255,4 +255,6 @@ class TestMain:
         main(test_case["args"])
         with open(test_case["args"].output_filepath, "r") as file:
             output_filecontents = file.read()
+        print(output_filecontents)
+        print(test_case["output_filecontents"])
         assert output_filecontents == test_case["output_filecontents"]
