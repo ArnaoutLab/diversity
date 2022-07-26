@@ -62,7 +62,7 @@ def main(args):
         subcommunity_column=args.subcommunity_column,
         species_column=args.species_column,
         count_column=args.count_column,
-        similarity_kwargs={"chunk_size": args.chunk_size},
+        chunk_size=args.chunk_size,
     )
 
     community_views = []
