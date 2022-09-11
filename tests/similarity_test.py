@@ -10,7 +10,6 @@ from diversity.log import LOGGER
 from diversity.similarity import (
     SimilarityFromArray,
     SimilarityFromDataFrame,
-    SimilarityFromMemmap,
     make_similarity,
     SimilarityFromFile,
 )
@@ -33,11 +32,6 @@ class MockSimilarityFromArray(MockClass):
     pass
 
 
-class MockSimilarityFromMemmap(MockClass):
-    pass
-
-
-FAKE_SPECIES_ORDERING = "fake_ordering"
 FAKE_FEATURES = "fake_features"
 
 
@@ -59,7 +53,6 @@ MAKE_SIMILARITY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_1", "species_2", "species_3"],
         ),
-        "species_order": None,
         "chunk_size": 1,
         "expect_raise": False,
         "expected_return_type": MockSimilarityFromDataFrame,
@@ -73,13 +66,12 @@ MAKE_SIMILARITY_TEST_CASES = [
                 [0.1, 0.2, 1],
             ]
         ),
-        "species_order": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "expect_raise": False,
         "expected_return_type": MockSimilarityFromArray,
     },
     {
-        "description": "SimilarityFromMemmap numpy memmap",
+        "description": "SimilarityFromArray numpy memmap",
         "similarity": (
             "memmap",
             array(
@@ -90,15 +82,13 @@ MAKE_SIMILARITY_TEST_CASES = [
                 ]
             ),
         ),
-        "species_order": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "expect_raise": False,
-        "expected_return_type": MockSimilarityFromMemmap,
+        "expected_return_type": MockSimilarityFromArray,
     },
     {
         "description": "SimilarityFromFile",
         "similarity": "fake_similarities_file.tsv",
-        "species_order": ["species_1", "species_2", "species_3"],
         "chunk_size": 1,
         "expect_raise": False,
         "expected_return_type": MockSimilarityFromFile,
@@ -106,7 +96,6 @@ MAKE_SIMILARITY_TEST_CASES = [
     {
         "description": "SimilarityFromFile with non-default chunk_size",
         "similarity": "fake_similarities_file.tsv",
-        "species_order": ["species_1", "species_2", "species_3"],
         # Make chunk_size large to avoid builtin optimization assigning precomputed reference
         "chunk_size": 1228375972486598237,
         "expect_raise": False,
@@ -120,17 +109,10 @@ class TestMakeSimilarity:
     def test_case(self, request, monkeypatch, tmp_path):
         mock_classes = [
             ("diversity.similarity.SimilarityFromFile", MockSimilarityFromFile),
+            ("diversity.similarity.SimilarityFromArray", MockSimilarityFromArray),
             (
                 "diversity.similarity.SimilarityFromDataFrame",
                 MockSimilarityFromDataFrame,
-            ),
-            (
-                "diversity.similarity.SimilarityFromArray",
-                MockSimilarityFromArray,
-            ),
-            (
-                "diversity.similarity.SimilarityFromMemmap",
-                MockSimilarityFromMemmap,
             ),
         ]
         with monkeypatch.context() as patched_context:
@@ -139,13 +121,11 @@ class TestMakeSimilarity:
             test_case_ = {
                 key: request.param[key]
                 for key in [
-                    "species_order",
                     "chunk_size",
                     "expect_raise",
                     "expected_return_type",
                 ]
             }
-
             if (
                 type(request.param["similarity"]) == tuple
                 and request.param["similarity"][0] == "memmap"
@@ -163,7 +143,6 @@ class TestMakeSimilarity:
                 test_case_["similarity"] = memmapped
             else:
                 test_case_["similarity"] = request.param["similarity"]
-
             if request.param["expected_return_type"] == MockSimilarityFromFile:
                 test_case_["expected_init_kwargs"] = {
                     "similarity": test_case_["similarity"],
@@ -176,14 +155,7 @@ class TestMakeSimilarity:
             elif request.param["expected_return_type"] == MockSimilarityFromArray:
                 test_case_["expected_init_kwargs"] = {
                     "similarity": test_case_["similarity"],
-                    "species_order": test_case_["species_order"],
                 }
-            elif request.param["expected_return_type"] == MockSimilarityFromMemmap:
-                test_case_["expected_init_kwargs"] = {
-                    "similarity": test_case_["similarity"],
-                    "species_order": test_case_["species_order"],
-                }
-
             yield test_case_
 
     def test_make_similarity(self, test_case):
@@ -192,13 +164,11 @@ class TestMakeSimilarity:
                 breakpoint()
                 make_similarity(
                     similarity=test_case["similarity"],
-                    species_order=test_case["species_order"],
                     chunk_size=test_case["chunk_size"],
                 )
         else:
             similarity = make_similarity(
                 similarity=test_case["similarity"],
-                species_order=test_case["species_order"],
                 chunk_size=test_case["chunk_size"],
             )
             assert isinstance(similarity, test_case["expected_return_type"])
@@ -210,9 +180,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
     {
         "description": "tsv file; 2 communities",
         "similarity_matrix_filepath": "similarities_file.tsv",
-        "species_order": ["species_3", "species_1", "species_2"],
         "chunk_size": 1,
-        "expected_species_ordering": Index(["species_3", "species_1", "species_2"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "weighted_similarities": array(
             [[2.011, 20.11], [5.1001, 51.001], [10.0502, 100.502]]
@@ -229,9 +197,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
     {
         "description": "csv file; 2 communities",
         "similarity_matrix_filepath": "similarities_file.csv",
-        "species_order": ["species_3", "species_1", "species_2"],
         "chunk_size": 1,
-        "expected_species_ordering": Index(["species_3", "species_1", "species_2"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "weighted_similarities": array(
             [[2.011, 20.11], [5.1001, 51.001], [10.0502, 100.502]]
@@ -245,9 +211,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
     {
         "description": "no file extension; 1 community",
         "similarity_matrix_filepath": "similarities_file",
-        "species_order": ["species_3", "species_1", "species_2"],
         "chunk_size": 1,
-        "expected_species_ordering": Index(["species_3", "species_1", "species_2"]),
         "relative_abundances": array([[1 / 1000], [1 / 10], [10]]),
         "weighted_similarities": array([[2.011], [5.1001], [10.0502]]),
         "similarities_filecontents": (
@@ -262,9 +226,7 @@ SIMILARITY_FROM_FILE_TEST_CASES = [
     {
         "description": "non-default chunk_size",
         "similarity_matrix_filepath": "similarities_file.tsv",
-        "species_order": ["species_3", "species_1", "species_2"],
         "chunk_size": 12,
-        "expected_species_ordering": Index(["species_3", "species_1", "species_2"]),
         "relative_abundances": array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]]),
         "weighted_similarities": array(
             [[2.011, 20.11], [5.1001, 51.001], [10.0502, 100.502]]
@@ -293,9 +255,7 @@ class TestSimilarityFromFile:
             key: request.param[key]
             for key in [
                 "description",
-                "species_order",
                 "chunk_size",
-                "expected_species_ordering",
                 "weighted_similarities",
                 "similarities_filecontents",
                 "expect_warning",
@@ -322,9 +282,6 @@ class TestSimilarityFromFile:
                 similarity=test_case["similarity"],
                 chunk_size=test_case["chunk_size"],
             )
-        assert array_equal(
-            similarity.species_ordering, test_case["expected_species_ordering"]
-        )
         assert similarity.similarity == test_case["similarity"]
         assert similarity.chunk_size == test_case["chunk_size"]
 
@@ -367,8 +324,6 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_1", "species_2", "species_3"],
         ),
-        "species_order": ["species_1", "species_2", "species_3"],
-        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "expected_similarity_matrix": array(
             [
                 [1, 0.5, 0.1],
@@ -402,8 +357,6 @@ SIMILARITY_FROM_MEMORY_TEST_CASES = [
                 [0.1, 0.2, 1],
             ]
         ),
-        "species_order": ["species_1", "species_2", "species_3"],
-        "expected_species_ordering": Index(["species_1", "species_2", "species_3"]),
         "relative_abundances": array([[1 / 1000], [1 / 10], [10]]),
         "out": None,
         "weighted_similarities": array([[1.051], [2.1005], [10.0201]]),
@@ -420,8 +373,6 @@ class TestSimilarityFromMemory:
             key: request.param[key]
             for key in [
                 "similarity",
-                "species_order",
-                "expected_species_ordering",
                 "expected_similarity_matrix",
                 "weighted_similarities",
             ]
@@ -436,9 +387,6 @@ class TestSimilarityFromMemory:
     def test_init(self, test_case):
         """Tests initializer."""
         similarity = SimilarityFromDataFrame(similarity=test_case["similarity"])
-        assert array_equal(
-            similarity.species_ordering, test_case["expected_species_ordering"]
-        )
         assert allclose(similarity.similarity, test_case["expected_similarity_matrix"])
 
     def test_calculate_weighted_similarities(self, test_case, tmp_path):
@@ -460,43 +408,8 @@ class TestSimilarityFromMemory:
                 [0.1, 0.2, 1.0],
             ]
         )
-        species_order = ["a", "b", "c"]
-        similarity = SimilarityFromArray(
-            similarity=similarity_matrix,
-            species_order=species_order,
-        )
-        assert array_equal(similarity.species_ordering, species_order)
+        similarity = SimilarityFromArray(similarity=similarity_matrix)
         assert allclose(similarity.similarity, similarity_matrix)
-
-    def test_init_with_numpy_array_but_non_sequence_species_order(self):
-        similarity_matrix = array(
-            [
-                [1.0, 0.9, 0.1],
-                [0.9, 1.0, 0.2],
-                [0.1, 0.2, 1.0],
-            ]
-        )
-        species_order = {"a", "b", "c"}
-        with raises(InvalidArgumentError):
-            similarity = SimilarityFromArray(
-                similarity=similarity_matrix,
-                species_order=species_order,
-            )
-
-    def test_init_with_numpy_array_but_too_short_sequence_species_order(self):
-        similarity_matrix = array(
-            [
-                [1.0, 0.9, 0.1],
-                [0.9, 1.0, 0.2],
-                [0.1, 0.2, 1.0],
-            ]
-        )
-        species_order = ["a", "b"]
-        with raises(InvalidArgumentError):
-            similarity = SimilarityFromArray(
-                similarity=similarity_matrix,
-                species_order=species_order,
-            )
 
     def test_calculate_weighted_similarities_with_numpy_array(self):
         similarity_matrix = array(
@@ -506,11 +419,7 @@ class TestSimilarityFromMemory:
                 [0.1, 0.2, 1.0],
             ]
         )
-        species_order = ["a", "b", "c"]
-        similarity = SimilarityFromArray(
-            similarity=similarity_matrix,
-            species_order=species_order,
-        )
+        similarity = SimilarityFromArray(similarity=similarity_matrix)
         relative_abundances = array(
             [
                 [0.7, 0.3],
@@ -538,11 +447,7 @@ class TestSimilarityFromMemory:
                 [0.1, 0.2, 1.0],
             ]
         )
-        species_order = ["a", "b", "c"]
-        similarity = SimilarityFromArray(
-            similarity=similarity_matrix,
-            species_order=species_order,
-        )
+        similarity = SimilarityFromArray(similarity=similarity_matrix)
         relative_abundances = array(
             [
                 [0.7, 0.3],
@@ -587,64 +492,8 @@ class TestSimilarityFromMemory:
             order="C",
         )
         memmapped_similarity_matrix[:, :] = similarity_matrix
-        species_order = ["a", "b", "c"]
-        similarity = SimilarityFromMemmap(
-            similarity=memmapped_similarity_matrix,
-            species_order=species_order,
-        )
-        assert array_equal(similarity.species_ordering, species_order)
+        similarity = SimilarityFromArray(similarity=memmapped_similarity_matrix)
         assert allclose(similarity.similarity, similarity_matrix)
-
-    def test_init_with_numpy_memmap_but_non_sequence_species_order(self, tmp_path):
-        similarity_matrix = array(
-            [
-                [1.0, 0.9, 0.1],
-                [0.9, 1.0, 0.2],
-                [0.1, 0.2, 1.0],
-            ]
-        )
-        memmapped_similarity_matrix = memmap(
-            tmp_path / "similarity_matrix.npy",
-            dtype=dtype("f8"),
-            mode="w+",
-            offset=0,
-            shape=similarity_matrix.shape,
-            order="C",
-        )
-        memmapped_similarity_matrix[:, :] = similarity_matrix
-        species_order = {"a", "b", "c"}
-        with raises(InvalidArgumentError):
-            similarity = SimilarityFromMemmap(
-                similarity=memmapped_similarity_matrix,
-                species_order=species_order,
-            )
-
-    def test_init_with_numpy_memmap_but_too_short_sequence_species_order(
-        self, tmp_path
-    ):
-        similarity_matrix = array(
-            [
-                [1.0, 0.9, 0.1],
-                [0.9, 1.0, 0.2],
-                [0.1, 0.2, 1.0],
-            ]
-        )
-        memmapped_similarity_matrix = memmap(
-            tmp_path / "similarity_matrix.npy",
-            dtype=dtype("f8"),
-            mode="w+",
-            offset=0,
-            shape=similarity_matrix.shape,
-            order="C",
-        )
-        memmapped_similarity_matrix[:, :] = similarity_matrix
-        species_order = ["a", "b"]
-        with raises(InvalidArgumentError):
-
-            similarity = SimilarityFromMemmap(
-                similarity=memmapped_similarity_matrix,
-                species_order=species_order,
-            )
 
     def test_calculate_weighted_similarities_with_numpy_memmap(self, tmp_path):
         similarity_matrix = array(
@@ -663,11 +512,7 @@ class TestSimilarityFromMemory:
             order="C",
         )
         memmapped_similarity_matrix[:, :] = similarity_matrix
-        species_order = ["a", "b", "c"]
-        similarity = SimilarityFromMemmap(
-            similarity=memmapped_similarity_matrix,
-            species_order=species_order,
-        )
+        similarity = SimilarityFromArray(similarity=memmapped_similarity_matrix)
         relative_abundances = array(
             [
                 [0.7, 0.3],
@@ -704,11 +549,7 @@ class TestSimilarityFromMemory:
             order="C",
         )
         memmapped_similarity_matrix[:, :] = similarity_matrix
-        species_order = ["a", "b", "c"]
-        similarity = SimilarityFromMemmap(
-            similarity=memmapped_similarity_matrix,
-            species_order=species_order,
-        )
+        similarity = SimilarityFromArray(similarity=memmapped_similarity_matrix)
         relative_abundances = array(
             [
                 [0.7, 0.3],

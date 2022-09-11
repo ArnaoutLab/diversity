@@ -16,13 +16,8 @@ make_similarity
     Chooses and creates instance of concrete ISimilarity implementation.
 """
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
-from functools import cached_property
-
 from numpy import dtype, empty, memmap, ndarray
 from pandas import DataFrame, read_csv
-
-from diversity.exceptions import InvalidArgumentError
 from diversity.log import LOGGER
 from diversity.utilities import (
     get_file_delimiter,
@@ -31,7 +26,6 @@ from diversity.utilities import (
 
 def make_similarity(
     similarity,
-    species_order=None,
     chunk_size=None,
 ):
     """Initializes a concrete subclass of ISimilarity.
@@ -42,8 +36,6 @@ def make_similarity(
         If pandas.DataFrame, see diversity.similarity.SimilarityFromMemory.
         If str, see diversity.similarity.SimilarityFromFile.
         If callable, see diversity.similarity.SimilarityFromFunction.
-    species_order: a collection of str objects used to determine
-        the species ordering
     chunk_size: int
         See diversity.similarity.SimilarityFromFile. Only relevant
         if a str is passed as argument for similarity.
@@ -53,27 +45,17 @@ def make_similarity(
     An instance of a concrete subclass of ISimilarity.
     """
     LOGGER.debug(
-        "make_similarity(similarity=%s, species_order=%s, chunk_size=%s)",
+        "make_similarity(similarity=%s, chunk_size=%s)",
         similarity,
-        species_order,
         chunk_size,
     )
     strategies = {
         DataFrame: (SimilarityFromDataFrame, {"similarity": similarity}),
-        ndarray: (
-            SimilarityFromArray,
-            {"similarity": similarity, "species_order": species_order},
-        ),
-        memmap: (
-            SimilarityFromMemmap,
-            {"similarity": similarity, "species_order": species_order},
-        ),
+        ndarray: (SimilarityFromArray, {"similarity": similarity}),
+        memmap: (SimilarityFromArray, {"similarity": similarity}),
         str: (
             SimilarityFromFile,
-            {
-                "similarity": similarity,
-                "chunk_size": chunk_size,
-            },
+            {"similarity": similarity, "chunk_size": chunk_size},
         ),
     }
     strategy_choice = strategies[type(similarity)]
@@ -107,19 +89,6 @@ class ISimilarity(ABC):
         """
         pass
 
-    @property
-    @abstractmethod
-    def species_ordering(self):
-        """The ordering of species used by the object.
-
-        Returns
-        -------
-        A 1-d numpy.ndarray of species names in the ordering used for
-        the return value of the object's .calculate_weighted_similarities
-        method.
-        """
-        pass
-
 
 class SimilarityFromFile(ISimilarity):
     """Implements ISimilarity by using similarities stored in file.
@@ -150,39 +119,6 @@ class SimilarityFromFile(ISimilarity):
         self.similarity = similarity
         self.chunk_size = chunk_size
         self.__delimiter = get_file_delimiter(self.similarity)
-        self.__species_ordering = self.__get_species_ordering()
-
-    def __get_species_ordering(self):
-        """The species ordering used in similarity matrix file.
-
-        Parameters
-        ----------
-        species_subset: collection of str objects, which supports membership test
-            Set of species to include. If None, all species are
-            included.
-
-        Returns
-        -------
-        A tuple consisting of
-        0 - numpy.ndarray (1d)
-            Uniqued species ordered according to the similarity matrix
-            file header.
-        1 - numpy.ndarray (1d)
-            Column numbers (0-based) of columns corresponding to members
-            of species, or None if species is None.
-        2 - numpy.ndarray (1d)
-            Row numbers (0-based, header counts as row 0) of rows
-            corresponding to non-members of species, or None if species
-            is None.
-        """
-        with read_csv(
-            self.similarity, delimiter=self.__delimiter, chunksize=self.chunk_size
-        ) as similarity_matrix_header:
-            return next(similarity_matrix_header).columns.astype(str)
-
-    @cached_property
-    def species_ordering(self):
-        return self.__species_ordering
 
     def calculate_weighted_similarities(self, relative_abundances):
         weighted_similarities = empty(relative_abundances.shape, dtype=dtype("f8"))
@@ -200,8 +136,8 @@ class SimilarityFromFile(ISimilarity):
         return weighted_similarities
 
 
-class SimilarityFromMemory(ISimilarity):
-    """Implements Similarity using similarities stored in memory."""
+class SimilarityFromDataFrame(ISimilarity):
+    """Implements Similarity using similarities stored in pandas dataframe"""
 
     def __init__(self, similarity):
         """Initializes object.
@@ -213,73 +149,22 @@ class SimilarityFromMemory(ISimilarity):
         """
         self.similarity = similarity
 
-    @property
-    def species_ordering(self):
-        pass
-
-    def get_species_ordering(self, species_order):
-        if (len(species_order) == self.similarity.shape[0]) and isinstance(
-            species_order, Sequence
-        ):
-            return species_order
-        raise InvalidArgumentError(
-            """species_order must inherit from class Sequence and have length equal 
-            to the dimensions of the similarity matrix"""
-        )
-
     def calculate_weighted_similarities(self, relative_abundances):
         return self.similarity.to_numpy() @ relative_abundances
 
 
-class SimilarityFromDataFrame(SimilarityFromMemory):
+class SimilarityFromArray(ISimilarity):
+    """Implements Similarity using similarities stored in a numpy array"""
+
     def __init__(self, similarity):
-        super().__init__(similarity)
-        self.__species_ordering = self.similarity.columns.astype(str)
+        """Initializes object.
 
-    @property
-    def species_ordering(self):
-        return self.__species_ordering
-
-
-class SimilarityFromArray(SimilarityFromMemory):
-    """
-    species_subset: Sequence, or collection of str objects, which supports membership test
-        The species to include. Only similarities from columns and
-        rows corresponding to these species are used. If
-        numpy.ndarray, or numpy.memmap is used as the matrix, then
-        species_subset must be a Sequence of the same length as
-        rows/columns in the similarity matrix.
-    """
-
-    def __init__(self, similarity, species_order):
-        super().__init__(similarity)
-        self.__species_ordering = self.get_species_ordering(species_order)
-
-    @property
-    def species_ordering(self):
-        return self.__species_ordering
-
-    def calculate_weighted_similarities(self, relative_abundances):
-        return self.similarity @ relative_abundances
-
-
-class SimilarityFromMemmap(SimilarityFromMemory):
-    """
-    species_subset: Sequence, or collection of str objects, which supports membership test
-        The species to include. Only similarities from columns and
-        rows corresponding to these species are used. If
-        numpy.ndarray, or numpy.memmap is used as the matrix, then
-        species_subset must be a Sequence of the same length as
-        rows/columns in the similarity matrix.
-    """
-
-    def __init__(self, similarity, species_order):
-        super().__init__(similarity)
-        self.__species_ordering = self.get_species_ordering(species_order)
-
-    @property
-    def species_ordering(self):
-        return self.__species_ordering
+        similarity: pandas.DataFrame, numpy.ndarray, or numpy.memmap
+            Similarities between species. Columns and index must be
+            species names corresponding to the values in their rows and
+            columns.
+        """
+        self.similarity = similarity
 
     def calculate_weighted_similarities(self, relative_abundances):
         return self.similarity @ relative_abundances

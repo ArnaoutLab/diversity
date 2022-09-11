@@ -3,20 +3,21 @@
 ![Tests](https://github.com/Elliot-D-Hill/diversity/actions/workflows/tests.yml/badge.svg)
 [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
 
-* [About](#about)
-    + [Alternatives](#alternatives)
-* [Installation](#installation)
-* [Usage and Examples](#usage-and-examples)
-    + [Command line interface](#command-line-interface)
-    + [Python](#python)
-        + [Similarity from array or dataframe](#similarity-from-array-or-dataframe)
-        + [Similarity from file](#similarity-from-file)
-* [Background](#background)
-    + [Diversity indices](#diversity-indices)
-    + [Partitioned diversity](#partitioned-diversity)
-    + [Frequency-sensitive diversity](#frequency-sensitive-diversity)
-    + [Similarity-sensitive diversity](#similarity-sensitive-diversity)
-    + [One package to calculate them all](#one-package-to-calculate-them-all)
+- [diversity: similarity-sensitive diversity indices](#diversity-similarity-sensitive-diversity-indices)
+  - [About](#about)
+    - [Alternatives](#alternatives)
+  - [Installation](#installation)
+  - [Usage and Examples](#usage-and-examples)
+    - [Command line interface](#command-line-interface)
+    - [Python](#python)
+    - [Similarity from an array or dataframe](#similarity-from-an-array-or-dataframe)
+    - [Similarity from file](#similarity-from-file)
+  - [Background](#background)
+    - [Diversity indices](#diversity-indices)
+    - [Partitioned diversity](#partitioned-diversity)
+    - [Frequency-sensitive diversity](#frequency-sensitive-diversity)
+    - [Similarity-sensitive diversity](#similarity-sensitive-diversity)
+    - [One package to calculate them all](#one-package-to-calculate-them-all)
 
 
 ## About
@@ -305,7 +306,6 @@ Next, we load a similiarty matrix as a pandas dataframe (but it could also be a 
 ```python
 penguin_similarity_matrix_filepath = gist_url + 'penguin_similarity_matrix.csv'
 penguin_similarity_matrix = read_csv(penguin_similarity_matrix_filepath)
-species_order = penguin_similarity_matrix.columns
 ```
 
 Finally, we create a Metacommunity object.
@@ -313,7 +313,6 @@ Finally, we create a Metacommunity object.
 ```python
 penguin_metacommunity = make_metacommunity(
     penguin_counts, 
-    species_order=species_order, 
     similarity_matrix=penguin_similarity_matrix
 )
 ```

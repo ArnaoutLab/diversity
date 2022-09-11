@@ -9,7 +9,6 @@ from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger
 
-from numpy import array, unique
 from pandas import read_csv, concat
 
 from diversity.metacommunity import make_metacommunity
@@ -37,34 +36,16 @@ def main(args):
     LOGGER.debug(f"args: {args}")
 
     delimiter = get_file_delimiter(args.input_filepath)
-    species_counts = read_csv(
-        args.input_filepath,
-        sep=delimiter,
-        usecols=[args.subcommunity_column, args.species_column, args.count_column],
-        dtype={
-            args.subcommunity_column: str,
-            args.species_column: str,
-            args.count_column: int,
-        },
-    )
-
-    LOGGER.debug(f"data: {species_counts}")
-
-    if args.subcommunities is None:
-        subcommunities = unique(species_counts[args.subcommunity_column])
-    else:
-        subcommunities = array(args.subcommunities)
+    counts = read_csv(args.input_filepath, sep=delimiter, dtype=int)
+    LOGGER.debug(f"data: {counts}")
 
     meta = make_metacommunity(
-        counts=species_counts,
-        subcommunities=subcommunities,
+        counts=counts,
+        species=args.species,
+        subcommunities=args.subcommunities,
         similarity=args.similarity,
-        subcommunity_column=args.subcommunity_column,
-        species_column=args.species_column,
-        count_column=args.count_column,
         chunk_size=args.chunk_size,
     )
-
     community_views = []
     for view in args.viewpoint:
         community_views.append(meta.subcommunities_to_dataframe(view))
