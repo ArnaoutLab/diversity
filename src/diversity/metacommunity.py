@@ -73,31 +73,32 @@ def make_metacommunity(
 
     if similarity is not None:
         similarity = make_similarity(similarity=similarity, chunk_size=chunk_size)
+    # TODO move filtering to abundance class?
+    # TODO make overloading behavior for subcommunities creation where dataframes and arrays are handled differently?
     if subcommunities is not None:
         counts = counts.loc[:, subcommunities]
     else:
         subcommunities = counts.columns
     if species is not None:
-        counts.loc[species] = 0
+        species_complement = list(set(counts.index) - set(species))
+        counts.loc[species_complement] = 0
     abundance = make_abundance(counts)
-    frequency_sensitive = (
-        FrequencySensitiveMetacommunity,
-        {
-            "abundance": abundance,
-            "subcommunities": subcommunities,
-        },
-    )
-    similarity_sensitive = (
-        SimilaritySensitiveMetacommunity,
-        {
-            "abundance": abundance,
-            "subcommunities": subcommunities,
-            "similarity": similarity,
-        },
-    )
     strategies = {
-        False: frequency_sensitive,
-        True: similarity_sensitive,
+        False: (
+            FrequencySensitiveMetacommunity,
+            {
+                "abundance": abundance,
+                "subcommunities": subcommunities,
+            },
+        ),
+        True: (
+            SimilaritySensitiveMetacommunity,
+            {
+                "abundance": abundance,
+                "subcommunities": subcommunities,
+                "similarity": similarity,
+            },
+        ),
     }
     strategy_choice = strategies[issubclass(type(similarity), ISimilarity)]
     metacommunity_class, kwargs = strategy_choice
