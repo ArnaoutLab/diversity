@@ -95,7 +95,7 @@ MAIN_TEST_CASES = [
             subcommunities=None,
         ),
         "input_filecontents": (
-            "subcommunity_1\tsubcommunity_2\n" "1\t5\n" "3\t0\n" "0\t1\n"
+            "subcommunity_1\tsubcommunity_2\n" "2\t5\n" "3\t0\n" "0\t1\n"
         ),
         "similarities_filecontents": (
             "species_1\tspecies_2\tspecies_3\n"

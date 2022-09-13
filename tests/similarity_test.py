@@ -1,7 +1,5 @@
 """Tests for diversity.similarity."""
-from multiprocessing import cpu_count
-
-from numpy import allclose, array, array_equal, dtype, empty, memmap, ones, zeros
+from numpy import allclose, array, dtype, empty, memmap
 from pandas import DataFrame, Index
 from pytest import fixture, raises, warns
 
@@ -10,8 +8,8 @@ from diversity.log import LOGGER
 from diversity.similarity import (
     SimilarityFromArray,
     SimilarityFromDataFrame,
-    make_similarity,
     SimilarityFromFile,
+    make_similarity,
 )
 
 
@@ -30,13 +28,6 @@ class MockSimilarityFromDataFrame(MockClass):
 
 class MockSimilarityFromArray(MockClass):
     pass
-
-
-FAKE_FEATURES = "fake_features"
-
-
-def sim_func(a, b):
-    return 1 / sum(a * b)
 
 
 MAKE_SIMILARITY_TEST_CASES = [
@@ -168,8 +159,7 @@ class TestMakeSimilarity:
                 )
         else:
             similarity = make_similarity(
-                similarity=test_case["similarity"],
-                chunk_size=test_case["chunk_size"],
+                test_case["similarity"], chunk_size=test_case["chunk_size"]
             )
             assert isinstance(similarity, test_case["expected_return_type"])
             for key, arg in test_case["expected_init_kwargs"].items():

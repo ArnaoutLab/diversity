@@ -176,6 +176,8 @@ class TestMakeMetacommunity:
                 ("diversity.metacommunity.ISimilarity", FakeSimilarity),
             ]:
                 patched_context.setattr(target, mocked)
+            print(target)
+            print(mocked)
             test_case_ = deepcopy(request.param)
             yield test_case_
 

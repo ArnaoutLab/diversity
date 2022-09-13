@@ -14,19 +14,21 @@ make_abundance
     Chooses and creates instance of concrete IAbundance implementation.
 """
 from abc import ABC, abstractmethod
-from functools import cache
+from functools import cache, singledispatch
 
-from numpy import dtype, empty
+from numpy import dtype, empty, ndarray
+from pandas import DataFrame
+
 from diversity.log import LOGGER
 
 
+@singledispatch
 def make_abundance(counts):
     """Initializes a concrete subclass of IAbundance.
 
     Parameters
     ----------
-    counts: numpy.ndarray
-        If numpy.ndarray, see diversity.abundance.Abundance.
+    counts: numpy.ndarray or pandas.DataFrame
 
     Returns
     -------
@@ -37,9 +39,19 @@ def make_abundance(counts):
     Valid parameter combinations are:
     - counts: numpy.ndarray
     """
+    raise NotImplementedError(f"Type {type(counts)} not supported for counts table")
+
+
+@make_abundance.register
+def make_abundance_from_array(counts: ndarray):
     LOGGER.debug("make_abundance(counts=%s)", counts)
-    abundance = Abundance(counts=counts)
-    return abundance
+    return Abundance(counts=counts)
+
+
+@make_abundance.register
+def make_abundance_from_dataframe(counts: DataFrame):
+    LOGGER.debug("make_abundance(counts=%s)", counts)
+    return Abundance(counts=counts.to_numpy())
 
 
 class IAbundance(ABC):
@@ -100,6 +112,14 @@ class IAbundance(ABC):
         in the subcommunity relative to the subcommunity size.
         """
         pass
+
+
+class AbundanceFromDataFrame(IAbundance):
+    pass
+
+
+class AbundanceFromArray(IAbundance):
+    pass
 
 
 class Abundance(IAbundance):

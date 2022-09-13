@@ -55,7 +55,7 @@ class TestMakeAbundance:
             with raises(InvalidArgumentError):
                 make_abundance(counts=test_case["counts"])
         else:
-            abundance = make_abundance(counts=test_case["counts"])
+            abundance = make_abundance(test_case["counts"])
             assert isinstance(abundance, test_case["expected_return_type"])
             for key, arg in test_case["expected_init_kwargs"].items():
                 assert abundance.kwargs[key] is arg

@@ -100,7 +100,7 @@ def make_metacommunity(
             },
         ),
     }
-    strategy_choice = strategies[issubclass(type(similarity), ISimilarity)]
+    strategy_choice = strategies[similarity is not None]
     metacommunity_class, kwargs = strategy_choice
     metacommunity = metacommunity_class(**kwargs)
     return metacommunity

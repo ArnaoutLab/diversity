@@ -24,10 +24,7 @@ from diversity.utilities import (
 )
 
 
-def make_similarity(
-    similarity,
-    chunk_size=None,
-):
+def make_similarity(similarity, chunk_size=100):
     """Initializes a concrete subclass of ISimilarity.
 
     Parameters
@@ -60,8 +57,7 @@ def make_similarity(
     }
     strategy_choice = strategies[type(similarity)]
     similarity_class, kwargs = strategy_choice
-    similarity = similarity_class(**kwargs)
-    return similarity
+    return similarity_class(**kwargs)
 
 
 class ISimilarity(ABC):
