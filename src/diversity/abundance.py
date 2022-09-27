@@ -14,15 +14,14 @@ make_abundance
     Chooses and creates instance of concrete IAbundance implementation.
 """
 from abc import ABC, abstractmethod
-from functools import cache, singledispatch
+from functools import cache
 
-from numpy import dtype, empty, ndarray
+from numpy import dtype, empty
 from pandas import DataFrame
 
 from diversity.log import LOGGER
 
 
-@singledispatch
 def make_abundance(counts):
     """Initializes a concrete subclass of IAbundance.
 
@@ -39,19 +38,8 @@ def make_abundance(counts):
     Valid parameter combinations are:
     - counts: numpy.ndarray
     """
-    raise NotImplementedError(f"Type {type(counts)} not supported for counts table")
-
-
-@make_abundance.register
-def make_abundance_from_array(counts: ndarray):
     LOGGER.debug("make_abundance(counts=%s)", counts)
     return Abundance(counts=counts)
-
-
-@make_abundance.register
-def make_abundance_from_dataframe(counts: DataFrame):
-    LOGGER.debug("make_abundance(counts=%s)", counts)
-    return Abundance(counts=counts.to_numpy())
 
 
 class IAbundance(ABC):
@@ -114,14 +102,6 @@ class IAbundance(ABC):
         pass
 
 
-class AbundanceFromDataFrame(IAbundance):
-    pass
-
-
-class AbundanceFromArray(IAbundance):
-    pass
-
-
 class Abundance(IAbundance):
     """Implements IAbundance for fast, but memory-heavy calculations.
 
@@ -138,14 +118,13 @@ class Abundance(IAbundance):
             A 2-d numpy.ndarray with one column per subcommunity, one
             row per species, containing the count of each species in the
             corresponding subcommunities.
-
         """
         LOGGER.debug("Abundance(counts=%s", counts)
-        self.counts = counts
+        self.counts = DataFrame(counts)
 
     @cache
     def subcommunity_abundance(self):
-        total_abundance = self.counts.sum()
+        total_abundance = self.counts.sum().sum()
         relative_abundances = empty(shape=self.counts.shape, dtype=dtype("f8"))
         relative_abundances[:] = self.counts / total_abundance
         return relative_abundances

@@ -1,9 +1,9 @@
 """Tests for diversity.similarity."""
 from numpy import allclose, array, dtype, empty, memmap
-from pandas import DataFrame, Index
-from pytest import fixture, raises, warns
+from pandas import DataFrame
+from pytest import fixture, warns
 
-from diversity.exceptions import ArgumentWarning, InvalidArgumentError
+from diversity.exceptions import ArgumentWarning
 from diversity.log import LOGGER
 from diversity.similarity import (
     SimilarityFromArray,
@@ -150,20 +150,12 @@ class TestMakeSimilarity:
             yield test_case_
 
     def test_make_similarity(self, test_case):
-        if test_case["expect_raise"]:
-            with raises(InvalidArgumentError):
-                breakpoint()
-                make_similarity(
-                    similarity=test_case["similarity"],
-                    chunk_size=test_case["chunk_size"],
-                )
-        else:
-            similarity = make_similarity(
-                test_case["similarity"], chunk_size=test_case["chunk_size"]
-            )
-            assert isinstance(similarity, test_case["expected_return_type"])
-            for key, arg in test_case["expected_init_kwargs"].items():
-                assert similarity.kwargs[key] is arg
+        similarity = make_similarity(
+            test_case["similarity"], chunk_size=test_case["chunk_size"]
+        )
+        assert isinstance(similarity, test_case["expected_return_type"])
+        for key, arg in test_case["expected_init_kwargs"].items():
+            assert similarity.kwargs[key] is arg
 
 
 SIMILARITY_FROM_FILE_TEST_CASES = [

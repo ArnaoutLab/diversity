@@ -19,17 +19,15 @@ from functools import cache
 from pandas import DataFrame, Index
 from numpy import broadcast_to, divide, zeros
 
-from diversity.abundance import make_abundance
 from diversity.log import LOGGER
-from diversity.similarity import ISimilarity, make_similarity
+from diversity.abundance import make_abundance
+from diversity.similarity import make_similarity
 from diversity.utilities import power_mean
 
 
 def make_metacommunity(
     counts,
     similarity=None,
-    subcommunities=None,
-    species=None,
     chunk_size=100,
 ):
     """Initializes a concrete subclass of IMetacommunity.
@@ -43,16 +41,11 @@ def make_metacommunity(
         identifier pairs are assumed to be unique. Column headers are
         specified by the subcommunity_column, species_column, and
         count_column arguments.
-    similarity: pandas.DataFrame, str, Callable, numpy.ndarray, or numpy.memmap
+    similarity: pandas.DataFrame, numpy.ndarray, str, or numpy.memmap
         For similarity-sensitive diversity measures. When numpy.ndarray or
         numpy.memmap is used, the ordering of species in the species argument for
         diversity.similarity.make_similarity corresponds to the ordering
         of species in counts.
-    subcommunities: numpy.ndarray
-        Names of subcommunities to include. Their union is the
-        metacommunity, and data for all other subcommunities is ignored.
-    species: Sequence
-        Names of species to include. Data for all species not listed here is ignored.
     chunk_size: int
         The number of file lines to process at a time when the similarity matrix
         is read from a file. Larger chunk sizes are faster, but take more memory.
@@ -62,57 +55,24 @@ def make_metacommunity(
     An instance of a concrete subclass of IMetacommunity.
     """
     LOGGER.debug(
-        "make_metacommunity(counts=%s, similarity=%s,"
-        " subcommunities=%s, species=%s, chunk_size=%s",
+        "make_metacommunity(counts=%s, similarity=%s, chunk_size=%s",
         counts,
         similarity,
-        subcommunities,
-        species,
         chunk_size,
     )
-
-    if similarity is not None:
-        similarity = make_similarity(similarity=similarity, chunk_size=chunk_size)
-    # TODO move filtering to abundance class?
-    # TODO make overloading behavior for subcommunities creation where dataframes and arrays are handled differently?
-    if subcommunities is not None:
-        counts = counts.loc[:, subcommunities]
-    else:
-        subcommunities = counts.columns
-    if species is not None:
-        species_complement = list(set(counts.index) - set(species))
-        counts.loc[species_complement] = 0
     abundance = make_abundance(counts)
-    strategies = {
-        False: (
-            FrequencySensitiveMetacommunity,
-            {
-                "abundance": abundance,
-                "subcommunities": subcommunities,
-            },
-        ),
-        True: (
-            SimilaritySensitiveMetacommunity,
-            {
-                "abundance": abundance,
-                "subcommunities": subcommunities,
-                "similarity": similarity,
-            },
-        ),
-    }
-    strategy_choice = strategies[similarity is not None]
-    metacommunity_class, kwargs = strategy_choice
-    metacommunity = metacommunity_class(**kwargs)
-    return metacommunity
+    if similarity is None:
+        return FrequencySensitiveMetacommunity(abundance=abundance)
+    similarity = make_similarity(similarity=similarity, chunk_size=chunk_size)
+    return SimilaritySensitiveMetacommunity(abundance=abundance, similarity=similarity)
 
 
 class IMetacommunity(ABC):
     """Interface for metacommunities and calculating their diversity."""
 
     @abstractmethod
-    def __init__(self, abundance, subcommunities):
+    def __init__(self, abundance):
         self.abundance = abundance
-        self.subcommunities = subcommunities
         self.measure_components = None
 
     @cache
@@ -184,7 +144,7 @@ class IMetacommunity(ABC):
             }
         )
         df.insert(0, "viewpoint", viewpoint)
-        df.insert(0, "community", self.subcommunities)
+        df.insert(0, "community", self.abundance.counts.columns)
         return df
 
     def metacommunity_to_dataframe(self, viewpoint):
@@ -213,7 +173,7 @@ class IMetacommunity(ABC):
 class FrequencySensitiveMetacommunity(IMetacommunity):
     """Implements IMetacommunity for similarity-insensitive diversity."""
 
-    def __init__(self, abundance, subcommunities):
+    def __init__(self, abundance):
         """Initializes object.
 
         Parameters
@@ -221,10 +181,8 @@ class FrequencySensitiveMetacommunity(IMetacommunity):
         abundance: diversity.abundance.IAbundance
             Object whose (sub-/meta-)community species abundances are
             used.
-        subcommunities: Sequence
-            A sequence of elements that denote the subcommunities in the metacommunity
         """
-        super().__init__(abundance=abundance, subcommunities=subcommunities)
+        super().__init__(abundance=abundance)
         self.measure_components = {
             "alpha": (1, self.abundance.subcommunity_abundance),
             "rho": (
@@ -254,7 +212,7 @@ class FrequencySensitiveMetacommunity(IMetacommunity):
 class SimilaritySensitiveMetacommunity(IMetacommunity):
     """Implements ISimilaritySensitiveMetacommunity for fast but memory heavy calculations."""
 
-    def __init__(self, abundance, subcommunities, similarity):
+    def __init__(self, abundance, similarity):
         """Initializes object.
 
         Parameters
@@ -262,13 +220,10 @@ class SimilaritySensitiveMetacommunity(IMetacommunity):
         abundance: diversity.abundance.IAbundance
             Object whose (sub-/meta-)community species abundances are
             used.
-        subcommunities: numpy.ndarray
-            Ordered subcommunity identifiers. Ordering must correspond
-            to the ordering used by abundance.
         similarity: diversity.similarity.ISimilarity
             Object for calculating abundance-weighted similarities.
         """
-        super().__init__(abundance=abundance, subcommunities=subcommunities)
+        super().__init__(abundance=abundance)
         self.similarity = similarity
         self.measure_components = {
             "alpha": (1, self.subcommunity_similarity),

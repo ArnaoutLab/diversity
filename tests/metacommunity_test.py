@@ -12,8 +12,8 @@ from pandas import DataFrame
 from pandas.testing import assert_frame_equal
 from pytest import fixture
 
-from diversity.abundance import Abundance
 from diversity.log import LOGGER
+from diversity.abundance import Abundance
 from diversity.similarity import SimilarityFromDataFrame
 from diversity.metacommunity import (
     make_metacommunity,
@@ -52,17 +52,10 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             index=["species_1", "species_2", "species_3"],
             columns=["subcommunity_1", "subcommunity_2", "subcommunity_3"],
         ),
-        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "species": ["species_1", "species_2", "species_3"],
         "similarity": None,
-        "expect_raise": False,
         "expected_return_type": MockFrequencySensitiveMetacommunity,
-        "expected_keywords": {"abundance", "subcommunities"},
-        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
-        "expected_subcommunities": array(
-            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
-        ),
-        "expected_species_subset": None,
+        "expected_keywords": {"abundance"},
+        "expected_counts": DataFrame([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
     },
     {
         "description": "FrequencySensitiveMetacommunity; subset",
@@ -71,15 +64,10 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             index=["species_1", "species_2", "species_3"],
             columns=["subcommunity_1", "subcommunity_2", "subcommunity_3"],
         ),
-        "subcommunities": array(["subcommunity_3", "subcommunity_1"]),
-        "species": None,
         "similarity": None,
-        "expect_raise": False,
         "expected_return_type": MockFrequencySensitiveMetacommunity,
-        "expected_keywords": {"abundance", "subcommunities"},
-        "expected_counts": array([[0, 2], [0, 5], [3, 0]]),
-        "expected_subcommunities": array(["subcommunity_3", "subcommunity_1"]),
-        "expected_species_subset": None,
+        "expected_keywords": {"abundance"},
+        "expected_counts": DataFrame([[0, 2], [0, 5], [3, 0]]),
     },
     {
         "description": "FrequencySensitiveMetacommunity; abundance kwargs",
@@ -88,17 +76,10 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             index=["species_1", "species_2", "species_3"],
             columns=["subcommunity_1", "subcommunity_2", "subcommunity_3"],
         ),
-        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "species": None,
         "similarity": None,
-        "expect_raise": False,
         "expected_return_type": MockFrequencySensitiveMetacommunity,
-        "expected_keywords": {"abundance", "subcommunities"},
-        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
-        "expected_subcommunities": array(
-            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
-        ),
-        "expected_species_subset": None,
+        "expected_keywords": {"abundance"},
+        "expected_counts": DataFrame([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
     },
     {
         "description": "SimilaritySensitiveMetacommunity",
@@ -107,8 +88,6 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             index=["species_1", "species_2", "species_3"],
             columns=["subcommunity_1", "subcommunity_2", "subcommunity_3"],
         ),
-        "subcommunities": array(["subcommunity_1", "subcommunity_2", "subcommunity_3"]),
-        "species": array(["species_1", "species_2", "species_3"]),
         "similarity": DataFrame(
             data=array(
                 [
@@ -120,41 +99,9 @@ MAKE_METACOMMUNITY_TEST_CASES = [
             columns=["species_1", "species_2", "species_3"],
             index=["species_1", "species_2", "species_3"],
         ),
-        "expect_raise": False,
         "expected_return_type": MockSimilaritySensitiveMetacommunity,
-        "expected_keywords": {"abundance", "subcommunities", "similarity"},
-        "expected_counts": array([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
-        "expected_subcommunities": array(
-            ["subcommunity_1", "subcommunity_2", "subcommunity_3"]
-        ),
-        "expected_species_subset": array(["species_1", "species_2", "species_3"]),
-    },
-    {
-        "description": "SimilaritySensitiveMetacommunity; subset",
-        "counts": DataFrame(
-            [[2, 5, 0], [4, 3, 2], [0, 0, 3]],
-            index=["species_1", "species_2", "species_3"],
-            columns=["subcommunity_1", "subcommunity_2", "subcommunity_3"],
-        ),
-        "subcommunities": array(["subcommunity_3"]),
-        "species": array(["species_3"]),
-        "similarity": DataFrame(
-            data=array(
-                [
-                    [1, 0.5, 0.1],
-                    [0.5, 1, 0.2],
-                    [0.1, 0.2, 1],
-                ]
-            ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
-        "expect_raise": False,
-        "expected_return_type": MockSimilaritySensitiveMetacommunity,
-        "expected_keywords": {"abundance", "subcommunities", "similarity"},
-        "expected_counts": array([[3]]),
-        "expected_subcommunities": array(["subcommunity_3"]),
-        "expected_species_subset": array(["species_3"]),
+        "expected_keywords": {"abundance", "similarity"},
+        "expected_counts": DataFrame([[2, 4, 0], [5, 3, 0], [0, 2, 3]]),
     },
 ]
 
@@ -173,11 +120,8 @@ class TestMakeMetacommunity:
                     MockSimilaritySensitiveMetacommunity,
                 ),
                 ("diversity.metacommunity.make_similarity", mock_make_similarity),
-                ("diversity.metacommunity.ISimilarity", FakeSimilarity),
             ]:
                 patched_context.setattr(target, mocked)
-            print(target)
-            print(mocked)
             test_case_ = deepcopy(request.param)
             yield test_case_
 
@@ -185,15 +129,9 @@ class TestMakeMetacommunity:
         metacommunity = make_metacommunity(
             counts=test_case["counts"],
             similarity=test_case["similarity"],
-            species=test_case["species"],
-            subcommunities=test_case["subcommunities"],
         )
         assert isinstance(metacommunity, test_case["expected_return_type"])
         assert set(metacommunity.kwargs.keys()) == test_case["expected_keywords"]
-        assert array_equal(
-            metacommunity.kwargs["subcommunities"],
-            test_case["expected_subcommunities"],
-        )
         if test_case["similarity"] is not None:
             assert (
                 metacommunity.kwargs["similarity"].kwargs["similarity"]
@@ -233,7 +171,7 @@ SIMILARITY_INSENSITIVE_METACOMMUNITY_TEST_CASES = [
                 "normalized_rho": array([0.5, 0.5]),
                 "normalized_beta": array([2.0, 2.0]),
                 "viewpoint": [0, 0],
-                "community": array(["subcommunity_1", "subcommunity_2"]),
+                "community": [0, 1],
             },
         ),
         "metacommunity_dataframe": DataFrame(
@@ -254,9 +192,12 @@ SIMILARITY_INSENSITIVE_METACOMMUNITY_TEST_CASES = [
     {
         "description": "overlapping communities; non-uniform counts; viewpoint 2.",
         "abundance": Abundance(
-            counts=array([[1, 5], [3, 0], [0, 1]], dtype=dtype("f8"))
+            counts=DataFrame(
+                [[1, 5], [3, 0], [0, 1]],
+                columns=["subcommunity_1", "subcommunity_2"],
+                dtype=dtype("f8"),
+            )
         ),
-        "subcommunities": array(["subcommunity_1", "subcommunity_2"]),
         "viewpoint": 2,
         "subcommunity_alpha": array([4.0, 2.30769231]),
         "subcommunity_rho": array([1.26315789, 1.16129032]),
@@ -312,7 +253,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_subcommunity_alpha(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         subcommunity_alpha = metacommunity.subcommunity_diversity(
             test_case["viewpoint"], measure="alpha"
@@ -324,7 +264,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_subcommunity_rho(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         subcommunity_rho = metacommunity.subcommunity_diversity(
             test_case["viewpoint"], measure="rho"
@@ -336,7 +275,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_subcommunity_beta(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         subcommunity_beta = metacommunity.subcommunity_diversity(
             test_case["viewpoint"], measure="beta"
@@ -348,7 +286,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_subcommunity_gamma(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         subcommunity_gamma = metacommunity.subcommunity_diversity(
             test_case["viewpoint"], measure="gamma"
@@ -360,7 +297,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_normalized_subcommunity_alpha(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         normalized_subcommunity_alpha = metacommunity.subcommunity_diversity(
             test_case["viewpoint"], measure="normalized_alpha"
@@ -377,7 +313,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_normalized_subcommunity_rho(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         normalized_subcommunity_rho = metacommunity.subcommunity_diversity(
             test_case["viewpoint"], measure="normalized_rho"
@@ -394,7 +329,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_normalized_subcommunity_beta(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         normalized_subcommunity_beta = metacommunity.subcommunity_diversity(
             test_case["viewpoint"], measure="normalized_beta"
@@ -411,7 +345,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_metacommunity_alpha(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         metacommunity_alpha = metacommunity.metacommunity_diversity(
             test_case["viewpoint"], "alpha"
@@ -421,7 +354,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_metacommunity_rho(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         metacommunity_rho = metacommunity.metacommunity_diversity(
             test_case["viewpoint"], "rho"
@@ -431,7 +363,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_metacommunity_beta(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         metacommunity_beta = metacommunity.metacommunity_diversity(
             test_case["viewpoint"], "beta"
@@ -441,7 +372,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_metacommunity_gamma(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         metacommunity_gamma = metacommunity.metacommunity_diversity(
             test_case["viewpoint"], "gamma"
@@ -451,7 +381,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_metacommunity_normalized_alpha(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         metacommunity_normalized_alpha = metacommunity.metacommunity_diversity(
             test_case["viewpoint"], "normalized_alpha"
@@ -463,7 +392,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_metacommunity_normalized_rho(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         metacommunity_normalized_rho = metacommunity.metacommunity_diversity(
             test_case["viewpoint"], "normalized_rho"
@@ -475,7 +403,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_metacommunity_normalized_beta(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         metacommunity_normalized_beta = metacommunity.metacommunity_diversity(
             test_case["viewpoint"], "normalized_beta"
@@ -487,7 +414,6 @@ class TestFrequencySensitiveMetacommunity:
     def test_subcommunities_to_dataframe(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         subcommunity_dataframe = metacommunity.subcommunities_to_dataframe(
             viewpoint=test_case["viewpoint"]
@@ -495,12 +421,13 @@ class TestFrequencySensitiveMetacommunity:
         expected_subcommunity_dataframe = test_case["subcommunity_dataframe"][
             subcommunity_dataframe.columns
         ]
+        print(subcommunity_dataframe)
+        print(expected_subcommunity_dataframe)
         assert_frame_equal(subcommunity_dataframe, expected_subcommunity_dataframe)
 
     def test_metacommunities_to_dataframe(self, test_case):
         metacommunity = FrequencySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
         )
         metacommunity_dataframe = metacommunity.metacommunity_to_dataframe(
             viewpoint=test_case["viewpoint"]
@@ -515,9 +442,11 @@ SIMILARITY_SENSITIVE_METACOMMUNITY_TEST_CASES = [
     {
         "description": "disjoint communities; uniform counts; uniform inter-community similarities; viewpoint 0.",
         "abundance": Abundance(
-            counts=array([[1, 0], [1, 0], [1, 0], [0, 1], [0, 1], [0, 1]])
+            counts=DataFrame(
+                [[1, 0], [1, 0], [1, 0], [0, 1], [0, 1], [0, 1]],
+                columns=["subcommunity_1", "subcommunity_2"],
+            )
         ),
-        "subcommunities": array(["subcommunity_1", "subcommunity_2"]),
         "similarity": SimilarityFromDataFrame(
             similarity=DataFrame(
                 data=array(
@@ -624,12 +553,15 @@ SIMILARITY_SENSITIVE_METACOMMUNITY_TEST_CASES = [
     {
         "description": "overlapping communities; non-uniform counts; non-uniform inter-community similarities; viewpoint 2.",
         "abundance": Abundance(
-            counts=array([[1, 5], [3, 0], [0, 1]], dtype=dtype("f8"))
+            counts=DataFrame(
+                [[1, 5], [3, 0], [0, 1]],
+                columns=["subcommunity_1", "subcommunity_2"],
+                dtype=dtype("f8"),
+            )
         ),
-        "subcommunities": array(["subcommunity_1", "subcommunity_2"]),
         "similarity": SimilarityFromDataFrame(
             similarity=DataFrame(
-                data=array([[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0]]),
+                [[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0]],
                 columns=[
                     "species_1",
                     "species_2",
@@ -712,7 +644,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_metacommunity_similarity(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         metacommunity_similarity = metacommunity.metacommunity_similarity()
@@ -725,7 +656,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_subcommunity_similarity(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         subcommunity_similarity = metacommunity.subcommunity_similarity()
@@ -738,7 +668,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_normalized_subcommunity_similarity(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         normalized_subcommunity_similarity = (
@@ -757,7 +686,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_subcommunity_alpha(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         subcommunity_alpha = metacommunity.subcommunity_diversity(
@@ -770,7 +698,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_subcommunity_rho(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         subcommunity_rho = metacommunity.subcommunity_diversity(
@@ -783,7 +710,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_subcommunity_beta(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         subcommunity_beta = metacommunity.subcommunity_diversity(
@@ -796,7 +722,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_subcommunity_gamma(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         subcommunity_gamma = metacommunity.subcommunity_diversity(
@@ -809,7 +734,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_normalized_subcommunity_alpha(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         normalized_subcommunity_alpha = metacommunity.subcommunity_diversity(
@@ -827,7 +751,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_normalized_subcommunity_rho(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         normalized_subcommunity_rho = metacommunity.subcommunity_diversity(
@@ -845,7 +768,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_normalized_subcommunity_beta(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         normalized_subcommunity_beta = metacommunity.subcommunity_diversity(
@@ -863,7 +785,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_metacommunity_alpha(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         metacommunity_alpha = metacommunity.metacommunity_diversity(
@@ -874,7 +795,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_metacommunity_rho(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         metacommunity_rho = metacommunity.metacommunity_diversity(
@@ -885,7 +805,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_metacommunity_beta(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         metacommunity_beta = metacommunity.metacommunity_diversity(
@@ -896,7 +815,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_metacommunity_gamma(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         metacommunity_gamma = metacommunity.metacommunity_diversity(
@@ -907,7 +825,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_metacommunity_normalized_alpha(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         metacommunity_normalized_alpha = metacommunity.metacommunity_diversity(
@@ -920,7 +837,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_metacommunity_normalized_rho(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         metacommunity_normalized_rho = metacommunity.metacommunity_diversity(
@@ -933,7 +849,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_metacommunity_normalized_beta(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         metacommunity_normalized_beta = metacommunity.metacommunity_diversity(
@@ -946,7 +861,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_subcommunities_to_dataframe(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         subcommunity_dataframe = metacommunity.subcommunities_to_dataframe(
@@ -960,7 +874,6 @@ class TestSimilaritySensitiveMetacommunity:
     def test_metacommunities_to_dataframe(self, test_case):
         metacommunity = SimilaritySensitiveMetacommunity(
             abundance=test_case["abundance"],
-            subcommunities=test_case["subcommunities"],
             similarity=test_case["similarity"],
         )
         metacommunity_dataframe = metacommunity.metacommunity_to_dataframe(

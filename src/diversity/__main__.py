@@ -11,9 +11,9 @@ from logging import captureWarnings, getLogger
 
 from pandas import read_csv, concat
 
+from diversity.log import LOG_HANDLER, LOGGER
 from diversity.metacommunity import make_metacommunity
 from diversity.parameters import configure_arguments
-from diversity.log import LOG_HANDLER, LOGGER
 from diversity.utilities import get_file_delimiter
 
 # Ensure warnings are handled properly.
@@ -38,11 +38,8 @@ def main(args):
     delimiter = get_file_delimiter(args.input_filepath)
     counts = read_csv(args.input_filepath, sep=delimiter, dtype=int)
     LOGGER.debug(f"data: {counts}")
-
     meta = make_metacommunity(
         counts=counts,
-        species=args.species,
-        subcommunities=args.subcommunities,
         similarity=args.similarity,
         chunk_size=args.chunk_size,
     )
@@ -58,7 +55,6 @@ def main(args):
     community_views.to_csv(
         args.output_filepath, sep="\t", float_format="%.4f", index=False
     )
-
     LOGGER.info("Done!")
 
 
