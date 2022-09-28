@@ -2,7 +2,6 @@
 from numpy import allclose, array, array_equal, dtype
 from pytest import fixture, mark, raises
 
-# from diversity import abundance
 from diversity.abundance import Abundance, make_abundance
 from diversity.exceptions import InvalidArgumentError
 

@@ -4,7 +4,6 @@ from copy import deepcopy
 from numpy import (
     allclose,
     array,
-    array_equal,
     dtype,
     isclose,
 )

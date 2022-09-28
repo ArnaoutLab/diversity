@@ -29,10 +29,10 @@ def make_similarity(similarity, chunk_size=100):
 
     Parameters
     ----------
-    similarity: pandas.DataFrame, str, or Callable
-        If pandas.DataFrame, see diversity.similarity.SimilarityFromMemory.
+    similarity: pandas.DataFrame, numpy.ndarray, or str
+        If pandas.DataFrame, see diversity.similarity.SimilarityFromDataFrame.
+        If numpy.ndarray, see diversity.similarity.SimilarityFromArray.
         If str, see diversity.similarity.SimilarityFromFile.
-        If callable, see diversity.similarity.SimilarityFromFunction.
     chunk_size: int
         See diversity.similarity.SimilarityFromFile. Only relevant
         if a str is passed as argument for similarity.
@@ -150,7 +150,7 @@ class SimilarityFromDataFrame(ISimilarity):
 
 
 class SimilarityFromArray(ISimilarity):
-    """Implements Similarity using similarities stored in a numpy array"""
+    """Implements Similarity using similarities stored in a numpy ndarray"""
 
     def __init__(self, similarity):
         """Initializes object.

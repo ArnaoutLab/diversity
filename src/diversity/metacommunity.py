@@ -34,13 +34,9 @@ def make_metacommunity(
 
     Parameters
     ----------
-    counts: pandas.DataFrame
-        Table with 3 columns: one column lists subcommunity identifiers,
-        one lists species identifiers, and the last lists counts of
-        species in corresponding subcommunities. Subcommunity-species
-        identifier pairs are assumed to be unique. Column headers are
-        specified by the subcommunity_column, species_column, and
-        count_column arguments.
+    counts: pandas DataFrame or numpy.ndarray
+        2-d array with one column per subcommunity, one row per species,
+        containing the count of each species in the corresponding subcommunities.
     similarity: pandas.DataFrame, numpy.ndarray, str, or numpy.memmap
         For similarity-sensitive diversity measures. When numpy.ndarray or
         numpy.memmap is used, the ordering of species in the species argument for
@@ -82,18 +78,19 @@ class IMetacommunity(ABC):
         Parameters
         ----------
         viewpoint: numeric
-            Viewpoint parameter for diversity measure.
+            Viewpoint parameter for diversity measure. Valid measure identifiers
+            are: "alpha", "rho", "beta", "gamma", "normalized_alpha",
+            "normalized_rho", and "normalized_beta"
         measure: str
             Name of the diversity measure.
 
         Returns
         -------
-        A numpy array with a diversity value per subcommunity.
+        A numpy array with a diversity value for each subcommunity.
 
         Notes
         -----
-        Valid measure identifiers are: "alpha", "rho", "beta", "gamma",
-        "normalized_alpha", "normalized_rho", and "normalized_beta".
+        .
         """
         numerator, denominator = self.measure_components[measure]
         if callable(numerator):

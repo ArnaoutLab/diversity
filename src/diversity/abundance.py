@@ -27,16 +27,13 @@ def make_abundance(counts):
 
     Parameters
     ----------
-    counts: numpy.ndarray or pandas.DataFrame
+    counts: pandas DataFrame or numpy.ndarray
+        2-d array with one column per subcommunity, one row per species,
+        containing the count of each species in the correspon
 
     Returns
     -------
     An instance of a concrete subclass of IAbundance.
-
-    Notes
-    -----
-    Valid parameter combinations are:
-    - counts: numpy.ndarray
     """
     LOGGER.debug("make_abundance(counts=%s)", counts)
     return Abundance(counts=counts)
@@ -114,10 +111,9 @@ class Abundance(IAbundance):
 
         Parameters
         ----------
-        counts: numpy.ndarray
-            A 2-d numpy.ndarray with one column per subcommunity, one
-            row per species, containing the count of each species in the
-            corresponding subcommunities.
+        counts: pandas DataFrame or numpy.ndarray
+            2-d array with one column per subcommunity, one row per species,
+            containing the count of each species in the corresponding subcommunities.
         """
         LOGGER.debug("Abundance(counts=%s", counts)
         self.counts = DataFrame(counts)

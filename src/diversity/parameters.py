@@ -47,27 +47,6 @@ def configure_arguments():
     """
     parser = ArgumentParser()
     parser.add_argument(
-        "-b",
-        "--subcommunities",
-        help=(
-            "Names of subcommunities to include. Effectively makes"
-            " diversity ignore all rows and columns in input file and"
-            " similarity matrix file corresponing to subcommunities"
-            " not in this list and to species not found in any of"
-            " theses subcommunities. The subcommunity names must"
-            " correspond to names in the subcommunity column in input"
-            " file. If unspecified, all subcommunities are included."
-        ),
-        nargs="*",
-        default=None,
-    )
-    parser.add_argument(
-        "-c",
-        "--count_column",
-        help="Header of the column containing the counts.",
-        default="count",
-    )
-    parser.add_argument(
         "-i",
         "--input_filepath",
         help=(
@@ -97,12 +76,6 @@ def configure_arguments():
         help="A filepath to where the program's output will be saved",
     )
     parser.add_argument(
-        "-p",
-        "--species_column",
-        help="Header of the column containing the species names.",
-        default="species",
-    )
-    parser.add_argument(
         "-s",
         "--similarity_matrix_filepath",
         help=(
@@ -111,12 +84,6 @@ def configure_arguments():
             " header listing the species names corresponding to each"
             " column, and column and row ordering must be the same."
         ),
-    )
-    parser.add_argument(
-        "-u",
-        "--subcommunity_column",
-        help="Header for the column containing the subcommunity names.",
-        default="subcommunity",
     )
     parser.add_argument(
         "-v",

@@ -1,7 +1,6 @@
 """Tests for diversity.utilities."""
 
-from numpy import allclose, array, dtype, inf, ones
-from pandas import DataFrame
+from numpy import allclose, array, inf
 from pytest import mark, raises, warns
 
 from diversity.exceptions import ArgumentWarning, InvalidArgumentError
