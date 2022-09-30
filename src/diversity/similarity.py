@@ -2,7 +2,7 @@
 
 Classes
 -------
-ISimilarity
+Similarity
     Abstract base class for relative abundance-weighted species
     similarities.
 SimilarityFromFile
@@ -13,7 +13,7 @@ SimilarityFromMemory
 Functions
 ---------
 make_similarity
-    Chooses and creates instance of concrete ISimilarity implementation.
+    Chooses and creates instance of concrete Similarity implementation.
 """
 from abc import ABC, abstractmethod
 from numpy import dtype, empty, memmap, ndarray
@@ -24,43 +24,7 @@ from diversity.utilities import (
 )
 
 
-def make_similarity(similarity, chunk_size=100):
-    """Initializes a concrete subclass of ISimilarity.
-
-    Parameters
-    ----------
-    similarity: pandas.DataFrame, numpy.ndarray, or str
-        If pandas.DataFrame, see diversity.similarity.SimilarityFromDataFrame.
-        If numpy.ndarray, see diversity.similarity.SimilarityFromArray.
-        If str, see diversity.similarity.SimilarityFromFile.
-    chunk_size: int
-        See diversity.similarity.SimilarityFromFile. Only relevant
-        if a str is passed as argument for similarity.
-
-    Returns
-    -------
-    An instance of a concrete subclass of ISimilarity.
-    """
-    LOGGER.debug(
-        "make_similarity(similarity=%s, chunk_size=%s)",
-        similarity,
-        chunk_size,
-    )
-    strategies = {
-        DataFrame: (SimilarityFromDataFrame, {"similarity": similarity}),
-        ndarray: (SimilarityFromArray, {"similarity": similarity}),
-        memmap: (SimilarityFromArray, {"similarity": similarity}),
-        str: (
-            SimilarityFromFile,
-            {"similarity": similarity, "chunk_size": chunk_size},
-        ),
-    }
-    strategy_choice = strategies[type(similarity)]
-    similarity_class, kwargs = strategy_choice
-    return similarity_class(**kwargs)
-
-
-class ISimilarity(ABC):
+class Similarity(ABC):
     """Interface for classes computing weighted similarities."""
 
     @abstractmethod
@@ -86,15 +50,15 @@ class ISimilarity(ABC):
         pass
 
 
-class SimilarityFromFile(ISimilarity):
-    """Implements ISimilarity by using similarities stored in file.
+class SimilarityFromFile(Similarity):
+    """Implements Similarity by using similarities stored in file.
 
     Similarity matrix rows are read from the file one chunk at a time.
     The size of chunks can be specified in numbers of rows to control
     memory load.
     """
 
-    def __init__(self, similarity, chunk_size=100):
+    def __init__(self, similarity: str, chunk_size: int = 100) -> None:
         """Initializes object.
 
         Parameters
@@ -116,7 +80,7 @@ class SimilarityFromFile(ISimilarity):
         self.chunk_size = chunk_size
         self.__delimiter = get_file_delimiter(self.similarity)
 
-    def calculate_weighted_similarities(self, relative_abundances):
+    def calculate_weighted_similarities(self, relative_abundances: ndarray) -> ndarray:
         weighted_similarities = empty(relative_abundances.shape, dtype=dtype("f8"))
         with read_csv(
             self.similarity,
@@ -132,10 +96,10 @@ class SimilarityFromFile(ISimilarity):
         return weighted_similarities
 
 
-class SimilarityFromDataFrame(ISimilarity):
+class SimilarityFromDataFrame(Similarity):
     """Implements Similarity using similarities stored in pandas dataframe"""
 
-    def __init__(self, similarity):
+    def __init__(self, similarity: DataFrame):
         """Initializes object.
 
         similarity: pandas.DataFrame, numpy.ndarray, or numpy.memmap
@@ -145,14 +109,14 @@ class SimilarityFromDataFrame(ISimilarity):
         """
         self.similarity = similarity
 
-    def calculate_weighted_similarities(self, relative_abundances):
+    def calculate_weighted_similarities(self, relative_abundances: ndarray) -> ndarray:
         return self.similarity.to_numpy() @ relative_abundances
 
 
-class SimilarityFromArray(ISimilarity):
+class SimilarityFromArray(Similarity):
     """Implements Similarity using similarities stored in a numpy ndarray"""
 
-    def __init__(self, similarity):
+    def __init__(self, similarity: ndarray) -> None:
         """Initializes object.
 
         similarity: pandas.DataFrame, numpy.ndarray, or numpy.memmap
@@ -162,5 +126,43 @@ class SimilarityFromArray(ISimilarity):
         """
         self.similarity = similarity
 
-    def calculate_weighted_similarities(self, relative_abundances):
+    def calculate_weighted_similarities(self, relative_abundances: ndarray) -> ndarray:
         return self.similarity @ relative_abundances
+
+
+def make_similarity(
+    similarity: DataFrame | ndarray | str, chunk_size=100
+) -> Similarity:
+    """Initializes a concrete subclass of Similarity.
+
+    Parameters
+    ----------
+    similarity: pandas.DataFrame, numpy.ndarray, or str
+        If pandas.DataFrame, see diversity.similarity.SimilarityFromDataFrame.
+        If numpy.ndarray, see diversity.similarity.SimilarityFromArray.
+        If str, see diversity.similarity.SimilarityFromFile.
+    chunk_size: int
+        See diversity.similarity.SimilarityFromFile. Only relevant
+        if a str is passed as argument for similarity.
+
+    Returns
+    -------
+    An instance of a concrete subclass of Similarity.
+    """
+    LOGGER.debug(
+        "make_similarity(similarity=%s, chunk_size=%s)",
+        similarity,
+        chunk_size,
+    )
+    strategies = {
+        DataFrame: (SimilarityFromDataFrame, {"similarity": similarity}),
+        ndarray: (SimilarityFromArray, {"similarity": similarity}),
+        memmap: (SimilarityFromArray, {"similarity": similarity}),
+        str: (
+            SimilarityFromFile,
+            {"similarity": similarity, "chunk_size": chunk_size},
+        ),
+    }
+    strategy_choice = strategies[type(similarity)]
+    similarity_class, kwargs = strategy_choice
+    return similarity_class(**kwargs)

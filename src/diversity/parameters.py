@@ -77,7 +77,7 @@ def configure_arguments():
     )
     parser.add_argument(
         "-s",
-        "--similarity_matrix_filepath",
+        "--similarity",
         help=(
             "The filepath to a csv or tsv file containing a similarity"
             " for the species in the input file. The file must have a"

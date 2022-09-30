@@ -5,30 +5,24 @@
 
 - [diversity: similarity-sensitive diversity indices](#diversity-similarity-sensitive-diversity-indices)
   - [About](#about)
-    - [Alternatives](#alternatives)
   - [Installation](#installation)
   - [Usage and Examples](#usage-and-examples)
-    - [Command line interface](#command-line-interface)
-    - [Python](#python)
     - [Similarity from an array or dataframe](#similarity-from-an-array-or-dataframe)
     - [Similarity from file](#similarity-from-file)
+    - [Similarity-insensitive indices](#similarity-insensitive-indices)
+    - [Command line interface](#command-line-interface)
   - [Background](#background)
     - [Diversity indices](#diversity-indices)
     - [Partitioned diversity](#partitioned-diversity)
     - [Frequency-sensitive diversity](#frequency-sensitive-diversity)
     - [Similarity-sensitive diversity](#similarity-sensitive-diversity)
     - [One package to calculate them all](#one-package-to-calculate-them-all)
+    - [Alternatives](#alternatives)
 
 
 ## About
 
 For a rigorous mathematical treatment of the diversity indices calculated by `diversity`, see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background section](#background).
-
-
-### Alternatives
-
-Diversity can be defined in various ways and software calculating the various diversity measures exists. To date, we know of no other python package that implements the similarity-sensitive partitioned diversity measures defined by [Reeve at al.](https://arxiv.org/abs/1404.6520). An [R package](https://github.com/boydorr/rdiversity) and a [julia package](https://github.com/EcoJulia/Diversity.jl) exist. However, both packages require the species similarities to be stored in the form of a matrix in memory. That approach does not scale to the amount of species in some applications, such as immune repertoires. `diversity` allows the user to store the similarity matrix in a file, or simply provide a python function that computes the similarities on the fly.
-
 
 ## Installation
 
@@ -53,10 +47,118 @@ pytest
 
 ## Usage and Examples
 
+```python
+from diversity.metacommunity import make_metacommunity
+import pandas as pd
+```
+
+### Similarity from an array or dataframe
+
+This example uses aggregated data from the [Palmer penguins dataset](https://github.com/allisonhorst/palmerpenguins). The first input is a subcommunity-by-species counts table.
+
+```python
+counts = pd.DataFrame(
+    {
+      "Biscoe":    [44, 0, 120], 
+      "Dream":     [55, 68, 0], 
+      "Torgersen": [47, 0, 0]
+    },
+    index=["Adelie", "Chinstrap", "Gentoo"],
+)
+```
+We include an index with the species names here for illustrative purposes, but in general, an index is not require for the counts or similiarty matrix.
+
+|           | Biscoe | Dream | Torgersen |
+| :-------- | -----: | ----: | --------: |
+| Adelie    |     44 |    55 |        47 |
+| Chinstrap |      0 |    68 |         0 |
+| Gentoo    |    120 |     0 |         0 |
+
+Next, we create a species similiarty matrix.
+
+```python
+similarity_matrix = pd.DataFrame(
+    {
+        "Adelie":    [1.000000, 0.347385, 0.222998],
+        "Chinstrap": [0.347385, 1.000000, 0.258256],
+        "Gentoo":    [0.222998, 0.258256, 1.000000],
+    },
+    index=["Adelie", "Chinstrap", "Gentoo"],
+)
+```
+
+|           |   Adelie | Chinstrap |   Gentoo |
+| :-------- | -------: | --------: | -------: |
+| Adelie    |        1 |  0.347385 | 0.222998 |
+| Chinstrap | 0.347385 |         1 | 0.258256 |
+| Gentoo    | 0.222998 |  0.258256 |        1 |
+
+Finally, we create a Metacommunity object from the counts and similarity matrix.
+
+```python
+metacommunity = make_metacommunity(counts, similarity=similarity_matrix)
+```
+
+Metacommunty objects have convenience functions for calculating all diviersty measures for each subcommunity for a given viewpoint.
+
+```python
+metacommunity.subcommunities_to_dataframe(viewpoint=0)
+```
+
+|      | community | viewpoint | alpha |  rho | beta | gamma | normalized_alpha | normalized_rho | normalized_beta |
+| ---: | :-------- | --------: | ----: | ---: | ---: | ----: | ---------------: | -------------: | --------------: |
+|    0 | Biscoe    |         0 |  3.15 | 1.70 | 0.59 |  1.89 |             1.55 |           0.84 |            1.20 |
+|    1 | Dream     |         0 |  4.02 | 2.07 | 0.48 |  1.99 |             1.48 |           0.76 |            1.31 |
+|    2 | Torgersen |         0 |  7.11 | 4.18 | 0.24 |  1.70 |             1.00 |           0.59 |            1.70 |
+
+
+We can also compute all metacommunity measures at once. 
+```python
+metacommunity.subcommunities_to_dataframe(viewpoint=0)
+```
+
+|      | community     | viewpoint | alpha |  rho | beta | gamma | normalized_alpha | normalized_rho | normalized_beta |
+| ---: | :------------ | --------: | ----: | ---: | ---: | ----: | ---------------: | -------------: | --------------: |
+|    0 | metacommunity |         0 |  4.03 | 2.19 | 0.50 |  1.90 |             1.45 |           0.77 |            1.31 |
+
+
+
+We can also calculate individual diversity measures for subcommunities or metacommunties.
+
+```python
+metacommunity.subcommunity_diversity(measure='alpha', viewpoint=2)
+array([2.93063044, 4.00900135, 7.10638298])
+```
+
+And equivalently for the metacommunity:
+
+```python
+metacommunity.metacommunity_diversity(measure='beta', viewpoint=2)
+0.48236433045721444
+```
+    
+
+### Similarity from file
+
+For large datasets, the similarity matrix may not fit in RAM. To avoid loading the entire matrix into RAM, you can pass a filepath to the `similarity` argument to read a file from a hard disk drive.
+
+
+```python
+metacommunity = make_metacommunity(counts, similarity='similarity_matrix.csv')
+```
+
+### Similarity-insensitive indices
+
+If you do not wish to construct a metacommunity without similarity, simply pass the counts table to `make_metacommunity`.
+
+```python
+metacommunity = make_metacommunity(counts)
+```
+
 
 ### Command line interface
 
-`diversity` is a versatile python package that supports execution directly from the commandline as a module (via `python -m`).
+`diversity` can also be used from the command-line as a module (via `python -m`).
 
 The example below uses the `penguin_counts.csv` and `penguin_similarity_matrix.csv` files, which can be downloaded from this [gist](https://gist.github.com/Elliot-D-Hill/f6e9db0aebe561a363e8758c72a0acfc).
 
@@ -227,347 +329,7 @@ Notes:
 - you can use .csv or .tsv for input files, but output is tab-delimited
 - output can be piped (piping will not include log statements in the output)
 - viewpoint parameter values of 100 or larger are treated like infinity
-- if only some of the subcommunities should be included in the analysis,
-  specify these using the `-b` option (for example: `-b Biscoe Torgersen`)
 - for further options execute `python -m diversity -h`
-
-
-### Python
-
-```python
-from diversity.metacommunity import make_metacommunity
-from pandas import read_csv
-from numpy.linalg import norm
-```
-
-The data for the following examples will be loaded from this [gist](https://gist.github.com/Elliot-D-Hill/f6e9db0aebe561a363e8758c72a0acfc)
-
-```python
-gist_url = 'https://gist.githubusercontent.com/Elliot-D-Hill/f6e9db0aebe561a363e8758c72a0acfc/raw/ef29ba813d2b0b8a09c245175e96c9828693f25d/'
-```
-
-### Similarity from an array or dataframe
-
-First we load the [Palmer penguins dataset](https://github.com/allisonhorst/palmerpenguins). We have aggregated this dataset into subcommunity-by-species counts.
-
-```python
-penguin_counts_filepath = gist_url + 'penguin_counts.csv'
-penguin_counts = read_csv(penguin_counts_filepath)
-penguin_counts.head()
-```
-
-<div>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>subcommunity</th>
-      <th>species</th>
-      <th>count</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>Biscoe</td>
-      <td>Gentoo</td>
-      <td>120</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>Dream</td>
-      <td>Chinstrap</td>
-      <td>68</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>Dream</td>
-      <td>Adelie</td>
-      <td>55</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>Torgersen</td>
-      <td>Adelie</td>
-      <td>47</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>Biscoe</td>
-      <td>Adelie</td>
-      <td>44</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-Next, we load a similiarty matrix as a pandas dataframe (but it could also be a numpy array).
-
-```python
-penguin_similarity_matrix_filepath = gist_url + 'penguin_similarity_matrix.csv'
-penguin_similarity_matrix = read_csv(penguin_similarity_matrix_filepath)
-```
-
-Finally, we create a Metacommunity object.
-
-```python
-penguin_metacommunity = make_metacommunity(
-    penguin_counts, 
-    similarity_matrix=penguin_similarity_matrix
-)
-```
-
-Metacommunty objects have convenience functions for calculating all diviersty measures at once for a given viewpoint.
-
-```python
-penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
-```
-
-<div>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>community</th>
-      <th>viewpoint</th>
-      <th>alpha</th>
-      <th>rho</th>
-      <th>beta</th>
-      <th>gamma</th>
-      <th>normalized_alpha</th>
-      <th>normalized_rho</th>
-      <th>normalized_beta</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>Biscoe</td>
-      <td>0</td>
-      <td>3.149044</td>
-      <td>1.703508</td>
-      <td>0.587024</td>
-      <td>1.892887</td>
-      <td>1.546237</td>
-      <td>0.836453</td>
-      <td>1.195525</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>Dream</td>
-      <td>0</td>
-      <td>4.019417</td>
-      <td>2.067072</td>
-      <td>0.483776</td>
-      <td>1.993902</td>
-      <td>1.480205</td>
-      <td>0.761227</td>
-      <td>1.313668</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>Torgersen</td>
-      <td>0</td>
-      <td>7.106383</td>
-      <td>4.178339</td>
-      <td>0.239330</td>
-      <td>1.700768</td>
-      <td>1.000000</td>
-      <td>0.587970</td>
-      <td>1.700768</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-We can change the viewpoint parameter and recalculate diversity measures.
-
-```python
-penguin_metacommunity.subcommunities_to_dataframe(viewpoint=2)
-```
-
-<div>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>community</th>
-      <th>viewpoint</th>
-      <th>alpha</th>
-      <th>rho</th>
-      <th>beta</th>
-      <th>gamma</th>
-      <th>normalized_alpha</th>
-      <th>normalized_rho</th>
-      <th>normalized_beta</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>Biscoe</td>
-      <td>2</td>
-      <td>2.930631</td>
-      <td>1.526693</td>
-      <td>0.655011</td>
-      <td>1.885246</td>
-      <td>1.438992</td>
-      <td>0.749634</td>
-      <td>1.333985</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>Dream</td>
-      <td>2</td>
-      <td>4.009001</td>
-      <td>1.997261</td>
-      <td>0.500686</td>
-      <td>1.958037</td>
-      <td>1.476369</td>
-      <td>0.735518</td>
-      <td>1.359586</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>Torgersen</td>
-      <td>2</td>
-      <td>7.106383</td>
-      <td>4.178339</td>
-      <td>0.239330</td>
-      <td>1.700768</td>
-      <td>1.000000</td>
-      <td>0.587970</td>
-      <td>1.700768</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-We can also compute all metacommunity measures at once. 
-
-```python
-penguin_metacommunity.metacommunity_to_dataframe(viewpoint=0)
-```
-
-
-<div>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>community</th>
-      <th>viewpoint</th>
-      <th>alpha</th>
-      <th>rho</th>
-      <th>beta</th>
-      <th>gamma</th>
-      <th>normalized_alpha</th>
-      <th>normalized_rho</th>
-      <th>normalized_beta</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>metacommunity</td>
-      <td>0</td>
-      <td>4.026442</td>
-      <td>2.18565</td>
-      <td>0.500075</td>
-      <td>1.903052</td>
-      <td>1.445054</td>
-      <td>0.773784</td>
-      <td>1.31013</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-We can also calculate diveristy measures individually for subcommunities or metacommunties.
-
-```python
-penguin_metacommunity.normalized_subcommunity_alpha(viewpoint=0)
-```
-
-    array([1.54623705, 1.48020455, 1.        ])
-
-
-### Similarity from file
-
-For large datasets, the similarity matrix may not fit in RAM. To avoid loading the entire matrix into RAM, use the similarity_matrix_filepath argument to read a file from a hard disk drive.
-
-
-```python
-penguin_metacommunity = make_metacommunity(
-    penguin_counts, 
-    similarity_matrix_filepath=penguin_similarity_matrix_filepath
-)
-```
-
-
-```python
-penguin_metacommunity.subcommunities_to_dataframe(viewpoint=0)
-```
-
-
-
-
-<div>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>community</th>
-      <th>viewpoint</th>
-      <th>alpha</th>
-      <th>rho</th>
-      <th>beta</th>
-      <th>gamma</th>
-      <th>normalized_alpha</th>
-      <th>normalized_rho</th>
-      <th>normalized_beta</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>Biscoe</td>
-      <td>0</td>
-      <td>3.149044</td>
-      <td>1.703508</td>
-      <td>0.587024</td>
-      <td>1.892887</td>
-      <td>1.546237</td>
-      <td>0.836453</td>
-      <td>1.195525</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>Dream</td>
-      <td>0</td>
-      <td>4.019417</td>
-      <td>2.067072</td>
-      <td>0.483776</td>
-      <td>1.993902</td>
-      <td>1.480205</td>
-      <td>0.761227</td>
-      <td>1.313668</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>Torgersen</td>
-      <td>0</td>
-      <td>7.106383</td>
-      <td>4.178339</td>
-      <td>0.239330</td>
-      <td>1.700768</td>
-      <td>1.000000</td>
-      <td>0.587970</td>
-      <td>1.700768</td>
-    </tr>
-  </tbody>
-</table>
-</div>
 
 
 ## Background
@@ -596,4 +358,8 @@ In addition to being sensitive to frequency, it often makes sense to account for
 ### One package to calculate them all
 
 The `diversity` package is able to calculate all of the similarity- and frequency-sensitive subcommunity and metacommunity diversity measures described in [Reeve et al.](https://arxiv.org/abs/1404.6520). See the paper for more in-depth information on their derivation and interpretation.
+
+### Alternatives
+
+Diversity can be defined in various ways and software calculating the various diversity measures exists. To date, we know of no other python package that implements the similarity-sensitive partitioned diversity measures defined by [Reeve at al.](https://arxiv.org/abs/1404.6520). An [R package](https://github.com/boydorr/rdiversity) and a [julia package](https://github.com/EcoJulia/Diversity.jl) exist. However, both packages require the species similarities to be stored in the form of a matrix in memory. That approach does not scale to the amount of species in some applications, such as immune repertoires. `diversity` allows the user to store the similarity matrix in a file allowing for larger datasets to be analyzed.
 

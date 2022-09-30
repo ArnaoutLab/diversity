@@ -21,13 +21,14 @@ from numpy import (
     prod,
     sum as numpy_sum,
     zeros,
+    ndarray,
 )
 
 from diversity.exceptions import ArgumentWarning, InvalidArgumentError
 from diversity.log import LOGGER
 
 
-def get_file_delimiter(filepath):
+def get_file_delimiter(filepath: str) -> str:
     """Determines delimiter of file from filepath ending.
 
     Parameters
@@ -57,7 +58,9 @@ def get_file_delimiter(filepath):
         return "\t"
 
 
-def __validate_power_mean_args(weights, items, atol, weight_is_nonzero):
+def __validate_power_mean_args(
+    weights: ndarray, items: ndarray, atol: float, weight_is_nonzero: ndarray
+) -> None:
     """Validates arguments for power_mean.
 
     Parameters
@@ -100,7 +103,9 @@ def __validate_power_mean_args(weights, items, atol, weight_is_nonzero):
         )
 
 
-def power_mean(order, weights, items, atol=1e-9):
+def power_mean(
+    order: float, weights: ndarray, items: ndarray, atol: float = 1e-9
+) -> ndarray:
     """Calculates weighted power means.
 
     Parameters
