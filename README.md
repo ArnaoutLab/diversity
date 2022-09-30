@@ -9,7 +9,7 @@
 - [Usage and Examples](#usage-and-examples)
   - [Similarity-sensitive diversity from a dataframe or array](#similarity-sensitive-diversity-from-a-dataframe-or-array)
   - [Similarity-sensitive diversity from a file](#similarity-sensitive-diversity-from-a-file)
-  - [Similarity-insensitive indices](#similarity-insensitive-indices)
+  - [Similarity-insensitive diversity](#similarity-insensitive-diversity)
   - [Command line interface](#command-line-interface)
 - [Background](#background)
   - [Diversity indices](#diversity-indices)
@@ -22,7 +22,7 @@
 
 # About
 
-For a rigorous mathematical treatment of diversity indices see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background section](#background).
+For a rigorous mathematical treatment of the diversity indices that `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 
 # Installation
 
@@ -62,7 +62,7 @@ counts = pd.DataFrame(
 | Chinstrap |      0 |    68 |         0 |
 | Gentoo    |    120 |     0 |         0 |
 
-We include an index with the species names here for illustrative purposes, but in general, an index is not require for the counts or similiarty matrix.
+We include an index with the species names here for illustration, but in general, an index is not require for the counts or similiarty matrix.
 
 Next, we create a species similiarty matrix.
 
@@ -89,7 +89,7 @@ Finally, we create a Metacommunity object from the counts and similarity matrix.
 metacommunity = make_metacommunity(counts, similarity=similarity_matrix)
 ```
 
-Metacommunty objects have convenience functions for calculating all diviersty measures for each subcommunity for a given viewpoint.
+Metacommunty objects have convenience functions for calculating all diversity measures for each subcommunity for a given viewpoint.
 
 ```python
 metacommunity.subcommunities_to_dataframe(viewpoint=0)
@@ -112,15 +112,14 @@ metacommunity.subcommunities_to_dataframe(viewpoint=0)
 |    0 | metacommunity |         0 |  4.03 | 2.19 | 0.50 |  1.90 |             1.45 |           0.77 |            1.31 |
 
 
-
-It is also possible to calculate individual diversity measures for subcommunities:
+It is also possible to calculate individual diversity measures for subcommunities
 
 ```python
 metacommunity.subcommunity_diversity(viewpoint=2, measure='alpha')
 array([2.93063044, 4.00900135, 7.10638298])
 ```
 
-And equivalently for the metacommunity:
+and the metacommunity.
 
 ```python
 metacommunity.metacommunity_diversity(viewpoint=2, measure='beta')
@@ -137,7 +136,7 @@ For large datasets, the similarity matrix may not fit in RAM. To avoid loading t
 metacommunity = make_metacommunity(counts, similarity='similarity_matrix.csv')
 ```
 
-## Similarity-insensitive indices
+## Similarity-insensitive diversity
 
 If you wish to construct a metacommunity without similarity, simply pass the counts table to `make_metacommunity`.
 
@@ -177,16 +176,15 @@ parameter values 0, 1, and infinity:
 |   11 | metacommunity |       inf |  2.573 | 1.3105 | 0.2393 | 1.7008 |                1 |          0.588 |           1.554 |
 
 Notes:
-- the input filepath (`-i`) and the similarity matrix filepath (`-s`)
-  can be URLs to data files hosted on the web
-- you can use .csv or .tsv for input files, but output is tab-delimited
-- output can be piped (piping will not include log statements in the output)
-- viewpoint parameter values of 100 or larger are treated like infinity
-- for further options execute `python -m diversity -h`
+- The input filepath (`-i`) and the similarity matrix filepath (`-s`)
+  Can be URLs to data files hosted on the web
+- You can use .csv or .tsv for input files, but output is tab-delimited
+- Output can be piped (piping will not include log statements in the output)
+- Viewpoint parameter values of 100 or larger are treated like infinity
+- For further options execute `python -m diversity -h`
 
 
 # Background
-
 
 ## Diversity indices
 
