@@ -1,15 +1,16 @@
-# diversity: similarity-sensitive diversity indices
+# diversity: similarity- and frequency-sensitive diversity
 
 ![Tests](https://github.com/Elliot-D-Hill/diversity/actions/workflows/tests.yml/badge.svg)
 [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
 
-- [diversity: similarity-sensitive diversity indices](#diversity-similarity-sensitive-diversity-indices)
+- [diversity: similarity- and frequency-sensitive diversity](#diversity-similarity--and-frequency-sensitive-diversity)
 - [About](#about)
 - [Installation](#installation)
 - [Usage and Examples](#usage-and-examples)
-  - [Similarity-sensitive diversity from a dataframe or array](#similarity-sensitive-diversity-from-a-dataframe-or-array)
+  - [Frequency-sensitive metacommunity from a dataframe or array](#frequency-sensitive-metacommunity-from-a-dataframe-or-array)
+  - [Similarity-sensitive metacommunity from a dataframe or array](#similarity-sensitive-metacommunity-from-a-dataframe-or-array)
+  - [Diversity methods](#diversity-methods)
   - [Similarity-sensitive diversity from a file](#similarity-sensitive-diversity-from-a-file)
-  - [Similarity-insensitive diversity](#similarity-insensitive-diversity)
   - [Command line interface](#command-line-interface)
 - [Background](#background)
   - [Diversity indices](#diversity-indices)
@@ -22,13 +23,18 @@
 
 # About
 
-For a rigorous mathematical treatment of the diversity indices that `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
+The `diversity` package simplifies the calculation of similarity-sensitive and frequency-sensitive diversity.
+
+**Supported diversity measures**: alpha, beta, rho, gamma, normalized alpha, normalized beta, and normalized rho.
+
+**Supported diversity indices**: species richness, Shannon index, Simpson index, Berger-Parker index, and anything in between (Rényi entropy).
+
+For a rigorous mathematical treatment of the diversity measures and indices `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 
 # Installation
 
 `diversity` requires python version 3.9 or higher.
 
-To install, execute:
 ```bash
 pip install diversity
 ```
@@ -36,14 +42,18 @@ pip install diversity
 
 # Usage and Examples
 
+The examples here use aggregated data from the [Palmer penguins dataset](https://github.com/allisonhorst/palmerpenguins).
+
 ```python
 from diversity.metacommunity import make_metacommunity
 import pandas as pd
 ```
 
-## Similarity-sensitive diversity from a dataframe or array
+The first step to calculating diversity is to create a `Metacommunity` object. We can create either a frequency-sensitive or similarity-sensitive `Metacommunity` object.
 
-This example uses aggregated data from the [Palmer penguins dataset](https://github.com/allisonhorst/palmerpenguins). The first input is a subcommunity-by-species counts table.
+## Frequency-sensitive metacommunity from a dataframe or array
+
+To create a frequency-sensitive metacommunity, we need a subcommunity-by-species counts table.
 
 ```python
 counts = pd.DataFrame(
@@ -62,9 +72,17 @@ counts = pd.DataFrame(
 | Chinstrap |      0 |    68 |         0 |
 | Gentoo    |    120 |     0 |         0 |
 
-We include an index with the species names here for illustration, but in general, an index is not require for the counts or similiarty matrix.
+Note: we include an index with the species names here for illustration, but in general, an index is not required for the counts (or similarity matrix).
 
-Next, we create a species similiarty matrix.
+Next we create a `Metacommunity` object from the counts table.
+
+```python
+metacommunity = make_metacommunity(counts)
+```
+
+## Similarity-sensitive metacommunity from a dataframe or array
+
+For similarity-sensitive diversity, we must also supply a similarity matrix to `make_metacommunity` in addition to the counts table.
 
 ```python
 similarity_matrix = pd.DataFrame(
@@ -83,13 +101,14 @@ similarity_matrix = pd.DataFrame(
 | Chinstrap | 0.347385 |         1 | 0.258256 |
 | Gentoo    | 0.222998 |  0.258256 |        1 |
 
-Finally, we create a Metacommunity object from the counts and similarity matrix.
 
 ```python
 metacommunity = make_metacommunity(counts, similarity=similarity_matrix)
 ```
 
-Metacommunty objects have convenience functions for calculating all diversity measures for each subcommunity for a given viewpoint.
+## Diversity methods
+ 
+Once a `Metacommunty` object has been initialized, we can use convenience methods to calculate all diversity measures for each subcommunity for a given viewpoint.
 
 ```python
 metacommunity.subcommunities_to_dataframe(viewpoint=0)
@@ -112,14 +131,14 @@ metacommunity.subcommunities_to_dataframe(viewpoint=0)
 |    0 | metacommunity |         0 |  4.03 | 2.19 | 0.50 |  1.90 |             1.45 |           0.77 |            1.31 |
 
 
-It is also possible to calculate individual diversity measures for subcommunities
+Individual diversity measures for subcommunities can also be calculated, like so:
 
 ```python
 metacommunity.subcommunity_diversity(viewpoint=2, measure='alpha')
 array([2.93063044, 4.00900135, 7.10638298])
 ```
 
-and the metacommunity.
+and for the metacommunity:
 
 ```python
 metacommunity.metacommunity_diversity(viewpoint=2, measure='beta')
@@ -136,14 +155,6 @@ For large datasets, the similarity matrix may not fit in RAM. To avoid loading t
 metacommunity = make_metacommunity(counts, similarity='similarity_matrix.csv')
 ```
 
-## Similarity-insensitive diversity
-
-If you wish to construct a metacommunity without similarity, simply pass the counts table to `make_metacommunity`.
-
-```python
-metacommunity = make_metacommunity(counts)
-```
-
 
 ## Command line interface
 
@@ -151,13 +162,11 @@ metacommunity = make_metacommunity(counts)
 
 The example below uses the `penguin_counts.csv` and `penguin_similarity_matrix.csv` files, which can be downloaded from this [gist](https://gist.github.com/Elliot-D-Hill/f6e9db0aebe561a363e8758c72a0acfc).
 
-Once the files are downloaded, execute
-
 ```bash
 python -m diversity -i penguin_counts.csv -s penguin_similarity_matrix.csv -v 0 1 inf
 ```
 
-to obtain all subcommunity diversity measures for the viewpoint
+This command produces subcommunity diversity measures for the viewpoint
 parameter values 0, 1, and infinity:
 
 |      | community     | viewpoint |  alpha |    rho |   beta |  gamma | normalized_alpha | normalized_rho | normalized_beta |
