@@ -9,8 +9,8 @@
 - [Usage and Examples](#usage-and-examples)
   - [Frequency-sensitive metacommunity from a dataframe or array](#frequency-sensitive-metacommunity-from-a-dataframe-or-array)
   - [Similarity-sensitive metacommunity from a dataframe or array](#similarity-sensitive-metacommunity-from-a-dataframe-or-array)
+  - [Similarity-sensitive metacommunity from a file](#similarity-sensitive-metacommunity-from-a-file)
   - [Diversity methods](#diversity-methods)
-  - [Similarity-sensitive diversity from a file](#similarity-sensitive-diversity-from-a-file)
   - [Command line interface](#command-line-interface)
 - [Background](#background)
   - [Diversity indices](#diversity-indices)
@@ -106,6 +106,15 @@ similarity_matrix = pd.DataFrame(
 metacommunity = make_metacommunity(counts, similarity=similarity_matrix)
 ```
 
+## Similarity-sensitive metacommunity from a file
+
+For large datasets, the similarity matrix may not fit in RAM. To avoid loading the entire matrix into RAM, you can pass a filepath to the `similarity` argument to read a file from a hard disk drive.
+
+
+```python
+metacommunity = make_metacommunity(counts, similarity='similarity_matrix.csv')
+```
+
 ## Diversity methods
  
 Once a `Metacommunty` object has been initialized, we can use convenience methods to calculate all diversity measures for each subcommunity for a given viewpoint.
@@ -143,16 +152,6 @@ and for the metacommunity:
 ```python
 metacommunity.metacommunity_diversity(viewpoint=2, measure='beta')
 0.48236433045721444
-```
-    
-
-## Similarity-sensitive diversity from a file
-
-For large datasets, the similarity matrix may not fit in RAM. To avoid loading the entire matrix into RAM, you can pass a filepath to the `similarity` argument to read a file from a hard disk drive.
-
-
-```python
-metacommunity = make_metacommunity(counts, similarity='similarity_matrix.csv')
 ```
 
 
