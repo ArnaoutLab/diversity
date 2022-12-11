@@ -12,6 +12,22 @@ from diversity.similarity import (
     make_similarity,
 )
 
+similarity_array_3x3 = array(
+    [
+        [1, 0.5, 0.1],
+        [0.5, 1, 0.2],
+        [0.1, 0.2, 1],
+    ]
+)
+
+similarity_dataframe_3x3 = DataFrame(
+    data=similarity_array_3x3,
+    columns=["species_1", "species_2", "species_3"],
+    index=["species_1", "species_2", "species_3"],
+)
+
+relative_abundances_3x2 = array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]])
+
 
 class MockClass:
     def __init__(self, **kwargs):
@@ -30,132 +46,63 @@ class MockSimilarityFromArray(MockClass):
     pass
 
 
-MAKE_SIMILARITY_TEST_CASES = [
-    {
-        "description": "SimilarityFromDataFrame",
-        "similarity": DataFrame(
-            data=array(
-                [
-                    [1, 0.5, 0.1],
-                    [0.5, 1, 0.2],
-                    [0.1, 0.2, 1],
-                ]
-            ),
-            columns=["species_1", "species_2", "species_3"],
-            index=["species_1", "species_2", "species_3"],
-        ),
-        "chunk_size": 1,
-        "expect_raise": False,
-        "expected_return_type": MockSimilarityFromDataFrame,
-    },
-    {
-        "description": "SimilarityFromArray numpy array",
-        "similarity": array(
-            [
-                [1, 0.5, 0.1],
-                [0.5, 1, 0.2],
-                [0.1, 0.2, 1],
-            ]
-        ),
-        "chunk_size": 1,
-        "expect_raise": False,
-        "expected_return_type": MockSimilarityFromArray,
-    },
-    {
-        "description": "SimilarityFromArray numpy memmap",
-        "similarity": (
-            "memmap",
-            array(
-                [
-                    [1, 0.5, 0.1],
-                    [0.5, 1, 0.2],
-                    [0.1, 0.2, 1],
-                ]
-            ),
-        ),
-        "chunk_size": 1,
-        "expect_raise": False,
-        "expected_return_type": MockSimilarityFromArray,
-    },
-    {
-        "description": "SimilarityFromFile",
-        "similarity": "fake_similarities_file.tsv",
-        "chunk_size": 1,
-        "expect_raise": False,
-        "expected_return_type": MockSimilarityFromFile,
-    },
-    {
-        "description": "SimilarityFromFile with non-default chunk_size",
-        "similarity": "fake_similarities_file.tsv",
-        # Make chunk_size large to avoid builtin optimization assigning precomputed reference
-        "chunk_size": 1228375972486598237,
-        "expect_raise": False,
-        "expected_return_type": MockSimilarityFromFile,
-    },
-]
+@fixture
+def make_similarity_kwargs():
+    def make(
+        similarity: similarity_dataframe_3x3,
+        chunk_size=None,
+    ):
+        return {
+            "similarity": similarity,
+            "chunk_size": chunk_size,
+        }
+
+    return make
 
 
-class TestMakeSimilarity:
-    @fixture(params=MAKE_SIMILARITY_TEST_CASES)
-    def test_case(self, request, monkeypatch, tmp_path):
-        mock_classes = [
-            ("diversity.similarity.SimilarityFromFile", MockSimilarityFromFile),
-            ("diversity.similarity.SimilarityFromArray", MockSimilarityFromArray),
-            (
-                "diversity.similarity.SimilarityFromDataFrame",
-                MockSimilarityFromDataFrame,
-            ),
-        ]
-        with monkeypatch.context() as patched_context:
-            for target, mock_class in mock_classes:
-                patched_context.setattr(target, mock_class)
-            test_case_ = {
-                key: request.param[key]
-                for key in [
-                    "chunk_size",
-                    "expect_raise",
-                    "expected_return_type",
-                ]
-            }
-            if (
-                type(request.param["similarity"]) == tuple
-                and request.param["similarity"][0] == "memmap"
-            ):
-                similarity = request.param["similarity"][1]
-                memmapped = memmap(
-                    tmp_path / "similarity.npy",
-                    dtype=dtype("f8"),
-                    mode="w+",
-                    offset=0,
-                    shape=(similarity.shape[0], similarity.shape[0]),
-                    order="C",
-                )
-                memmapped[:, :] = similarity
-                test_case_["similarity"] = memmapped
-            else:
-                test_case_["similarity"] = request.param["similarity"]
-            if request.param["expected_return_type"] == MockSimilarityFromFile:
-                test_case_["expected_init_kwargs"] = {
-                    "similarity": test_case_["similarity"],
-                    "chunk_size": test_case_["chunk_size"],
-                }
-            elif request.param["expected_return_type"] == MockSimilarityFromDataFrame:
-                test_case_["expected_init_kwargs"] = {
-                    "similarity": test_case_["similarity"],
-                }
-            elif request.param["expected_return_type"] == MockSimilarityFromArray:
-                test_case_["expected_init_kwargs"] = {
-                    "similarity": test_case_["similarity"],
-                }
-            yield test_case_
+def test_make_similarity_from_dataframe():
+    similarity = make_similarity(similarity_dataframe_3x3)
+    assert type(similarity) is SimilarityFromDataFrame
 
-    def test_make_similarity(self, test_case):
-        similarity = make_similarity(
-            test_case["similarity"], chunk_size=test_case["chunk_size"]
-        )
-        assert isinstance(similarity, test_case["expected_return_type"])
-        for key, arg in test_case["expected_init_kwargs"].items():
-            assert similarity.kwargs[key] is arg
+
+def test_make_similarity_from_array():
+    similarity = make_similarity(similarity_array_3x3)
+    assert type(similarity) is SimilarityFromArray
+
+
+def test_make_similarity_from_memmap(tmp_path):
+    memmapped = memmap(
+        tmp_path / "similarity.npy",
+        dtype=dtype("f8"),
+        mode="w+",
+        offset=0,
+        shape=(similarity_array_3x3.shape[0], similarity_array_3x3.shape[0]),
+        order="C",
+    )
+    memmapped[:, :] = similarity_array_3x3
+    similarity = make_similarity(memmapped, chunk_size=None)
+    assert type(similarity) is SimilarityFromArray
+
+
+def test_make_similarity_from_file():
+    similarity = make_similarity("fake_similarities_file.tsv", chunk_size=100)
+    assert type(similarity) is SimilarityFromFile
+
+
+def test_make_similarity_from_file_chunk_size():
+    similarity = make_similarity("fake_similarities_file.tsv", chunk_size=3)
+    assert type(similarity) is SimilarityFromFile
+
+
+# TODO
+# def test_make_similarity_from_function():
+#     similarity = make_similarity()
+#     assert similarity is SimilarityFromFunction
+
+
+def test_do_not_make_similarity():
+    similarity = make_similarity(None)
+    assert similarity is None
 
 
 SIMILARITY_FROM_FILE_TEST_CASES = [
@@ -371,7 +318,7 @@ class TestSimilarityFromMemory:
         similarity = SimilarityFromDataFrame(similarity=test_case["similarity"])
         assert allclose(similarity.similarity, test_case["expected_similarity_matrix"])
 
-    def test_calculate_weighted_similarities(self, test_case, tmp_path):
+    def test_calculate_weighted_similarities(self, test_case):
         """Tests .calculate_weighted_similarities."""
         similarity = SimilarityFromDataFrame(similarity=test_case["similarity"])
         weighted_similarities = similarity.calculate_weighted_similarities(

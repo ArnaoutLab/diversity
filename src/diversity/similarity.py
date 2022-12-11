@@ -16,7 +16,8 @@ make_similarity
     Chooses and creates instance of concrete Similarity implementation.
 """
 from abc import ABC, abstractmethod
-from numpy import dtype, empty, memmap, ndarray
+from inspect import signature
+from numpy import dtype, ndarray, memmap, empty
 from pandas import DataFrame, read_csv
 from diversity.log import LOGGER
 from diversity.utilities import (
@@ -130,8 +131,16 @@ class SimilarityFromArray(Similarity):
         return self.similarity @ relative_abundances
 
 
+SIMILARITY_STRATEGIES = {
+    DataFrame: SimilarityFromDataFrame,
+    ndarray: SimilarityFromArray,
+    memmap: SimilarityFromArray,
+    str: SimilarityFromFile,
+}
+
+
 def make_similarity(
-    similarity: DataFrame | ndarray | str, chunk_size=100
+    similarity: DataFrame | ndarray | str, chunk_size: int = 100
 ) -> Similarity:
     """Initializes a concrete subclass of Similarity.
 
@@ -154,15 +163,13 @@ def make_similarity(
         similarity,
         chunk_size,
     )
-    strategies = {
-        DataFrame: (SimilarityFromDataFrame, {"similarity": similarity}),
-        ndarray: (SimilarityFromArray, {"similarity": similarity}),
-        memmap: (SimilarityFromArray, {"similarity": similarity}),
-        str: (
-            SimilarityFromFile,
-            {"similarity": similarity, "chunk_size": chunk_size},
-        ),
+    if similarity is None:
+        return None
+    similarity_class = SIMILARITY_STRATEGIES[type(similarity)]
+    kwargs_dict = {
+        SimilarityFromDataFrame: {"similarity": similarity},
+        SimilarityFromArray: {"similarity": similarity},
+        SimilarityFromFile: {"similarity": similarity, "chunk_size": chunk_size},
     }
-    strategy_choice = strategies[type(similarity)]
-    similarity_class, kwargs = strategy_choice
+    kwargs = kwargs_dict[similarity_class]
     return similarity_class(**kwargs)

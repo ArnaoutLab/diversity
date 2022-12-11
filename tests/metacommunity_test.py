@@ -118,7 +118,6 @@ class TestMakeMetacommunity:
                     "diversity.metacommunity.SimilaritySensitiveMetacommunity",
                     MockSimilaritySensitiveMetacommunity,
                 ),
-                ("diversity.metacommunity.make_similarity", mock_make_similarity),
             ]:
                 patched_context.setattr(target, mocked)
             test_case_ = deepcopy(request.param)

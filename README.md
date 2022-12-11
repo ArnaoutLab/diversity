@@ -27,7 +27,7 @@ The `diversity` package simplifies the calculation of similarity-sensitive and f
 
 **Supported diversity measures**: alpha, beta, rho, gamma, normalized alpha, normalized beta, and normalized rho.
 
-**Supported diversity indices**: species richness, Shannon index, Simpson index, Berger-Parker index, and anything in between (Rényi entropy).
+**Supported diversity indices**: species richness, Shannon index, Simpson index, Berger-Parker index, and anything in between (Hill numbers).
 
 For a rigorous mathematical treatment of the diversity measures and indices `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 

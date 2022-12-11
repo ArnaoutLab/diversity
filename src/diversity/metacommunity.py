@@ -130,7 +130,7 @@ class Metacommunity(ABC):
 
 
 class FrequencySensitiveMetacommunity(Metacommunity):
-    """Implements IMetacommunity for similarity-insensitive diversity."""
+    """Implements Metacommunity for similarity-insensitive diversity."""
 
     def __init__(self, abundance: Abundance) -> None:
         """Initializes object.
@@ -223,7 +223,7 @@ def make_metacommunity(
     similarity: DataFrame | ndarray | str = None,
     chunk_size: int = 100,
 ) -> Metacommunity:
-    """Initializes a concrete subclass of IMetacommunity.
+    """Initializes a concrete subclass of Metacommunity.
 
     Parameters
     ----------
@@ -241,7 +241,7 @@ def make_metacommunity(
 
     Returns
     -------
-    An instance of a concrete subclass of IMetacommunity.
+    An instance of a concrete subclass of Metacommunity.
     """
     LOGGER.debug(
         "make_metacommunity(counts=%s, similarity=%s, chunk_size=%s",
