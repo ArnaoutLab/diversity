@@ -90,8 +90,7 @@ class Abundance(Abundance):
     """
 
     def __init__(self, counts: DataFrame) -> None:
-        """Initializes object.
-
+        """
         Parameters
         ----------
         counts: pandas DataFrame or numpy.ndarray

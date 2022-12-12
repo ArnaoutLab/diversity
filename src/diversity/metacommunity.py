@@ -15,6 +15,7 @@ make_metacommunity
 
 from abc import ABC, abstractmethod
 from functools import cache
+from typing import Callable
 
 from pandas import DataFrame, Index
 from numpy import broadcast_to, divide, zeros, ndarray
@@ -133,8 +134,7 @@ class FrequencySensitiveMetacommunity(Metacommunity):
     """Implements Metacommunity for similarity-insensitive diversity."""
 
     def __init__(self, abundance: Abundance) -> None:
-        """Initializes object.
-
+        """
         Parameters
         ----------
         abundance: diversity.abundance.Abundance
@@ -171,8 +171,7 @@ class SimilaritySensitiveMetacommunity(Metacommunity):
     """Implements SimilaritySensitiveMetacommunity for fast but memory heavy calculations."""
 
     def __init__(self, abundance: Abundance, similarity: Similarity):
-        """Initializes object.
-
+        """
         Parameters
         ----------
         abundance: diversity.abundance.Abundance
@@ -201,27 +200,28 @@ class SimilaritySensitiveMetacommunity(Metacommunity):
 
     @cache
     def metacommunity_similarity(self):
-        return self.similarity.calculate_weighted_similarities(
+        return self.similarity.weighted_similarities(
             self.abundance.metacommunity_abundance()
         )
 
     @cache
     def subcommunity_similarity(self):
-        return self.similarity.calculate_weighted_similarities(
+        return self.similarity.weighted_similarities(
             self.abundance.subcommunity_abundance()
         )
 
     @cache
     def normalized_subcommunity_similarity(self):
-        return self.similarity.calculate_weighted_similarities(
+        return self.similarity.weighted_similarities(
             self.abundance.normalized_subcommunity_abundance()
         )
 
 
 def make_metacommunity(
     counts: DataFrame | ndarray,
-    similarity: DataFrame | ndarray | str = None,
-    chunk_size: int = 100,
+    similarity: DataFrame | ndarray | str | Callable | None = None,
+    X: ndarray | None = None,
+    chunk_size: int | None = 100,
 ) -> Metacommunity:
     """Initializes a concrete subclass of Metacommunity.
 
@@ -235,6 +235,7 @@ def make_metacommunity(
         numpy.memmap is used, the ordering of species in the species argument for
         diversity.similarity.make_similarity corresponds to the ordering
         of species in counts.
+
     chunk_size: int
         The number of file lines to process at a time when the similarity matrix
         is read from a file. Larger chunk sizes are faster, but take more memory.
@@ -244,13 +245,14 @@ def make_metacommunity(
     An instance of a concrete subclass of Metacommunity.
     """
     LOGGER.debug(
-        "make_metacommunity(counts=%s, similarity=%s, chunk_size=%s",
+        "make_metacommunity(counts=%s, similarity=%s, X=%s, chunk_size=%s",
         counts,
         similarity,
+        X,
         chunk_size,
     )
     abundance = make_abundance(counts)
     if similarity is None:
         return FrequencySensitiveMetacommunity(abundance=abundance)
-    similarity = make_similarity(similarity=similarity, chunk_size=chunk_size)
+    similarity = make_similarity(similarity=similarity, X=X, chunk_size=chunk_size)
     return SimilaritySensitiveMetacommunity(abundance=abundance, similarity=similarity)

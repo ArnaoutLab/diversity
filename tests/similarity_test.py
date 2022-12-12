@@ -9,8 +9,14 @@ from diversity.similarity import (
     SimilarityFromArray,
     SimilarityFromDataFrame,
     SimilarityFromFile,
+    SimilarityFromFunction,
     make_similarity,
 )
+
+
+def sim_func(a, b):
+    return 1 / sum(a * b)
+
 
 similarity_array_3x3 = array(
     [
@@ -19,14 +25,13 @@ similarity_array_3x3 = array(
         [0.1, 0.2, 1],
     ]
 )
-
 similarity_dataframe_3x3 = DataFrame(
     data=similarity_array_3x3,
     columns=["species_1", "species_2", "species_3"],
     index=["species_1", "species_2", "species_3"],
 )
-
 relative_abundances_3x2 = array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]])
+X_3x2 = array([[1, 2], [3, 5], [7, 11]])
 
 
 class MockClass:
@@ -80,12 +85,12 @@ def test_make_similarity_from_memmap(tmp_path):
         order="C",
     )
     memmapped[:, :] = similarity_array_3x3
-    similarity = make_similarity(memmapped, chunk_size=None)
+    similarity = make_similarity(memmapped)
     assert type(similarity) is SimilarityFromArray
 
 
 def test_make_similarity_from_file():
-    similarity = make_similarity("fake_similarities_file.tsv", chunk_size=100)
+    similarity = make_similarity("fake_similarities_file.tsv")
     assert type(similarity) is SimilarityFromFile
 
 
@@ -94,10 +99,14 @@ def test_make_similarity_from_file_chunk_size():
     assert type(similarity) is SimilarityFromFile
 
 
-# TODO
-# def test_make_similarity_from_function():
-#     similarity = make_similarity()
-#     assert similarity is SimilarityFromFunction
+def test_make_similarity_from_function():
+    similarity = make_similarity(similarity=sim_func, X=X_3x2)
+    assert type(similarity) is SimilarityFromFunction
+
+
+def test_make_similarity_from_function_chunk_size():
+    similarity = make_similarity(similarity=sim_func, X=X_3x2, chunk_size=2)
+    assert type(similarity) is SimilarityFromFunction
 
 
 def test_do_not_make_similarity():
@@ -214,8 +223,8 @@ class TestSimilarityFromFile:
         assert similarity.similarity == test_case["similarity"]
         assert similarity.chunk_size == test_case["chunk_size"]
 
-    def test_calculate_weighted_similarities(self, test_case):
-        """Tests .calculate_weighted_similarities."""
+    def test_weighted_similarities(self, test_case):
+        """Tests .weighted_similarities."""
         if test_case["expect_warning"]:
             with warns(ArgumentWarning):
                 similarity = SimilarityFromFile(
@@ -227,7 +236,7 @@ class TestSimilarityFromFile:
                 similarity=test_case["similarity"],
                 chunk_size=test_case["chunk_size"],
             )
-        weighted_similarities = similarity.calculate_weighted_similarities(
+        weighted_similarities = similarity.weighted_similarities(
             relative_abundances=test_case["relative_abundances"],
         )
         assert weighted_similarities.shape == test_case["weighted_similarities"].shape
@@ -318,10 +327,10 @@ class TestSimilarityFromMemory:
         similarity = SimilarityFromDataFrame(similarity=test_case["similarity"])
         assert allclose(similarity.similarity, test_case["expected_similarity_matrix"])
 
-    def test_calculate_weighted_similarities(self, test_case):
-        """Tests .calculate_weighted_similarities."""
+    def test_weighted_similarities(self, test_case):
+        """Tests .weighted_similarities."""
         similarity = SimilarityFromDataFrame(similarity=test_case["similarity"])
-        weighted_similarities = similarity.calculate_weighted_similarities(
+        weighted_similarities = similarity.weighted_similarities(
             relative_abundances=test_case["relative_abundances"]
         )
         assert weighted_similarities.shape == test_case["weighted_similarities"].shape
@@ -340,7 +349,7 @@ class TestSimilarityFromMemory:
         similarity = SimilarityFromArray(similarity=similarity_matrix)
         assert allclose(similarity.similarity, similarity_matrix)
 
-    def test_calculate_weighted_similarities_with_numpy_array(self):
+    def test_weighted_similarities_with_numpy_array(self):
         similarity_matrix = array(
             [
                 [1.0, 0.9, 0.1],
@@ -356,7 +365,7 @@ class TestSimilarityFromMemory:
                 [0.2, 0.4],
             ]
         )
-        weighted_similarities = similarity.calculate_weighted_similarities(
+        weighted_similarities = similarity.weighted_similarities(
             relative_abundances,
         )
         expected_weighted_similarities = array(
@@ -368,7 +377,7 @@ class TestSimilarityFromMemory:
         )
         assert allclose(weighted_similarities, expected_weighted_similarities)
 
-    def test_calculate_weighted_similarities_with_numpy_array(self):
+    def test_weighted_similarities_with_numpy_array(self):
         similarity_matrix = array(
             [
                 [1.0, 0.9, 0.1],
@@ -391,7 +400,7 @@ class TestSimilarityFromMemory:
                 relative_abundances.shape[1],
             ),
         )
-        weighted_similarities = similarity.calculate_weighted_similarities(
+        weighted_similarities = similarity.weighted_similarities(
             relative_abundances,
         )
         expected_weighted_similarities = array(
@@ -424,7 +433,7 @@ class TestSimilarityFromMemory:
         similarity = SimilarityFromArray(similarity=memmapped_similarity_matrix)
         assert allclose(similarity.similarity, similarity_matrix)
 
-    def test_calculate_weighted_similarities_with_numpy_memmap(self, tmp_path):
+    def test_weighted_similarities_with_numpy_memmap(self, tmp_path):
         similarity_matrix = array(
             [
                 [1.0, 0.9, 0.1],
@@ -449,7 +458,7 @@ class TestSimilarityFromMemory:
                 [0.2, 0.4],
             ]
         )
-        weighted_similarities = similarity.calculate_weighted_similarities(
+        weighted_similarities = similarity.weighted_similarities(
             relative_abundances,
         )
         expected_weighted_similarities = array(
@@ -461,7 +470,7 @@ class TestSimilarityFromMemory:
         )
         assert allclose(weighted_similarities, expected_weighted_similarities)
 
-    def test_calculate_weighted_similarities_with_numpy_array(self, tmp_path):
+    def test_weighted_similarities_with_numpy_array(self, tmp_path):
         similarity_matrix = array(
             [
                 [1.0, 0.9, 0.1],
@@ -486,9 +495,7 @@ class TestSimilarityFromMemory:
                 [0.2, 0.4],
             ]
         )
-        weighted_similarities = similarity.calculate_weighted_similarities(
-            relative_abundances
-        )
+        weighted_similarities = similarity.weighted_similarities(relative_abundances)
         expected_weighted_similarities = array(
             [
                 [0.81, 0.61],
