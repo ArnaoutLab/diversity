@@ -78,6 +78,20 @@ weighted_similarities_3x2_3 = (
 X_3x2 = array([[1, 2], [3, 5], [7, 11]])
 
 
+@fixture
+def memmapped_similarity_matrix(tmp_path):
+    memmapped = memmap(
+        tmp_path / "similarity_matrix.npy",
+        dtype=dtype("f8"),
+        mode="w+",
+        offset=0,
+        shape=similarity_array_3x3.shape,
+        order="C",
+    )
+    memmapped[:, :] = similarity_array_3x3
+    return memmapped
+
+
 class MockClass:
     def __init__(self, **kwargs):
         self.kwargs = kwargs
