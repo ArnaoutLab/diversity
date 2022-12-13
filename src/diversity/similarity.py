@@ -130,7 +130,23 @@ class SimilarityFromFile(Similarity):
         return weighted_similarities
 
 
-class SimilarityFromFunction:
+@remote
+def weighted_similarity_chunk(
+    similarity: Callable,
+    X: ndarray,
+    relative_abundances: ndarray,
+    chunk_size: int,
+    i: int,
+) -> ndarray:
+    chunk = X[i : i + chunk_size]
+    similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
+    for i, row_i in enumerate(chunk):
+        for j, row_j in enumerate(X):
+            similarities_chunk[i, j] = similarity(row_i, row_j)
+    return similarities_chunk @ relative_abundances
+
+
+class SimilarityFromFunction(Similarity):
     """Implements Similarity by calculating similarities with a callable function"""
 
     def __init__(self, similarity: Callable, X: ndarray, chunk_size: int = 100) -> None:
@@ -138,22 +154,17 @@ class SimilarityFromFunction:
         self.X: ndarray = X
         self.chunk_size: int = chunk_size
 
-    @remote
-    def weighted_similarity_chunk(
-        self, X: ndarray, relative_abundances: ndarray, i: int
-    ) -> ndarray:
-        chunk = X[i : i + self.chunk_size]
-        similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
-        for i, row_i in enumerate(chunk):
-            for j, row_j in enumerate(X):
-                similarities_chunk[i, j] = self.similarity(row_i, row_j)
-        return similarities_chunk @ relative_abundances
-
     def weighted_similarities(self, relative_abundances: ndarray) -> ndarray:
         X_ref = put(self.X)
         abundance_ref = put(relative_abundances)
         futures = [
-            self.weighted_similarity_chunk.remote(X_ref, abundance_ref, i)
+            weighted_similarity_chunk.remote(
+                similarity=self.similarity,
+                X=X_ref,
+                relative_abundances=abundance_ref,
+                chunk_size=self.chunk_size,
+                i=i,
+            )
             for i in range(0, self.X.shape[0], self.chunk_size)
         ]
         weighted_similarity_chunks = get(futures)
@@ -161,9 +172,7 @@ class SimilarityFromFunction:
 
 
 def make_similarity(
-    similarity: DataFrame | ndarray | str | Callable | None,
-    X: ndarray = None,
-    chunk_size: int = 100,
+    similarity: DataFrame | ndarray | str, X: ndarray = None, chunk_size: int = 100
 ) -> Similarity:
     """Initializes a concrete subclass of Similarity.
 
@@ -184,73 +193,26 @@ def make_similarity(
     -------
     An instance of a concrete subclass of Similarity.
     """
-    if similarity is None:
-        return None
-    kwargs = {"similarity": similarity}
-    similarity_strategies = {
-        DataFrame: (SimilarityFromDataFrame, kwargs),
-        ndarray: (SimilarityFromArray, kwargs),
-        memmap: (SimilarityFromArray, kwargs),
-        str: (SimilarityFromFile, kwargs | {"chunk_size": chunk_size}),
-        FunctionType: (
-            SimilarityFromFunction,
-            kwargs | {"X": X, "chunk_size": chunk_size},
-        ),
-    }
-    similarity_class, kwargs = similarity_strategies[type(similarity)]
-    return similarity_class(**kwargs)
-
-
-# def make_similarity(
-#     similarity: DataFrame | ndarray | str, X: ndarray = None, chunk_size: int = 100
-# ) -> Similarity:
-#     """Initializes a concrete subclass of Similarity.
-
-#     Parameters
-#     ----------
-#     similarity:
-#         If pandas.DataFrame, see diversity.similarity.SimilarityFromDataFrame.
-#         If numpy.ndarray, see diversity.similarity.SimilarityFromArray.
-#         If str, see diversity.similarity.SimilarityFromFile.
-#         If Callable, see diversity.similarity.SimilarityFromFunction
-#     X:
-#         A 2-d array where each row is a species
-#     chunk_size:
-#         See diversity.similarity.SimilarityFromFile. Only relevant
-#         if a str is passed as argument for similarity.
-
-#     Returns
-#     -------
-#     An instance of a concrete subclass of Similarity.
-#     """
-#     LOGGER.debug(
-#         "make_similarity(similarity=%s, X=%s, chunk_size=%s)",
-#         similarity,
-#         X,
-#         chunk_size,
-#     )
-#     similarity_type = type(similarity)
-#     if similarity is None:
-#         return None
-#     elif similarity_type is DataFrame:
-#         return SimilarityFromDataFrame()
-#     elif similarity_type is ndarray or similarity_type is memmap:
-#         return SimilarityFromArray()
-#     elif similarity_type is str:
-#         return SimilarityFromFile()
-#     elif callable(similarity):
-#         return SimilarityFromFunction()
-#     else:
-#         raise NotImplementedError(
-#             f"Type {type(similarity)} is not supported for argument 'similarity'"
-#         )
-#     similarity_class = SIMILARITY_STRATEGIES[type(similarity)]
-#     kwargs_dict = {"similarity": similarity}
-#     kwargs_factory = {
-#         SimilarityFromDataFrame: kwargs_dict,
-#         SimilarityFromArray: kwargs_dict,
-#         SimilarityFromFile: kwargs_dict.update({"chunk_size": chunk_size}),
-#         SimilarityFromFunction: kwargs_dict.update({"X": X}),
-#     }
-#     kwargs = kwargs_factory[similarity_class]
-#     return similarity_class(**kwargs)
+    LOGGER.debug(
+        "make_similarity(similarity=%s, X=%s, chunk_size=%s)",
+        similarity,
+        X,
+        chunk_size,
+    )
+    match similarity:
+        case None:
+            return None
+        case DataFrame():
+            return SimilarityFromDataFrame(similarity=similarity)
+        case ndarray() | memmap():
+            return SimilarityFromArray(similarity=similarity)
+        case str():
+            return SimilarityFromFile(similarity=similarity, chunk_size=chunk_size)
+        case FunctionType():
+            return SimilarityFromFunction(
+                similarity=similarity, X=X, chunk_size=chunk_size
+            )
+        case _:
+            raise NotImplementedError(
+                f"Type {type(similarity)} is not supported for argument 'similarity'"
+            )
