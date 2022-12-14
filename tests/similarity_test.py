@@ -18,7 +18,7 @@ def similarity_function(a, b):
     return 1 / sum(a * b)
 
 
-similarity_array_3by3 = array(
+similarity_array_3by3_1 = array(
     [
         [1, 0.5, 0.1],
         [0.5, 1, 0.2],
@@ -33,7 +33,7 @@ similarity_array_3by3_2 = array(
     ]
 )
 similarity_dataframe_3by3 = DataFrame(
-    data=similarity_array_3by3,
+    data=similarity_array_3by3_1,
     columns=["species_1", "species_2", "species_3"],
     index=["species_1", "species_2", "species_3"],
 )
@@ -55,9 +55,10 @@ relative_abundances_3by2_2 = array(
         [0.2, 0.4],
     ]
 )
-weighted_similarities_3by1 = array([[1.051], [2.1005], [10.0201]])
+weighted_similarities_3by1_1 = array([[1.051], [2.1005], [10.0201]])
 weighted_similarities_3by1_2 = array([[0.35271989], [0.13459705], [0.0601738]])
-weighted_similarities_3by2 = array(
+weighted_similarities_3by1_3 = array([[0.35271989], [0.13459705], [0.0601738]])
+weighted_similarities_3by2_1 = array(
     [[1.051, 10.51], [2.1005, 21.005], [10.0201, 100.201]]
 )
 weighted_similarities_3by2_2 = array(
@@ -94,10 +95,10 @@ def memmapped_similarity_matrix(tmp_path):
         dtype=dtype("f8"),
         mode="w+",
         offset=0,
-        shape=similarity_array_3by3.shape,
+        shape=similarity_array_3by3_1.shape,
         order="C",
     )
-    memmapped[:, :] = similarity_array_3by3
+    memmapped[:, :] = similarity_array_3by3_1
     return memmapped
 
 
@@ -105,9 +106,9 @@ def memmapped_similarity_matrix(tmp_path):
     "similarity_kwargs, similarity_type",
     [
         ({"similarity": similarity_dataframe_3by3}, SimilarityFromDataFrame),
-        ({"similarity": similarity_array_3by3}, SimilarityFromArray),
+        ({"similarity": similarity_array_3by3_1}, SimilarityFromArray),
         (
-            {"similarity": "fake_similarities_file.tsv", "chunk_size": 2},
+            {"similarity": "similarity_matrix.tsv", "chunk_size": 2},
             SimilarityFromFile,
         ),
         (
@@ -122,7 +123,7 @@ def memmapped_similarity_matrix(tmp_path):
 )
 def test_make_similarity(similarity_kwargs, similarity_type):
     similarity = make_similarity(**similarity_kwargs)
-    assert type(similarity) is similarity_type
+    assert isinstance(similarity, similarity_type)
 
 
 def test_do_not_make_similarity():
@@ -132,7 +133,7 @@ def test_do_not_make_similarity():
 
 def test_make_similarity_from_memmap(memmapped_similarity_matrix):
     similarity = make_similarity(memmapped_similarity_matrix)
-    assert type(similarity) is SimilarityFromArray
+    assert isinstance(similarity, SimilarityFromArray)
 
 
 def test_make_similarity_not_implemented():
@@ -143,11 +144,11 @@ def test_make_similarity_not_implemented():
 @fixture
 def make_similarity_from_file(tmp_path):
     def make(
-        filename="similarities_file.tsv",
+        filename="similarity_matrix.tsv",
         filecontent=similarity_filecontent_3by3_tsv,
         chunk_size=1,
     ):
-        filepath = f"{tmp_path}/{filename}"
+        filepath = tmp_path / filename
         with open(filepath, "w") as file:
             file.write(filecontent)
         return SimilarityFromFile(similarity=filepath, chunk_size=chunk_size)
@@ -158,17 +159,17 @@ def make_similarity_from_file(tmp_path):
 @mark.parametrize(
     "relative_abundances, expected, kwargs",
     [
-        (relative_abundances_3by2, weighted_similarities_3by2, {}),
-        (relative_abundances_3by2, weighted_similarities_3by2, {"chunk_size": 2}),
+        (relative_abundances_3by2, weighted_similarities_3by2_1, {}),
+        (relative_abundances_3by2, weighted_similarities_3by2_1, {"chunk_size": 2}),
         (
             relative_abundances_3by2,
-            weighted_similarities_3by2,
+            weighted_similarities_3by2_1,
             {
-                "filename": "similarities_file.csv",
+                "filename": "similarity_matrix.csv",
                 "filecontent": similarities_filecontents_3by3_csv,
             },
         ),
-        (relative_abundances_3by1, weighted_similarities_3by1, {}),
+        (relative_abundances_3by1, weighted_similarities_3by1_1, {}),
     ],
 )
 def test_weighted_similarities(
@@ -189,17 +190,17 @@ def test_weighted_similarities_warning(make_similarity_from_file):
         (
             similarity_dataframe_3by3,
             relative_abundances_3by2,
-            weighted_similarities_3by2,
+            weighted_similarities_3by2_1,
         ),
         (
             similarity_dataframe_3by3,
             relative_abundances_3by1,
-            weighted_similarities_3by1,
+            weighted_similarities_3by1_1,
         ),
         (
-            similarity_array_3by3,
+            similarity_array_3by3_1,
             relative_abundances_3by1,
-            weighted_similarities_3by1,
+            weighted_similarities_3by1_1,
         ),
         (
             similarity_array_3by3_2,
@@ -217,7 +218,7 @@ def test_weighted_similarities_from_array(similarity, relative_abundances, expec
 def test_weighted_similarities_from_memmap(memmapped_similarity_matrix):
     similarity = make_similarity(similarity=memmapped_similarity_matrix)
     weighted_similarities = similarity.weighted_similarities(relative_abundances_3by2)
-    assert allclose(weighted_similarities, weighted_similarities_3by2)
+    assert allclose(weighted_similarities, weighted_similarities_3by2_1)
 
 
 @mark.parametrize(
@@ -225,6 +226,7 @@ def test_weighted_similarities_from_memmap(memmapped_similarity_matrix):
     [
         (relative_abundances_3by2, X_3by2, 2, weighted_similarities_3by2_3),
         (relative_abundances_3by2, X_3by1, 1, weighted_similarities_3by2_4),
+        (relative_abundances_3by1, X_3by2, 4, weighted_similarities_3by1_2),
         (relative_abundances_3by1, X_3by2, 2, weighted_similarities_3by1_2),
     ],
 )
@@ -235,6 +237,4 @@ def test_weighted_similarities_from_function(
         similarity=similarity_function, X=X, chunk_size=chunk_size
     )
     weighted_similarities = similarity.weighted_similarities(relative_abundances)
-    print(weighted_similarities)
-    print(expected)
     assert allclose(weighted_similarities, expected)
