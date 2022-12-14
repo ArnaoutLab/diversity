@@ -1,4 +1,4 @@
-"""Module for calculating weighted sub- and metacommunity similarities.
+"""Module for calculating weighted subcommunity and metacommunity similarities.
 
 Classes
 -------
@@ -54,7 +54,7 @@ class Similarity(ABC):
 
 
 class SimilarityFromDataFrame(Similarity):
-    """Implements Similarity using similarities stored in pandas dataframe"""
+    """Implements Similarity using similarities stored in pandas dataframe."""
 
     def __init__(self, similarity: DataFrame):
         """
@@ -70,9 +70,9 @@ class SimilarityFromDataFrame(Similarity):
 
 
 class SimilarityFromArray(Similarity):
-    """Implements Similarity using similarities stored in a numpy ndarray"""
+    """Implements Similarity using similarities stored in a numpy ndarray."""
 
-    def __init__(self, similarity: ndarray) -> None:
+    def __init__(self, similarity: ndarray | memmap) -> None:
         """
         similarity:
             Similarities between species. Columns and index must be
@@ -147,9 +147,21 @@ def weighted_similarity_chunk(
 
 
 class SimilarityFromFunction(Similarity):
-    """Implements Similarity by calculating similarities with a callable function"""
+    """Implements Similarity by calculating similarities with a callable function."""
 
     def __init__(self, similarity: Callable, X: ndarray, chunk_size: int = 100) -> None:
+        """
+        similarity:
+            Callable to determine similarity between species. Must take
+            two items from the features argument and return a numeric
+            similarity value.
+        X:
+            An array where each row contains the feature values for a given species.
+        chunk_size:
+            Determines how many rows of the similarity matrix each will be processes at a time.
+            In general, choosing a larger chunk_size will make the calculation faster,
+            but will also require more memory.
+        """
         self.similarity: Callable = similarity
         self.X: ndarray = X
         self.chunk_size: int = chunk_size
