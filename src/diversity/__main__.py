@@ -12,7 +12,7 @@ from logging import captureWarnings, getLogger
 from pandas import read_csv, concat
 
 from diversity.log import LOG_HANDLER, LOGGER
-from diversity.metacommunity import make_metacommunity
+from diversity.metacommunity import Metacommunity
 from diversity.parameters import configure_arguments
 from diversity.utilities import get_file_delimiter
 
@@ -38,7 +38,7 @@ def main(args):
     delimiter = get_file_delimiter(args.input_filepath)
     counts = read_csv(args.input_filepath, sep=delimiter, dtype=int)
     LOGGER.debug(f"data: {counts}")
-    meta = make_metacommunity(
+    meta = Metacommunity(
         counts=counts,
         similarity=args.similarity,
         chunk_size=args.chunk_size,
