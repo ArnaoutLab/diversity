@@ -1,6 +1,7 @@
 """Tests for diversity.similarity"""
 from numpy import allclose, array, dtype, memmap
 from pandas import DataFrame
+from ray import get
 from pytest import fixture, warns, raises, mark
 
 from diversity.exceptions import ArgumentWarning
@@ -11,6 +12,7 @@ from diversity.similarity import (
     SimilarityFromFile,
     SimilarityFromFunction,
     make_similarity,
+    weighted_similarity_chunk,
 )
 
 
@@ -238,3 +240,16 @@ def test_weighted_similarities_from_function(
     )
     weighted_similarities = similarity.weighted_similarities(relative_abundances)
     assert allclose(weighted_similarities, expected)
+
+
+def test_weighted_similarity_chunk():
+    chunk = get(
+        weighted_similarity_chunk.remote(
+            similarity=similarity_function,
+            X=X_3by2,
+            relative_abundances=relative_abundances_3by2,
+            chunk_size=3,
+            i=0,
+        )
+    )
+    assert allclose(chunk, weighted_similarities_3by2_3)

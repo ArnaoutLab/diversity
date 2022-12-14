@@ -153,8 +153,7 @@ class SimilarityFromFunction(Similarity):
         """
         similarity:
             Callable to determine similarity between species. Must take
-            two items from the features argument and return a numeric
-            similarity value.
+            two rows from X and return a numeric similarity value.
         X:
             An array where each row contains the feature values for a given species.
         chunk_size:
