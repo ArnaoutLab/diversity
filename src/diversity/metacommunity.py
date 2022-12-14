@@ -4,21 +4,14 @@ Classes
 -------
 Metacommunity
     Represents a metacommunity made up of subcommunities and computes
-    metacommunity subcommunity diversity measures.
-
-Functions
----------
-make_metacommunity
-    Builds diversity.metacommunity.Metacommunity object according to
-    parameter specification.
+    metacommunity and subcommunity diversity measures.
 """
 
-from abc import ABC, abstractmethod
 from functools import cache
 from typing import Callable
 
 from pandas import DataFrame, Index
-from numpy import broadcast_to, divide, zeros, ndarray
+from numpy import broadcast_to, divide, zeros, ndarray, memmap
 
 from diversity.log import LOGGER
 from diversity.abundance import make_abundance, Abundance
@@ -26,15 +19,116 @@ from diversity.similarity import make_similarity, Similarity
 from diversity.utilities import power_mean
 
 
-class Metacommunity(ABC):
-    """Interface for metacommunities and calculating their diversity."""
+class Metacommunity:
+    """Creates diversity components and calculates diversity measures."""
 
-    @abstractmethod
-    def __init__(self, abundance) -> None:
-        self.abundance = abundance
-        self.measure_components = None
+    def __init__(
+        self,
+        counts: DataFrame | ndarray,
+        similarity: DataFrame | ndarray | memmap | str | Callable | None = None,
+        X: ndarray | None = None,
+        chunk_size: int | None = 100,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        counts:
+            2-d array with one column per subcommunity, one row per species,
+            containing the count of each species in the corresponding subcommunities.
+        similarity:
+            For similarity-sensitive diversity measures. Use DataFrame or ndarray if the
+            similarity matrix fits in memory. Use a numpy memmap or a filepath if the similarity matrix
+            fits on the hard drive disk. Use a Callable function if the similarity matrix does not fit
+            on the disk.
+        X:
+            An array, where each pair of rows will be passed to 'similarity' if it is Callable.
+        chunk_size:
+            The number of file lines to process at a time when the similarity matrix
+            is read from a file. Larger chunk sizes are faster, but take more memory.
+        """
+        LOGGER.debug(
+            "make_metacommunity(counts=%s, similarity=%s, X=%s, chunk_size=%s",
+            counts,
+            similarity,
+            X,
+            chunk_size,
+        )
+        self.abundance: Abundance = make_abundance(counts=counts)
+        self.similarity: Similarity = make_similarity(
+            similarity=similarity, X=X, chunk_size=chunk_size
+        )
+        self.measure_components: dict = self.make_measure_components()
 
     @cache
+    def metacommunity_similarity(self):
+        return self.similarity.weighted_similarities(
+            self.abundance.metacommunity_abundance()
+        )
+
+    @cache
+    def subcommunity_similarity(self):
+        return self.similarity.weighted_similarities(
+            self.abundance.subcommunity_abundance()
+        )
+
+    @cache
+    def normalized_subcommunity_similarity(self):
+        return self.similarity.weighted_similarities(
+            self.abundance.normalized_subcommunity_abundance()
+        )
+
+    def make_measure_components(self) -> dict:
+        if self.similarity is None:
+            return {
+                "alpha": (1, self.abundance.subcommunity_abundance),
+                "rho": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.subcommunity_abundance,
+                ),
+                "beta": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.subcommunity_abundance,
+                ),
+                "gamma": (1, self.abundance.metacommunity_abundance),
+                "normalized_alpha": (
+                    1,
+                    self.abundance.normalized_subcommunity_abundance,
+                ),
+                "normalized_rho": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.normalized_subcommunity_abundance,
+                ),
+                "normalized_beta": (
+                    self.abundance.metacommunity_abundance,
+                    self.abundance.normalized_subcommunity_abundance,
+                ),
+            }
+        else:
+            return {
+                "alpha": (1, self.subcommunity_similarity),
+                "rho": (
+                    self.metacommunity_similarity,
+                    self.subcommunity_similarity,
+                ),
+                "beta": (
+                    self.metacommunity_similarity,
+                    self.subcommunity_similarity,
+                ),
+                "gamma": (1, self.metacommunity_similarity),
+                "normalized_alpha": (
+                    1,
+                    self.normalized_subcommunity_similarity,
+                ),
+                "normalized_rho": (
+                    self.metacommunity_similarity,
+                    self.normalized_subcommunity_similarity,
+                ),
+                "normalized_beta": (
+                    self.metacommunity_similarity,
+                    self.normalized_subcommunity_similarity,
+                ),
+            }
+
     def subcommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
         """Calculates subcommunity diversity measures.
 
@@ -76,7 +170,6 @@ class Metacommunity(ABC):
             return 1 / result
         return result
 
-    @cache
     def metacommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
         """Calculates metcommunity diversity measures."""
         subcommunity_diversity = self.subcommunity_diversity(viewpoint, measure)
@@ -128,131 +221,3 @@ class Metacommunity(ABC):
         df.insert(0, "viewpoint", viewpoint)
         df.reset_index(inplace=True)
         return df
-
-
-class FrequencySensitiveMetacommunity(Metacommunity):
-    """Implements Metacommunity for similarity-insensitive diversity."""
-
-    def __init__(self, abundance: Abundance) -> None:
-        """
-        Parameters
-        ----------
-        abundance: diversity.abundance.Abundance
-            Object that contains (sub-/meta-)community species abundance.
-        """
-        super().__init__(abundance=abundance)
-        self.measure_components = {
-            "alpha": (1, self.abundance.subcommunity_abundance),
-            "rho": (
-                self.abundance.metacommunity_abundance,
-                self.abundance.subcommunity_abundance,
-            ),
-            "beta": (
-                self.abundance.metacommunity_abundance,
-                self.abundance.subcommunity_abundance,
-            ),
-            "gamma": (1, self.abundance.metacommunity_abundance),
-            "normalized_alpha": (
-                1,
-                self.abundance.normalized_subcommunity_abundance,
-            ),
-            "normalized_rho": (
-                self.abundance.metacommunity_abundance,
-                self.abundance.normalized_subcommunity_abundance,
-            ),
-            "normalized_beta": (
-                self.abundance.metacommunity_abundance,
-                self.abundance.normalized_subcommunity_abundance,
-            ),
-        }
-
-
-class SimilaritySensitiveMetacommunity(Metacommunity):
-    """Implements SimilaritySensitiveMetacommunity for fast but memory heavy calculations."""
-
-    def __init__(self, abundance: Abundance, similarity: Similarity):
-        """
-        Parameters
-        ----------
-        abundance: diversity.abundance.Abundance
-            Object whose (sub-/meta-)community species abundances are
-            used.
-        similarity: diversity.similarity.Similarity
-            Object for calculating abundance-weighted similarities.
-        """
-        super().__init__(abundance=abundance)
-        self.similarity = similarity
-        self.measure_components = {
-            "alpha": (1, self.subcommunity_similarity),
-            "rho": (self.metacommunity_similarity, self.subcommunity_similarity),
-            "beta": (self.metacommunity_similarity, self.subcommunity_similarity),
-            "gamma": (1, self.metacommunity_similarity),
-            "normalized_alpha": (1, self.normalized_subcommunity_similarity),
-            "normalized_rho": (
-                self.metacommunity_similarity,
-                self.normalized_subcommunity_similarity,
-            ),
-            "normalized_beta": (
-                self.metacommunity_similarity,
-                self.normalized_subcommunity_similarity,
-            ),
-        }
-
-    @cache
-    def metacommunity_similarity(self):
-        return self.similarity.weighted_similarities(
-            self.abundance.metacommunity_abundance()
-        )
-
-    @cache
-    def subcommunity_similarity(self):
-        return self.similarity.weighted_similarities(
-            self.abundance.subcommunity_abundance()
-        )
-
-    @cache
-    def normalized_subcommunity_similarity(self):
-        return self.similarity.weighted_similarities(
-            self.abundance.normalized_subcommunity_abundance()
-        )
-
-
-def make_metacommunity(
-    counts: DataFrame | ndarray,
-    similarity: DataFrame | ndarray | str | Callable | None = None,
-    X: ndarray | None = None,
-    chunk_size: int | None = 100,
-) -> Metacommunity:
-    """Initializes a concrete subclass of Metacommunity.
-
-    Parameters
-    ----------
-    counts: pandas DataFrame or numpy.ndarray
-        2-d array with one column per subcommunity, one row per species,
-        containing the count of each species in the corresponding subcommunities.
-    similarity: pandas.DataFrame, numpy.ndarray, str, or numpy.memmap
-        For similarity-sensitive diversity measures. When numpy.ndarray or
-        numpy.memmap is used, the ordering of species in the species argument for
-        diversity.similarity.make_similarity corresponds to the ordering
-        of species in counts.
-
-    chunk_size: int
-        The number of file lines to process at a time when the similarity matrix
-        is read from a file. Larger chunk sizes are faster, but take more memory.
-
-    Returns
-    -------
-    An instance of a concrete subclass of Metacommunity.
-    """
-    LOGGER.debug(
-        "make_metacommunity(counts=%s, similarity=%s, X=%s, chunk_size=%s",
-        counts,
-        similarity,
-        X,
-        chunk_size,
-    )
-    abundance = make_abundance(counts)
-    if similarity is None:
-        return FrequencySensitiveMetacommunity(abundance=abundance)
-    similarity = make_similarity(similarity=similarity, X=X, chunk_size=chunk_size)
-    return SimilaritySensitiveMetacommunity(abundance=abundance, similarity=similarity)
