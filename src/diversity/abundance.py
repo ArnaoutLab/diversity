@@ -134,4 +134,11 @@ def make_abundance(counts: DataFrame | ndarray) -> Abundance:
     An instance of a concrete subclass of Abundance.
     """
     LOGGER.debug("make_abundance(counts=%s)", counts)
-    return Abundance(counts=counts)
+    match counts:
+        case DataFrame() | ndarray():
+            return AbundanceFromArray(counts=counts)
+        case _:
+            raise NotImplementedError(
+                f"Type {type(counts)} is not supported for argument 'counts'."
+                "Valid types include pandas.DataFram or numpy.ndarray"
+            )
