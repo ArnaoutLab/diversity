@@ -2,7 +2,7 @@
 from numpy import allclose, array, array_equal, dtype
 from pytest import fixture, mark, raises
 
-from diversity.abundance import Abundance, make_abundance
+from diversity.abundance import AbundanceFromArray, make_abundance
 from diversity.exceptions import InvalidArgumentError
 
 
@@ -184,33 +184,33 @@ ABUNDANCE_TEST_CASES = [
 ]
 
 
-class TestAbundance:
-    """Tests metacommunity.Abundance."""
+class TestAbundanceFromArray:
+    """Tests metacommunity.AbundanceFromArray."""
 
     @mark.parametrize("test_case", ABUNDANCE_TEST_CASES)
     def test_init(self, test_case):
         """Tests initializer."""
-        abundance = Abundance(counts=test_case["counts"])
+        abundance = AbundanceFromArray(counts=test_case["counts"])
         array_equal(abundance.counts, test_case["counts"])
 
     @mark.parametrize("test_case", ABUNDANCE_TEST_CASES)
     def test_subcommunity_abundance(self, test_case):
         """Tests .subcommunity_abundance."""
-        abundance = Abundance(counts=test_case["counts"])
+        abundance = AbundanceFromArray(counts=test_case["counts"])
         subcommunity_abundance = abundance.subcommunity_abundance()
         assert allclose(subcommunity_abundance, test_case["subcommunity_abundance"])
 
     @mark.parametrize("test_case", ABUNDANCE_TEST_CASES)
     def test_metacommunity_abundance(self, test_case):
         """Tests .metacommunity_abundance."""
-        abundance = Abundance(counts=test_case["counts"])
+        abundance = AbundanceFromArray(counts=test_case["counts"])
         metacommunity_abundance = abundance.metacommunity_abundance()
         assert allclose(metacommunity_abundance, test_case["metacommunity_abundance"])
 
     @mark.parametrize("test_case", ABUNDANCE_TEST_CASES)
     def test_subcommunity_normalizing_constants(self, test_case):
         """Tests .subcommunity_normalizing_constants."""
-        abundance = Abundance(counts=test_case["counts"])
+        abundance = AbundanceFromArray(counts=test_case["counts"])
         subcommunity_normalizing_constants = (
             abundance.subcommunity_normalizing_constants()
         )
@@ -222,7 +222,7 @@ class TestAbundance:
     @mark.parametrize("test_case", ABUNDANCE_TEST_CASES)
     def test_normalized_subcommunity_abundance(self, test_case):
         """Tests .normalized_subcommunity_abundance."""
-        abundance = Abundance(counts=test_case["counts"])
+        abundance = AbundanceFromArray(counts=test_case["counts"])
         normalized_subcommunity_abundance = (
             abundance.normalized_subcommunity_abundance()
         )

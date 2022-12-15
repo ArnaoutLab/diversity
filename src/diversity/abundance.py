@@ -82,14 +82,14 @@ class Abundance(ABC):
         pass
 
 
-class Abundance(Abundance):
+class AbundanceFromArray(Abundance):
     """Implements Abundance for fast, but memory-heavy calculations.
 
     Caches counts and (normalized) relative meta- and subcommunity
     abundances at the same time.
     """
 
-    def __init__(self, counts: DataFrame) -> None:
+    def __init__(self, counts: DataFrame | ndarray) -> None:
         """
         Parameters
         ----------
