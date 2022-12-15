@@ -230,5 +230,7 @@ def make_similarity(
             )
         case _:
             raise NotImplementedError(
-                f"Type {type(similarity)} is not supported for argument 'similarity'"
+                f"Type {type(similarity)} is not supported for argument 'similarity'."
+                "Valid types include pandas.DataFram, numpy.ndarray, numpy.memmap,"
+                " str, or typing.Callable"
             )
