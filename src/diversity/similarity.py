@@ -5,15 +5,19 @@ Classes
 Similarity
     Abstract base class for relative abundance-weighted species
     similarities.
+SimilarityFromDataFrame
+    Implements Similarity by storing similarities in a pandas DataFrame.
+SimilarityFromArray
+    Implements Similarity by storing similarities in a numpy ndarray or memmap.
 SimilarityFromFile
-    Implements Similarity by reading similarities from a file.
-SimilarityFromMemory
-    Implements Similarity by storing similarities in memory.
+    Implements Similarity by reading similarities from a csv or tsv file.
+SimilarityFromFunction:
+    Implements Similarity by calculating pairwise similarities with a callable function.
 
 Functions
 ---------
 make_similarity
-    Chooses and creates instance of concrete Similarity implementation.
+    Chooses and creates instances of concrete Similarity implementations.
 """
 from abc import ABC, abstractmethod
 from typing import Callable
@@ -31,12 +35,12 @@ class Similarity(ABC):
     """Interface for classes computing weighted similarities."""
 
     @abstractmethod
-    def weighted_similarities(self, relative_abundances: ndarray) -> ndarray:
+    def weighted_similarities(self, relative_abundances) -> ndarray:
         """Calculates weighted sums of similarities to each species.
 
         Parameters
         ----------
-        relative_abundances: numpy.ndarray
+        relative_abundances:
             Array of shape (n_species, n_communities), where rows
             correspond to unique species, columns correspond to
             (meta-/sub-) communities and each element is the relative
@@ -75,9 +79,11 @@ class SimilarityFromArray(Similarity):
     def __init__(self, similarity: ndarray | memmap) -> None:
         """
         similarity:
-            Similarities between species. Columns and index must be
-            species names corresponding to the values in their rows and
-            columns.
+            A pairwise similarity matrix of shape (n_species, n_species) where
+            each value is the similarity between a pair of species. Species must
+            be in the same order as in the counts argument of
+            the Metacommunity class.
+
         """
         self.similarity: ndarray = similarity
 
@@ -98,10 +104,9 @@ class SimilarityFromFile(Similarity):
         Parameters
         ----------
         similarity:
-            Path to similarities file containing a square matrix of
-            similarities between species, together with a header
-            containing the unique species names in the matrix's row and
-            column ordering.
+            Path to a file containing a pairwise similarity matrix of
+            shape (n_species, n_species). The file should have a header
+            that denotes the unique species names.
         chunk_size:
             Number of rows to read from similarity matrix at a time.
         """
@@ -152,7 +157,7 @@ class SimilarityFromFunction(Similarity):
     def __init__(self, similarity: Callable, X: ndarray, chunk_size: int = 100) -> None:
         """
         similarity:
-            Callable to determine similarity between species. Must take
+            A Callable that calculates similarity between a pair of species. Must take
             two rows from X and return a numeric similarity value.
         X:
             An array where each row contains the feature values for a given species.
