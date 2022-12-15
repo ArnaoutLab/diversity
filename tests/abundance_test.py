@@ -1,9 +1,9 @@
 """Tests for diversity.abundance."""
 from numpy import allclose, array, array_equal, dtype
-from pytest import fixture, mark, raises
+from pandas import DataFrame
+from pytest import mark, raises
 
 from diversity.abundance import AbundanceFromArray, make_abundance
-from diversity.exceptions import InvalidArgumentError
 
 
 class MockClass:
@@ -11,53 +11,29 @@ class MockClass:
         self.kwargs = kwargs
 
 
-class MockAbundance(MockClass):
+class MockAbundanceFromArray(MockClass):
     pass
 
 
-MAKE_ABUNDANCE_TEST_CASES = [
-    {
-        "description": "Abundance",
-        "counts": array([[2, 4], [3, 0], [0, 1]], dtype=dtype("f8")),
-        "expect_raise": False,
-        "expected_return_type": MockAbundance,
-    },
-]
+counts_array_3by2 = array([[2, 4], [3, 0], [0, 1]])
+counts_dataframe_3by2 = DataFrame(counts_array_3by2)
 
 
-class TestMakeAbundance:
-    @fixture(params=MAKE_ABUNDANCE_TEST_CASES)
-    def test_case(self, request, monkeypatch):
-        with monkeypatch.context() as patched_context:
-            for target, mock_class in [
-                ("diversity.abundance.Abundance", MockAbundance),
-            ]:
-                patched_context.setattr(target, mock_class)
-            test_case_ = {
-                key: request.param[key]
-                for key in [
-                    "counts",
-                    "expect_raise",
-                    "expected_return_type",
-                ]
-            }
-            if request.param["expected_return_type"] == MockAbundance:
-                test_case_["expected_init_kwargs"] = {"counts": request.param["counts"]}
-            else:
-                test_case_["expected_init_kwargs"] = {
-                    "counts": request.param["counts"],
-                }
-            yield test_case_
+@mark.parametrize(
+    "counts, expected",
+    [
+        (counts_array_3by2, DataFrame),
+        (counts_dataframe_3by2, DataFrame),
+    ],
+)
+def test_make_abundance(counts, expected):
+    abundance = AbundanceFromArray(counts=counts)
+    assert isinstance(abundance.counts, expected)
 
-    def test_make_abundance(self, test_case):
-        if test_case["expect_raise"]:
-            with raises(InvalidArgumentError):
-                make_abundance(counts=test_case["counts"])
-        else:
-            abundance = make_abundance(test_case["counts"])
-            assert isinstance(abundance, test_case["expected_return_type"])
-            for key, arg in test_case["expected_init_kwargs"].items():
-                assert abundance.kwargs[key] is arg
+
+def test_make_abundance_not_implemented():
+    with raises(NotImplementedError):
+        make_abundance(counts=1)
 
 
 ABUNDANCE_TEST_CASES = [
