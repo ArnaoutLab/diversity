@@ -1,16 +1,16 @@
 # diversity: similarity- and frequency-sensitive diversity
 
 ![Tests](https://github.com/Elliot-D-Hill/diversity/actions/workflows/tests.yml/badge.svg)
-[![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
+[![Python 3.9](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-390/)
 
 - [diversity: similarity- and frequency-sensitive diversity](#diversity-similarity--and-frequency-sensitive-diversity)
 - [About](#about)
-- [Installation](#installation)
 - [Usage and Examples](#usage-and-examples)
   - [Frequency-sensitive metacommunity from a dataframe or array](#frequency-sensitive-metacommunity-from-a-dataframe-or-array)
   - [Similarity-sensitive metacommunity from a dataframe or array](#similarity-sensitive-metacommunity-from-a-dataframe-or-array)
   - [Similarity-sensitive metacommunity from a file](#similarity-sensitive-metacommunity-from-a-file)
-  - [Diversity methods](#diversity-methods)
+  - [Similarity-sensitive metacommunity from a function](#similarity-sensitive-metacommunity-from-a-function)
+  - [Diversity measures](#diversity-measures)
   - [Command line interface](#command-line-interface)
 - [Background](#background)
   - [Diversity indices](#diversity-indices)
@@ -23,7 +23,7 @@
 
 # About
 
-The `diversity` package simplifies the calculation of similarity-sensitive and frequency-sensitive diversity.
+The `diversity` package calculates similarity-sensitive and frequency-sensitive diversity measures.
 
 **Supported diversity measures**: alpha, beta, rho, gamma, normalized alpha, normalized beta, and normalized rho.
 
@@ -31,13 +31,13 @@ The `diversity` package simplifies the calculation of similarity-sensitive and f
 
 For a rigorous mathematical treatment of the diversity measures and indices `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 
-# Installation
+<!-- # Installation
 
-`diversity` requires python version 3.9 or higher.
+`diversity` requires python version 3.10 or higher.
 
 ```bash
 pip install diversity
-```
+``` -->
 
 
 # Usage and Examples
@@ -45,15 +45,16 @@ pip install diversity
 The examples here use aggregated data from the [Palmer penguins dataset](https://github.com/allisonhorst/palmerpenguins).
 
 ```python
-from diversity.metacommunity import make_metacommunity
+from diversity.metacommunity import Metacommunity
 import pandas as pd
+import numpy as np
 ```
 
 The first step to calculating diversity is to create a `Metacommunity` object. We can create either a frequency-sensitive or similarity-sensitive `Metacommunity` object.
 
 ## Frequency-sensitive metacommunity from a dataframe or array
 
-To create a frequency-sensitive metacommunity, we need a subcommunity-by-species counts table.
+To create a frequency-sensitive metacommunity, we need a subcommunity-by-species counts table, where rows are unique species, columns are subcommunities, and the elements are species counts.
 
 ```python
 counts = pd.DataFrame(
@@ -77,12 +78,12 @@ Note: we include an index with the species names here for illustration, but in g
 Next we create a `Metacommunity` object from the counts table.
 
 ```python
-metacommunity = make_metacommunity(counts)
+metacommunity = Metacommunity(counts)
 ```
 
 ## Similarity-sensitive metacommunity from a dataframe or array
 
-For similarity-sensitive diversity, we must also supply a similarity matrix to `make_metacommunity` in addition to the counts table.
+For similarity-sensitive diversity, we must also supply a similarity matrix to `Metacommunity` in addition to the counts table. The columns and rows of the similarity matrix must be in the same order as the rows of the counts table.
 
 ```python
 similarity_matrix = pd.DataFrame(
@@ -103,21 +104,32 @@ similarity_matrix = pd.DataFrame(
 
 
 ```python
-metacommunity = make_metacommunity(counts, similarity=similarity_matrix)
+metacommunity = Metacommunity(counts, similarity=similarity_matrix)
 ```
 
 ## Similarity-sensitive metacommunity from a file
 
-For large datasets, the similarity matrix may not fit in RAM. To avoid loading the entire matrix into RAM, you can pass a filepath to the `similarity` argument to read a file from a hard disk drive.
-
+For medium sized datasets, the similarity matrix may not fit in RAM. To avoid loading the entire matrix into RAM, you can pass a filepath to the `similarity` argument to read a file from a hard disk drive.
 
 ```python
-metacommunity = make_metacommunity(counts, similarity='similarity_matrix.csv')
+metacommunity = Metacommunity(counts, similarity='similarity_matrix.csv', chunk_size=100)
 ```
 
-## Diversity methods
+## Similarity-sensitive metacommunity from a function
+For large datasets, the similarity matrix may not fit on the disk, in which case it can be constructed and processed in chunks by passing a similarity function to `similarity` and an array of features to `X`. Each row of `X` represents the features of a single species.
+```python
+X = np.array([[1, 2], [3, 5], [7, 11]])
+
+def similarity_function(species_i, species_j):
+  return 1 / (1 + np.norm(species_i, species_j))
+
+metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk_size=100)
+```
+
+## Diversity measures
  
-Once a `Metacommunty` object has been initialized, we can use convenience methods to calculate all diversity measures for each subcommunity for a given viewpoint.
+Once a `Metacommunty` object has been initialized, we can calculate all diversity measures for each subcommunity for a given viewpoint. Here we calculate similarity sensitive-species richness (viewpoint = 0).
+
 
 ```python
 metacommunity.subcommunities_to_dataframe(viewpoint=0)
@@ -144,6 +156,7 @@ Individual diversity measures for subcommunities can also be calculated, like so
 
 ```python
 metacommunity.subcommunity_diversity(viewpoint=2, measure='alpha')
+
 array([2.93063044, 4.00900135, 7.10638298])
 ```
 
@@ -151,6 +164,7 @@ and for the metacommunity:
 
 ```python
 metacommunity.metacommunity_diversity(viewpoint=2, measure='beta')
+
 0.48236433045721444
 ```
 
@@ -211,7 +225,7 @@ Some diversity indices compare the diversities of subsets of a community with re
 
 ## Similarity-sensitive diversity
 
-In addition to being sensitive to frequency, it often makes sense to account for similarity in a diversity measure. For example, a community of 2 different types of rodents, may be considered less diverse as the same community where one of the rodent types was replaced by the same number of individuals of a bird species. [Reeve et al.](https://arxiv.org/abs/1404.6520) and [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1) present a general mathematically rigorous way of incorporating similarity measures into Hill's framework. The result is a family of similarity-sensitive diversity indices parameterized by the same viewpoint parameter as well as the similarity function used for the species in the meta- or subcommunities of interest. As opposed to accounting for distinct species and their frequency, these similarity-sensitive diversity measures can be interpreted as accounting for different possibly overlapping clusters of mutually similar species and their combined frequencies.
+In addition to being sensitive to frequency, it often makes sense to account for similarity in a diversity measure. For example, a community of 2 different types of rodents, may be considered less diverse than a community where one of the rodent species was replaced by the same number of individuals of a bird species. [Reeve et al.](https://arxiv.org/abs/1404.6520) and [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1) present a general mathematically rigorous way of incorporating similarity measures into Hill's framework. The result is a family of similarity-sensitive diversity indices parameterized by the same viewpoint parameter as well as the similarity function used for the species in the meta- or subcommunities of interest. These similarity-sensitive diversity measures account for both the pairwise similarity between all species and their frequencies.
 
 
 ## One package to calculate them all
@@ -220,5 +234,5 @@ The `diversity` package is able to calculate all of the similarity- and frequenc
 
 ## Alternatives
 
-Diversity can be defined in various ways and software calculating the various diversity measures exists. To date, we know of no other python package that implements the similarity-sensitive partitioned diversity measures defined by [Reeve at al.](https://arxiv.org/abs/1404.6520). An [R package](https://github.com/boydorr/rdiversity) and a [julia package](https://github.com/EcoJulia/Diversity.jl) exist. However, both packages require the species similarities to be stored in the form of a matrix in memory. That approach does not scale to the amount of species in some applications, such as immune repertoires. `diversity` allows the user to store the similarity matrix in a file allowing for larger datasets to be analyzed.
+Diversity can be defined in various ways and software calculating the various diversity measures exists. To date, we know of no other python package that implements the similarity-sensitive partitioned diversity measures defined by [Reeve at al.](https://arxiv.org/abs/1404.6520). An [R package](https://github.com/boydorr/rdiversity) and a [julia package](https://github.com/EcoJulia/Diversity.jl) exist. However, both packages require the species similarities to be stored in the form of a matrix in memory. That approach does not scale to the amount of species in some applications, such as immune repertoires. `diversity` allows the user to store the similarity matrix in a file or construct it on the fly, allowing for larger datasets to be analyzed.
 
