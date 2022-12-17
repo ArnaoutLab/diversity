@@ -14,7 +14,7 @@ make_abundance
     Chooses and creates instance of concrete Abundance implementation.
 """
 from abc import ABC, abstractmethod
-from functools import cache
+from functools import cached_property
 
 from numpy import dtype, ndarray, empty
 from pandas import DataFrame
@@ -100,24 +100,24 @@ class AbundanceFromArray(Abundance):
         LOGGER.debug("Abundance(counts=%s", counts)
         self.counts = DataFrame(counts)
 
-    @cache
+    @cached_property
     def subcommunity_abundance(self) -> ndarray:
         total_abundance = self.counts.sum().sum()
         relative_abundances = empty(shape=self.counts.shape, dtype=dtype("f8"))
         relative_abundances[:] = self.counts / total_abundance
         return relative_abundances
 
-    @cache
+    @cached_property
     def metacommunity_abundance(self) -> ndarray:
-        return self.subcommunity_abundance().sum(axis=1, keepdims=True)
+        return self.subcommunity_abundance.sum(axis=1, keepdims=True)
 
-    @cache
+    @cached_property
     def subcommunity_normalizing_constants(self) -> ndarray:
-        return self.subcommunity_abundance().sum(axis=0)
+        return self.subcommunity_abundance.sum(axis=0)
 
-    @cache
+    @cached_property
     def normalized_subcommunity_abundance(self) -> ndarray:
-        return self.subcommunity_abundance() / self.subcommunity_normalizing_constants()
+        return self.subcommunity_abundance / self.subcommunity_normalizing_constants
 
 
 def make_abundance(counts: DataFrame | ndarray) -> Abundance:
@@ -140,5 +140,5 @@ def make_abundance(counts: DataFrame | ndarray) -> Abundance:
         case _:
             raise NotImplementedError(
                 f"Type {type(counts)} is not supported for argument 'counts'."
-                "Valid types include pandas.DataFram or numpy.ndarray"
+                "Valid types include pandas.DataFrame or numpy.ndarray"
             )
