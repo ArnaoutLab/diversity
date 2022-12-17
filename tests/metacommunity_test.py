@@ -1,15 +1,12 @@
 """Tests for diversity.metacommunity."""
-from copy import deepcopy
 
 from numpy import (
     allclose,
     array,
-    dtype,
-    isclose,
 )
 from pandas import DataFrame
 from pandas.testing import assert_frame_equal
-from pytest import fixture, mark
+from pytest import fixture, mark, raises
 
 from diversity.log import LOGGER
 from diversity.abundance import Abundance
@@ -285,7 +282,6 @@ def test_metacommunity(similarity, X, chunk_size, request):
     )
     assert isinstance(metacommunity, Metacommunity)
     assert isinstance(metacommunity.abundance, Abundance)
-    assert isinstance(metacommunity.measure_components, dict)
     if similarity is not None:
         assert isinstance(metacommunity.similarity, Similarity)
 
@@ -346,6 +342,13 @@ def test_subcommunity_diversity(
     assert allclose(subcommunity_diversity, expected)
 
 
+def test_subcommunity_diversity_invalid_measure():
+    with raises(ValueError):
+        Metacommunity(counts=counts_dataframe_3by2).subcommunity_diversity(
+            measure="omega", viewpoint=0
+        )
+
+
 @mark.parametrize(
     "counts, similarity, expected",
     [
@@ -355,8 +358,7 @@ def test_subcommunity_diversity(
 )
 def test_metacommunity_similarity(counts, similarity, expected):
     metacommunity = Metacommunity(counts=counts, similarity=similarity)
-    metacommunity_similarity = metacommunity.metacommunity_similarity()
-    assert allclose(metacommunity_similarity, expected)
+    assert allclose(metacommunity.metacommunity_similarity, expected)
 
 
 @mark.parametrize(
@@ -368,8 +370,7 @@ def test_metacommunity_similarity(counts, similarity, expected):
 )
 def test_subcommunity_similarity(counts, similarity, expected):
     metacommunity = Metacommunity(counts=counts, similarity=similarity)
-    subcommunity_similarity = metacommunity.subcommunity_similarity()
-    assert allclose(subcommunity_similarity, expected)
+    assert allclose(metacommunity.subcommunity_similarity, expected)
 
 
 @mark.parametrize(
@@ -389,7 +390,4 @@ def test_subcommunity_similarity(counts, similarity, expected):
 )
 def test_normalized_subcommunity_similarity(counts, similarity, expected):
     metacommunity = Metacommunity(counts=counts, similarity=similarity)
-    normalized_subcommunity_similarity = (
-        metacommunity.normalized_subcommunity_similarity()
-    )
-    assert allclose(normalized_subcommunity_similarity, expected)
+    assert allclose(metacommunity.normalized_subcommunity_similarity, expected)

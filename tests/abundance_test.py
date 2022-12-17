@@ -173,25 +173,24 @@ class TestAbundanceFromArray:
     def test_subcommunity_abundance(self, test_case):
         """Tests .subcommunity_abundance."""
         abundance = AbundanceFromArray(counts=test_case["counts"])
-        subcommunity_abundance = abundance.subcommunity_abundance()
-        assert allclose(subcommunity_abundance, test_case["subcommunity_abundance"])
+        assert allclose(
+            abundance.subcommunity_abundance, test_case["subcommunity_abundance"]
+        )
 
     @mark.parametrize("test_case", ABUNDANCE_TEST_CASES)
     def test_metacommunity_abundance(self, test_case):
         """Tests .metacommunity_abundance."""
         abundance = AbundanceFromArray(counts=test_case["counts"])
-        metacommunity_abundance = abundance.metacommunity_abundance()
-        assert allclose(metacommunity_abundance, test_case["metacommunity_abundance"])
+        assert allclose(
+            abundance.metacommunity_abundance, test_case["metacommunity_abundance"]
+        )
 
     @mark.parametrize("test_case", ABUNDANCE_TEST_CASES)
     def test_subcommunity_normalizing_constants(self, test_case):
         """Tests .subcommunity_normalizing_constants."""
         abundance = AbundanceFromArray(counts=test_case["counts"])
-        subcommunity_normalizing_constants = (
-            abundance.subcommunity_normalizing_constants()
-        )
         assert allclose(
-            subcommunity_normalizing_constants,
+            abundance.subcommunity_normalizing_constants,
             test_case["subcommunity_normalizing_constants"],
         )
 
@@ -199,10 +198,7 @@ class TestAbundanceFromArray:
     def test_normalized_subcommunity_abundance(self, test_case):
         """Tests .normalized_subcommunity_abundance."""
         abundance = AbundanceFromArray(counts=test_case["counts"])
-        normalized_subcommunity_abundance = (
-            abundance.normalized_subcommunity_abundance()
-        )
         assert allclose(
-            normalized_subcommunity_abundance,
+            abundance.normalized_subcommunity_abundance,
             test_case["normalized_subcommunity_abundance"],
         )
