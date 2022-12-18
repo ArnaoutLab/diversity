@@ -183,7 +183,8 @@ def test_weighted_similarities(
 
 def test_weighted_similarities_warning(make_similarity_from_file):
     with warns(ArgumentWarning):
-        make_similarity_from_file(filename="similarities_file")
+        similarity = make_similarity_from_file(filename="similarities_file")
+        similarity.weighted_similarities(relative_abundances_3by2)
 
 
 @mark.parametrize(

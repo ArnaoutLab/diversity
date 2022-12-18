@@ -67,6 +67,7 @@ class SimilarityFromDataFrame(Similarity):
             species names corresponding to the values in their rows and
             columns.
         """
+        LOGGER.debug("SimilarityFromFile(similarity=%s", similarity)
         self.similarity: DataFrame = similarity
 
     def weighted_similarities(self, relative_abundances: ndarray) -> ndarray:
@@ -85,6 +86,7 @@ class SimilarityFromArray(Similarity):
             the Metacommunity class.
 
         """
+        LOGGER.debug("SimilarityFromFile(similarity=%s", similarity)
         self.similarity: ndarray = similarity
 
     def weighted_similarities(self, relative_abundances: ndarray) -> ndarray:
@@ -111,19 +113,18 @@ class SimilarityFromFile(Similarity):
             Number of rows to read from similarity matrix at a time.
         """
         LOGGER.debug(
-            "SimilarityFromFile(similarity=%s chunk_size=%s",
+            "SimilarityFromFile(similarity=%s, chunk_size=%s",
             similarity,
             chunk_size,
         )
         self.similarity: str = similarity
         self.chunk_size: int = chunk_size
-        self.__delimiter = get_file_delimiter(self.similarity)
 
     def weighted_similarities(self, relative_abundances: ndarray) -> ndarray:
         weighted_similarities = empty(relative_abundances.shape, dtype=dtype("f8"))
         with read_csv(
             self.similarity,
-            delimiter=self.__delimiter,
+            delimiter=get_file_delimiter(self.similarity),
             chunksize=self.chunk_size,
         ) as similarity_matrix_chunks:
             i = 0
@@ -166,6 +167,12 @@ class SimilarityFromFunction(Similarity):
             In general, choosing a larger chunk_size will make the calculation faster,
             but will also require more memory.
         """
+        LOGGER.debug(
+            "SimilarityFromFile(similarity=%s, X=%s, chunk_size=%s",
+            similarity,
+            X,
+            chunk_size,
+        )
         self.similarity: Callable = similarity
         self.X: ndarray = X
         self.chunk_size: int = chunk_size
