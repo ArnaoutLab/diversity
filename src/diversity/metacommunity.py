@@ -22,7 +22,7 @@ from diversity.utilities import power_mean
 class Metacommunity:
     """Creates diversity components and calculates diversity measures."""
 
-    MEASURES = [
+    MEASURES = (
         "alpha",
         "rho",
         "beta",
@@ -30,7 +30,7 @@ class Metacommunity:
         "normalized_alpha",
         "normalized_rho",
         "normalized_beta",
-    ]
+    )
 
     def __init__(
         self,
