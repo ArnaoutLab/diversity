@@ -7,7 +7,7 @@ from numpy import (
     array,
     ndarray,
 )
-from pandas import DataFrame
+from pandas import DataFrame, concat
 from pandas.testing import assert_frame_equal
 from pytest import fixture, mark, raises
 
@@ -258,22 +258,6 @@ def test_metacommunity(data, expected):
     assert isinstance(metacommunity.similarity, expected)
 
 
-@mark.parametrize("data", metacommunity_data)
-def test_subcommunities_to_dataframe(data):
-    metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
-    subcommunities_df = metacommunity.subcommunities_to_dataframe(data.viewpoint)
-    assert_frame_equal(subcommunities_df, data.subcommunity_results)
-
-
-@mark.parametrize("data", metacommunity_data)
-def test_metacommunties_to_dataframe(data):
-    metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
-    metacommunity_df = metacommunity.metacommunity_to_dataframe(
-        viewpoint=data.viewpoint
-    )
-    assert_frame_equal(metacommunity_df, data.metacommunity_results)
-
-
 @mark.parametrize("measure", MEASURES)
 @mark.parametrize("data", metacommunity_data)
 def test_metacommunity_diversity(data, measure):
@@ -322,3 +306,28 @@ def test_normalized_subcommunity_similarity(data):
         metacommunity.normalized_subcommunity_similarity,
         data.normalized_subcommunity_similarity,
     )
+
+
+@mark.parametrize("data", metacommunity_data)
+def test_subcommunities_to_dataframe(data):
+    metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
+    subcommunities_df = metacommunity.subcommunities_to_dataframe(data.viewpoint)
+    assert_frame_equal(subcommunities_df, data.subcommunity_results)
+
+
+@mark.parametrize("data", metacommunity_data)
+def test_metacommunties_to_dataframe(data):
+    metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
+    metacommunity_df = metacommunity.metacommunity_to_dataframe(
+        viewpoint=data.viewpoint
+    )
+    assert_frame_equal(metacommunity_df, data.metacommunity_results)
+
+
+@mark.parametrize("data", metacommunity_data)
+def test_to_dataframe(data):
+    metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
+    expected = concat(
+        [data.metacommunity_results, data.subcommunity_results]
+    ).reset_index(drop=True)
+    assert_frame_equal(metacommunity.to_dataframe(viewpoint=data.viewpoint), expected)

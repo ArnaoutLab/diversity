@@ -8,10 +8,10 @@ Metacommunity
 """
 
 from functools import cached_property
-from typing import Callable
+from typing import Callable, Iterable
 
-from pandas import DataFrame, Index
-from numpy import broadcast_to, divide, zeros, ndarray, memmap
+from pandas import DataFrame, Index, concat
+from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray, memmap
 
 from diversity.log import LOGGER
 from diversity.abundance import make_abundance, Abundance
@@ -91,12 +91,12 @@ class Metacommunity:
 
         Parameters
         ----------
-        viewpoint: numeric
-            Viewpoint parameter for diversity measure. Valid measure identifiers
-            are: "alpha", "rho", "beta", "gamma", "normalized_alpha",
-            "normalized_rho", and "normalized_beta"
+        viewpoint:
+            Viewpoint parameter for diversity measure.
         measure: str
-            Name of the diversity measure.
+            Name of the diversity measure. Valid measures
+            include: "alpha", "rho", "beta", "gamma", "normalized_alpha",
+            "normalized_rho", and "normalized_beta"
 
         Returns
         -------
@@ -149,7 +149,21 @@ class Metacommunity:
         return diversity_measure
 
     def metacommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
-        """Calculates metcommunity diversity measures."""
+        """Calculates metcommunity diversity measures.
+
+        Parameters
+        ----------
+        viewpoint:
+            Viewpoint parameter for diversity measure.
+        measure: str
+            Name of the diversity measure. Valid measures
+            include: "alpha", "rho", "beta", "gamma", "normalized_alpha",
+            "normalized_rho", and "normalized_beta"
+
+        Returns
+        -------
+        A numpy array containing the metacommunity diversity measure.
+        """
         subcommunity_diversity = self.subcommunity_diversity(viewpoint, measure)
         return power_mean(
             1 - viewpoint,
@@ -162,7 +176,7 @@ class Metacommunity:
 
         Parameters
         ----------
-        viewpoint: numeric
+        viewpoint:
             Non-negative number. Can be interpreted as the degree of
             ignorance towards rare species, where 0 treats rare species
             the same as frequent species, and infinity considers only the
@@ -183,7 +197,7 @@ class Metacommunity:
 
         Parameters
         ----------
-        viewpoint: numeric
+        viewpoint
             Non-negative number. Can be interpreted as the degree of
             ignorance towards rare species, where 0 treats rare species
             the same as frequent species, and infinity considers only the
@@ -199,3 +213,10 @@ class Metacommunity:
         df.insert(0, "viewpoint", viewpoint)
         df.reset_index(inplace=True)
         return df
+
+    def to_dataframe(self, viewpoint: float | Iterable[float]):
+        dataframes = []
+        for q in atleast_1d(viewpoint):
+            dataframes.append(self.metacommunity_to_dataframe(viewpoint=q))
+            dataframes.append(self.subcommunities_to_dataframe(viewpoint=q))
+        return concat(dataframes).reset_index(drop=True)
