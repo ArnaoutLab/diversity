@@ -93,7 +93,7 @@ class AbundanceFromArray(Abundance):
         """
         Parameters
         ----------
-        counts: pandas DataFrame or numpy.ndarray
+        counts:
             2-d array with one column per subcommunity, one row per species,
             containing the count of each species in the corresponding subcommunities.
         """
@@ -125,7 +125,7 @@ def make_abundance(counts: DataFrame | ndarray) -> Abundance:
 
     Parameters
     ----------
-    counts: pandas DataFrame or numpy.ndarray
+    counts:
         2-d array with one column per subcommunity, one row per species,
         containing the count of each species in the correspon
 

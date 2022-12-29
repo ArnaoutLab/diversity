@@ -155,7 +155,7 @@ class Metacommunity:
         ----------
         viewpoint:
             Viewpoint parameter for diversity measure.
-        measure: str
+        measure:
             Name of the diversity measure. Valid measures
             include: "alpha", "rho", "beta", "gamma", "normalized_alpha",
             "normalized_rho", and "normalized_beta"

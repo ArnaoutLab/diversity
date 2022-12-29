@@ -26,9 +26,7 @@ from numpy import dtype, ndarray, memmap, empty, concatenate
 from pandas import DataFrame, read_csv
 from ray import remote, get, put
 from diversity.log import LOGGER
-from diversity.utilities import (
-    get_file_delimiter,
-)
+from diversity.utilities import get_file_delimiter
 
 
 class Similarity(ABC):
