@@ -21,6 +21,8 @@ from numpy import (
     prod,
     sum as numpy_sum,
     zeros,
+    all,
+    any,
     ndarray,
 )
 
@@ -33,7 +35,7 @@ def get_file_delimiter(filepath: str) -> str:
 
     Parameters
     ----------
-    filepath: str
+    filepath:
         The filepath whose delimiter is to be determine.
 
     Returns
@@ -67,9 +69,6 @@ def __validate_power_mean_args(
     ----------
     weights, items, atol
         Same as for power_mean.
-    weight_is_nonzero
-        Boolean array of same shape as weights, indicating those whose
-        absolute value meets or exceeds atol.
 
     Raises
     ------
@@ -81,24 +80,18 @@ def __validate_power_mean_args(
     """
     if len(weights.shape) > 2:
         raise InvalidArgumentError(
-            f"Invalid weights shape for power_mean: {weights.shape}."
+            f"'weights' shape must have 1 or 2 dimensions, but 'weights' had shape {weights.shape}."
         )
     if weights.shape != items.shape:
         raise InvalidArgumentError(
-            f"Shape of weights ({weights.shape}) must be the same as"
-            f" shape fo items ({items.shape})."
+            f"Shape of 'weights' ({weights.shape}) must be the same as"
+            f" shape fo 'items' ({items.shape})."
         )
-    all_0_column = None
-    if len(weights.shape) == 1:
-        all_0_column = [not (weight_is_nonzero).any()]
-    elif len(weights.shape) == 2:
-        all_0_column = [
-            not (weight_is_nonzero[:, col]).any() for col in range(weights.shape[1])
-        ]
+    all_0_column = all(~weight_is_nonzero, axis=0)
     if any(all_0_column):
         raise InvalidArgumentError(
-            "power_mean expects at least one zero weight. Weights are"
-            " considered 0, if absolute value does not meet or exceed"
+            "Argument 'weights' must have at least one nonzero weight in each column. A weight is"
+            " considered 0 if its absolute value is greater than or equal to"
             f" configurable minimum threshold: {atol:.2e}."
         )
 
@@ -110,29 +103,28 @@ def power_mean(
 
     Parameters
     ----------
-    order: numeric
+    order:
         Exponent used for the power mean.
-    weights: numpy.ndarray
+    weights:
         The weights corresponding to items. Must be 1-d or 2-d. If 2-d,
-        each column must contain at least one wheight whose absolute
-        value meets or exceeds atol.
-    items: numpy.ndarray
+        each column must contain at least one weight whose absolute
+        value is greater than or equal to atol.
+    items:
         The elements for which the weighted power mean is computed. Must
         have same shape as weights.
-    atol: float
+    atol:
         Threshold below which weights are considered to be 0.
 
     Returns
     -------
     A numpy.ndarray of the power means of items along axis 0 using order
-    as exponent, weighing by weights. The array shape is the same as
+    as exponent, weighted by weights. The array shape is the same as
     that of weights, or items except with the 0-axis removed. In the
     case of 1-d weights and items, the result has shape (1,). When order
     is close to 0 (absolute value less than atol), less than -100, or
     greater than 100 analytical formulas for the limits at 0, -infinity,
-    or infinity are used respectively. An exception is raised if all
-    weights or a column of weights (in the 2-d case) are all too close
-    to 0.
+    or infinity are used respectively. An exception is raised if all weights
+    in a column are close to 0.
     """
     LOGGER.debug(
         "power_mean(order=%s, weights=%s, items=%s, atol=%s)",
