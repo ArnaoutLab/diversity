@@ -86,28 +86,7 @@ class Metacommunity:
             self.abundance.normalized_subcommunity_abundance
         )
 
-    def subcommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
-        """Calculates subcommunity diversity measures.
-
-        Parameters
-        ----------
-        viewpoint:
-            Viewpoint parameter for diversity measure.
-        measure: str
-            Name of the diversity measure. Valid measures
-            include: "alpha", "rho", "beta", "gamma", "normalized_alpha",
-            "normalized_rho", and "normalized_beta"
-
-        Returns
-        -------
-        A numpy array with a diversity value for each subcommunity.
-        """
-        if measure not in self.MEASURES:
-            raise (
-                ValueError(
-                    f"Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
-                )
-            )
+    def get_measure_components(self, measure):
         match measure, self.similarity:
             case "alpha" | "gamma" | "normalized_alpha", _:
                 numerator = 1
@@ -133,6 +112,31 @@ class Metacommunity:
                 denominator,
                 self.abundance.normalized_subcommunity_abundance.shape,
             )
+        return numerator, denominator
+
+    def subcommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
+        """Calculates subcommunity diversity measures.
+
+        Parameters
+        ----------
+        viewpoint:
+            Viewpoint parameter for diversity measure.
+        measure:
+            Name of the diversity measure. Valid measures
+            include: "alpha", "rho", "beta", "gamma", "normalized_alpha",
+            "normalized_rho", and "normalized_beta"
+
+        Returns
+        -------
+        A numpy array with a diversity value for each subcommunity.
+        """
+        if measure not in self.MEASURES:
+            raise (
+                ValueError(
+                    f"Invalid measure '{measure}'. Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
+                )
+            )
+        numerator, denominator = self.get_measure_components(measure)
         community_ratio = divide(
             numerator,
             denominator,
@@ -197,7 +201,7 @@ class Metacommunity:
 
         Parameters
         ----------
-        viewpoint
+        viewpoint:
             Non-negative number. Can be interpreted as the degree of
             ignorance towards rare species, where 0 treats rare species
             the same as frequent species, and infinity considers only the
