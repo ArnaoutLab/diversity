@@ -16,7 +16,7 @@ make_abundance
 from abc import ABC, abstractmethod
 from functools import cached_property
 
-from numpy import dtype, ndarray, empty
+from numpy import float64, ndarray, empty
 from pandas import DataFrame
 
 from diversity.log import LOGGER
@@ -103,7 +103,7 @@ class AbundanceFromArray(Abundance):
     @cached_property
     def subcommunity_abundance(self) -> ndarray:
         total_abundance = self.counts.sum().sum()
-        relative_abundances = empty(shape=self.counts.shape, dtype=dtype("f8"))
+        relative_abundances = empty(shape=self.counts.shape, dtype=float64)
         relative_abundances[:] = self.counts / total_abundance
         return relative_abundances
 
