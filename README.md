@@ -1,7 +1,7 @@
 # diversity: partitioned frequency- and similarity-sensitive diversity in Python
 
 ![Tests](https://github.com/Elliot-D-Hill/diversity/actions/workflows/tests.yml/badge.svg)
-[![Python 3.9](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-390/)
+[![Python 3.10 | 3.11](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue)](https://www.python.org/downloads/release/python-310/)
 
 - [diversity: partitioned frequency- and similarity-sensitive diversity in Python](#diversity-partitioned-frequency--and-similarity-sensitive-diversity-in-python)
 - [About](#about)
@@ -64,7 +64,7 @@ pip install diversity
 The examples here use aggregated data from the [Palmer penguins dataset](https://github.com/allisonhorst/palmerpenguins).
 
 ```python
-from diversity.metacommunity import Metacommunity
+from diversity import Metacommunity
 import pandas as pd
 import numpy as np
 ```
