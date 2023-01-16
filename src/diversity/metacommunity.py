@@ -86,7 +86,19 @@ class Metacommunity:
             self.abundance.normalized_subcommunity_abundance
         )
 
-    def get_measure_components(self, measure):
+    def get_measure_components(self, measure: str) -> tuple[ndarray, ndarray]:
+        """Selects the components of the community ratio based on the given measure
+
+        Parameters
+        ----------
+        measure:
+            Name of the diversity measure. Valid measures include:
+            "alpha", "rho", "beta", "gamma", "normalized_alpha",
+            "normalized_rho", and "normalized_beta"
+        Returns
+        -------
+        The numerator and denominator of the community ratio
+        """
         match measure, self.similarity:
             case "alpha" | "gamma" | "normalized_alpha", _:
                 numerator = 1
@@ -122,8 +134,8 @@ class Metacommunity:
         viewpoint:
             Viewpoint parameter for diversity measure.
         measure:
-            Name of the diversity measure. Valid measures
-            include: "alpha", "rho", "beta", "gamma", "normalized_alpha",
+            Name of the diversity measure. Valid measures include:
+            "alpha", "rho", "beta", "gamma", "normalized_alpha",
             "normalized_rho", and "normalized_beta"
 
         Returns
@@ -181,10 +193,9 @@ class Metacommunity:
         Parameters
         ----------
         viewpoint:
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
+            Affects the contribution of rare species to the diversity measure.
+            When viewpoint = 0 all species (rare or frequent) contribute equally.
+            When viewpoint = infinity, only the single most frequent species contribute.
         """
         df = DataFrame(
             {
@@ -202,10 +213,9 @@ class Metacommunity:
         Parameters
         ----------
         viewpoint:
-            Non-negative number. Can be interpreted as the degree of
-            ignorance towards rare species, where 0 treats rare species
-            the same as frequent species, and infinity considers only the
-            most frequent species.
+            Affects the contribution of rare species to the diversity measure.
+            When viewpoint = 0 all species (rare or frequent) contribute equally.
+            When viewpoint = infinity, only the single most frequent species contribute.
         """
         df = DataFrame(
             {
@@ -219,6 +229,15 @@ class Metacommunity:
         return df
 
     def to_dataframe(self, viewpoint: float | Iterable[float]):
+        """Table containing all metacommunity and subcommunity diversity values.
+
+        Parameters
+        ----------
+        viewpoint:
+            Affects the contribution of rare species to the diversity measure.
+            When viewpoint = 0 all species (rare or frequent) contribute equally.
+            When viewpoint = infinity, only the single most frequent species contribute.
+        """
         dataframes = []
         for q in atleast_1d(viewpoint):
             dataframes.append(self.metacommunity_to_dataframe(viewpoint=q))
