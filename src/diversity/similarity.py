@@ -22,11 +22,10 @@ make_similarity
 from abc import ABC, abstractmethod
 from typing import Callable
 from types import FunctionType
-from numpy import dtype, ndarray, memmap, empty, concatenate
+from numpy import ndarray, memmap, empty, concatenate, float64
 from pandas import DataFrame, read_csv
 from ray import remote, get, put
 from diversity.log import LOGGER
-from diversity.utilities import get_file_delimiter
 
 
 class Similarity(ABC):
@@ -119,11 +118,13 @@ class SimilarityFromFile(Similarity):
         self.chunk_size: int = chunk_size
 
     def weighted_similarities(self, relative_abundances: ndarray) -> ndarray:
-        weighted_similarities = empty(relative_abundances.shape, dtype=dtype("f8"))
+        weighted_similarities = empty(relative_abundances.shape, dtype=float64)
         with read_csv(
             self.similarity,
-            delimiter=get_file_delimiter(self.similarity),
             chunksize=self.chunk_size,
+            sep=None,
+            engine="python",
+            dtype=float64,
         ) as similarity_matrix_chunks:
             i = 0
             for chunk in similarity_matrix_chunks:
