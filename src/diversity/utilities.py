@@ -7,8 +7,6 @@ get_file_delimiter
 power_mean
     Calculates weighted power means.
 """
-from pathlib import Path
-from warnings import warn
 
 from numpy import (
     amax,
@@ -26,38 +24,8 @@ from numpy import (
     ndarray,
 )
 
-from diversity.exceptions import ArgumentWarning, InvalidArgumentError
+from diversity.exceptions import InvalidArgumentError
 from diversity.log import LOGGER
-
-
-def get_file_delimiter(filepath: str) -> str:
-    """Determines delimiter of file from filepath ending.
-
-    Parameters
-    ----------
-    filepath:
-        The filepath whose delimiter is to be determine.
-
-    Returns
-    -------
-    "," if the file has the csv extension and "\t" otherwise.
-
-    Notes
-    -----
-    Emits a warning if filepath has neither .csv nor .tsv ending.
-    """
-    suffix = Path(filepath).suffix
-    if suffix == ".csv":
-        return ","
-    elif suffix == ".tsv":
-        return "\t"
-    else:
-        warn(
-            f"File extension for {filepath} not recognized. Assuming"
-            " tab-delimited file.",
-            category=ArgumentWarning,
-        )
-        return "\t"
 
 
 def __validate_power_mean_args(

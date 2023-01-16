@@ -2,7 +2,7 @@
 from pytest import mark, warns
 
 from diversity.parameters import configure_arguments
-from diversity.utilities import ArgumentWarning
+from diversity.exceptions import ArgumentWarning
 
 CONFIGURE_ARGUMENTS_TEST_CASES = [
     {
