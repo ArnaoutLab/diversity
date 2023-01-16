@@ -1,6 +1,37 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "diversity_stillahill"
+authors = [
+    { name = "Elliot Hill", email = "elliot.douglas.hill@gmail.com" },
+    { name = "Jasper Braun" },
 ]
-build-backend = "setuptools.build_meta"
+version = "0.0.1"
+description = "Partitioned frequency- and similarity-sensitive diversity"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = ["numpy==1.22.0", "pandas==1.1.5", "ray==2.1.0"]
+
+[project.optional-dependencies]
+tests = ["numpy==1.22.0", "pandas==1.5.1", "pytest==7.2.0"]
+dev = [
+    "pytest==6.2.5",
+    "pytest-cov==3.0.0",
+    "tox==3.24.5",
+    "tox-gh-actions==2.9.1",
+    "black==22.3.0",
+    "numpy==1.22.0",
+    "pandas==1.5.1",
+    "ray==2.1.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/pypa/sampleproject"
+"Bug Tracker" = "https://github.com/pypa/sampleproject/issues"
