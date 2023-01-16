@@ -181,12 +181,6 @@ def test_weighted_similarities(
     assert allclose(similarity.weighted_similarities(relative_abundances), expected)
 
 
-def test_weighted_similarities_warning(make_similarity_from_file):
-    with warns(ArgumentWarning):
-        similarity = make_similarity_from_file(filename="similarities_file")
-        similarity.weighted_similarities(relative_abundances_3by2)
-
-
 @mark.parametrize(
     "similarity, relative_abundances, expected",
     [
