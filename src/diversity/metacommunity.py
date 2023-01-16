@@ -86,19 +86,28 @@ class Metacommunity:
             self.abundance.normalized_subcommunity_abundance
         )
 
-    def get_measure_components(self, measure: str) -> tuple[ndarray, ndarray]:
-        """Selects the components of the community ratio based on the given measure
+    def subcommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
+        """Calculates subcommunity diversity measures.
 
         Parameters
         ----------
+        viewpoint:
+            Viewpoint parameter for diversity measure.
         measure:
             Name of the diversity measure. Valid measures include:
             "alpha", "rho", "beta", "gamma", "normalized_alpha",
             "normalized_rho", and "normalized_beta"
+
         Returns
         -------
-        The numerator and denominator of the community ratio
+        A numpy array with a diversity value for each subcommunity.
         """
+        if measure not in self.MEASURES:
+            raise (
+                ValueError(
+                    f"Invalid measure '{measure}'. Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
+                )
+            )
         match measure, self.similarity:
             case "alpha" | "gamma" | "normalized_alpha", _:
                 numerator = 1
@@ -124,31 +133,6 @@ class Metacommunity:
                 denominator,
                 self.abundance.normalized_subcommunity_abundance.shape,
             )
-        return numerator, denominator
-
-    def subcommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
-        """Calculates subcommunity diversity measures.
-
-        Parameters
-        ----------
-        viewpoint:
-            Viewpoint parameter for diversity measure.
-        measure:
-            Name of the diversity measure. Valid measures include:
-            "alpha", "rho", "beta", "gamma", "normalized_alpha",
-            "normalized_rho", and "normalized_beta"
-
-        Returns
-        -------
-        A numpy array with a diversity value for each subcommunity.
-        """
-        if measure not in self.MEASURES:
-            raise (
-                ValueError(
-                    f"Invalid measure '{measure}'. Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
-                )
-            )
-        numerator, denominator = self.get_measure_components(measure)
         community_ratio = divide(
             numerator,
             denominator,
