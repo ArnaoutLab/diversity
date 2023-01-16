@@ -8,13 +8,13 @@ main
 from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger
+from numpy import int64
 
 from pandas import read_csv, concat
 
 from diversity.log import LOG_HANDLER, LOGGER
-from diversity.metacommunity import Metacommunity
+from diversity import Metacommunity
 from diversity.parameters import configure_arguments
-from diversity.utilities import get_file_delimiter
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
@@ -35,23 +35,14 @@ def main(args):
     LOGGER.info(" ".join([f"python{python_version()}", *argv]))
     LOGGER.debug(f"args: {args}")
 
-    delimiter = get_file_delimiter(args.input_filepath)
-    counts = read_csv(args.input_filepath, sep=delimiter, dtype=int)
+    counts = read_csv(args.input_filepath, sep=None, engine="python", dtype=int64)
     LOGGER.debug(f"data: {counts}")
-    meta = Metacommunity(
+    metacommunity = Metacommunity(
         counts=counts,
         similarity=args.similarity,
         chunk_size=args.chunk_size,
     )
-    community_views = []
-    for view in args.viewpoint:
-        community_views.append(meta.subcommunities_to_dataframe(view))
-        community_views.append(meta.metacommunity_to_dataframe(view))
-
-    community_views = concat(community_views, ignore_index=True)
-    community_views.viewpoint = community_views.viewpoint.map(
-        lambda v: format(v, ".2f")
-    )
+    community_views = metacommunity.to_dataframe(viewpoint=args.viewpoint)
     community_views.to_csv(
         args.output_filepath, sep="\t", float_format="%.4f", index=False
     )
