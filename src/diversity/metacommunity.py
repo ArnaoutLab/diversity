@@ -7,15 +7,15 @@ Metacommunity
     metacommunity and subcommunity diversity measures.
 """
 
-from functools import cached_property
 from typing import Callable, Iterable, Optional, Union
 
 from pandas import DataFrame, Index, concat
-from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray
+from numpy import atleast_1d, divide, zeros, ndarray
 
 from diversity.log import LOGGER
 from diversity.abundance import make_abundance, Abundance
 from diversity.similarity import make_similarity, Similarity
+from diversity.components import make_components, Components
 from diversity.utilities import power_mean
 
 
@@ -67,23 +67,8 @@ class Metacommunity:
         self.similarity: Similarity = make_similarity(
             similarity=similarity, X=X, chunk_size=chunk_size
         )
-
-    @cached_property
-    def metacommunity_similarity(self):
-        return self.similarity.weighted_similarities(
-            self.abundance.metacommunity_abundance
-        )
-
-    @cached_property
-    def subcommunity_similarity(self):
-        return self.similarity.weighted_similarities(
-            self.abundance.subcommunity_abundance
-        )
-
-    @cached_property
-    def normalized_subcommunity_similarity(self):
-        return self.similarity.weighted_similarities(
-            self.abundance.normalized_subcommunity_abundance
+        self.components: Components = make_components(
+            abundance=self.abundance, similarity=self.similarity
         )
 
     def subcommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
@@ -100,7 +85,7 @@ class Metacommunity:
 
         Returns
         -------
-        A numpy array with a diversity value for each subcommunity.
+        A numpy.ndarray with a diversity measure for each subcommunity.
         """
         if measure not in self.MEASURES:
             raise (
@@ -109,31 +94,8 @@ class Metacommunity:
                     f"Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
                 )
             )
-        if measure in ("alpha", "gamma", "normalized_alpha"):
-            numerator = 1
-        if self.similarity is None:
-            if measure in ("beta", "rho", "normalized_beta", "normalized_rho"):
-                numerator = self.abundance.metacommunity_abundance
-            if measure in ("alpha", "beta", "rho"):
-                denominator = self.abundance.subcommunity_abundance
-            elif measure == "gamma":
-                denominator = self.abundance.metacommunity_abundance
-            elif measure in ("normalized_alpha", "normalized_beta", "normalized_rho"):
-                denominator = self.abundance.normalized_subcommunity_abundance
-        elif isinstance(self.similarity, Similarity):
-            if measure in ("beta", "rho", "normalized_beta", "normalized_rho"):
-                numerator = self.metacommunity_similarity
-            if measure in ("alpha", "beta", "rho"):
-                denominator = self.subcommunity_similarity
-            elif measure == "gamma":
-                denominator = self.metacommunity_similarity
-            elif measure in ("normalized_alpha", "normalized_beta", "normalized_rho"):
-                denominator = self.normalized_subcommunity_similarity
-        if measure == "gamma":
-            denominator = broadcast_to(
-                denominator,
-                self.abundance.normalized_subcommunity_abundance.shape,
-            )
+        numerator = self.components.get_numerator(measure)
+        denominator = self.components.get_denominator(measure)
         community_ratio = divide(
             numerator,
             denominator,
@@ -145,7 +107,7 @@ class Metacommunity:
             self.abundance.normalized_subcommunity_abundance,
             community_ratio,
         )
-        if measure in ["beta", "normalized_beta"]:
+        if measure in {"beta", "normalized_beta"}:
             return 1 / diversity_measure
         return diversity_measure
 
@@ -163,7 +125,7 @@ class Metacommunity:
 
         Returns
         -------
-        A numpy array containing the metacommunity diversity measure.
+        A numpy.ndarray containing the metacommunity diversity measure.
         """
         subcommunity_diversity = self.subcommunity_diversity(viewpoint, measure)
         return power_mean(
@@ -173,7 +135,7 @@ class Metacommunity:
         )
 
     def subcommunities_to_dataframe(self, viewpoint: float):
-        """Table containing all subcommunity diversity values.
+        """
 
         Parameters
         ----------
@@ -181,6 +143,10 @@ class Metacommunity:
             Affects the contribution of rare species to the diversity measure.
             When viewpoint = 0 all species (rare or frequent) contribute equally.
             When viewpoint = infinity, only the single most frequent species contribute.
+
+        Returns
+        -------
+        A pandas.DataFrame containing all subcommunity diversity measures for a given viewpoint
         """
         df = DataFrame(
             {
@@ -201,6 +167,10 @@ class Metacommunity:
             Affects the contribution of rare species to the diversity measure.
             When viewpoint = 0 all species (rare or frequent) contribute equally.
             When viewpoint = infinity, only the single most frequent species contributes.
+
+        Returns
+        -------
+        A pandas.DataFrame containing all metacommunity diversity measures for a given viewpoint
         """
         df = DataFrame(
             {
@@ -222,6 +192,10 @@ class Metacommunity:
             Affects the contribution of rare species to the diversity measure.
             When viewpoint = 0 all species (rare or frequent) contribute equally.
             When viewpoint = infinity, only the single most frequent species contributes.
+
+        Returns
+        -------
+        A pandas.DataFrame containing all metacommunity and subcommunity diversity measures for a given viewpoint
         """
         dataframes = []
         for q in atleast_1d(viewpoint):

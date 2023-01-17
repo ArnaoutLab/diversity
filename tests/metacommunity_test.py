@@ -284,29 +284,6 @@ def test_subcommunity_diversity_invalid_measure():
         )
 
 
-@mark.parametrize("data", metacommunity_data[2:])
-def test_metacommunity_similarity(data):
-    metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
-    assert allclose(
-        metacommunity.metacommunity_similarity, data.metacommunity_similarity
-    )
-
-
-@mark.parametrize("data", metacommunity_data[2:])
-def test_subcommunity_similarity(data):
-    metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
-    assert allclose(metacommunity.subcommunity_similarity, data.subcommunity_similarity)
-
-
-@mark.parametrize("data", metacommunity_data[2:])
-def test_normalized_subcommunity_similarity(data):
-    metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
-    assert allclose(
-        metacommunity.normalized_subcommunity_similarity,
-        data.normalized_subcommunity_similarity,
-    )
-
-
 @mark.parametrize("data", metacommunity_data)
 def test_subcommunities_to_dataframe(data):
     metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
