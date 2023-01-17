@@ -1,7 +1,6 @@
 """Tests for diversity.metacommunity."""
 
 from dataclasses import dataclass
-from types import NoneType
 from numpy import (
     allclose,
     array,
@@ -249,7 +248,7 @@ metacommunity_data = (
 
 @mark.parametrize(
     "data, expected",
-    zip(metacommunity_data, (NoneType, NoneType, Similarity, Similarity)),
+    zip(metacommunity_data, (type(None), type(None), Similarity, Similarity)),
 )
 def test_metacommunity(data, expected):
     metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
