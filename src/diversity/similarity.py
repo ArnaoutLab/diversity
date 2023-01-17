@@ -21,8 +21,7 @@ make_similarity
 """
 from abc import ABC, abstractmethod
 from typing import Callable
-from types import FunctionType
-from numpy import ndarray, memmap, empty, concatenate, float64
+from numpy import ndarray, empty, concatenate, float64
 from pandas import DataFrame, read_csv
 from ray import remote, get, put
 from diversity.log import LOGGER
@@ -74,7 +73,7 @@ class SimilarityFromDataFrame(Similarity):
 class SimilarityFromArray(Similarity):
     """Implements Similarity using similarities stored in a numpy ndarray."""
 
-    def __init__(self, similarity: ndarray | memmap) -> None:
+    def __init__(self, similarity: ndarray) -> None:
         """
         similarity:
             A pairwise similarity matrix of shape (n_species, n_species) where
@@ -194,7 +193,9 @@ class SimilarityFromFunction(Similarity):
 
 
 def make_similarity(
-    similarity: DataFrame | ndarray | str, X: ndarray = None, chunk_size: int = 100
+    similarity: DataFrame | ndarray | str | Callable,
+    X: ndarray = None,
+    chunk_size: int = 100,
 ) -> Similarity:
     """Initializes a concrete subclass of Similarity.
 
@@ -221,22 +222,19 @@ def make_similarity(
         X,
         chunk_size,
     )
-    match similarity:
-        case None:
-            return None
-        case DataFrame():
-            return SimilarityFromDataFrame(similarity=similarity)
-        case ndarray() | memmap():
-            return SimilarityFromArray(similarity=similarity)
-        case str():
-            return SimilarityFromFile(similarity=similarity, chunk_size=chunk_size)
-        case FunctionType():
-            return SimilarityFromFunction(
-                similarity=similarity, X=X, chunk_size=chunk_size
-            )
-        case _:
-            raise NotImplementedError(
-                f"Type {type(similarity)} is not supported for argument 'similarity'."
-                "Valid types include pandas.DataFram, numpy.ndarray, numpy.memmap,"
-                " str, or typing.Callable"
-            )
+    if similarity is None:
+        return None
+    elif isinstance(similarity, DataFrame):
+        return SimilarityFromDataFrame(similarity=similarity)
+    elif isinstance(similarity, ndarray):
+        return SimilarityFromArray(similarity=similarity)
+    elif isinstance(similarity, str):
+        return SimilarityFromFile(similarity=similarity, chunk_size=chunk_size)
+    elif isinstance(similarity, Callable):
+        return SimilarityFromFunction(similarity=similarity, X=X, chunk_size=chunk_size)
+    else:
+        raise NotImplementedError(
+            f"Type {type(similarity)} is not supported for argument 'similarity'."
+            "Valid types include pandas.DataFram, numpy.ndarray, numpy.memmap,"
+            " str, or typing.Callable"
+        )
