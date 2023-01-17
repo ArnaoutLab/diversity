@@ -1,7 +1,7 @@
 # diversity: partitioned frequency- and similarity-sensitive diversity in Python
 
 ![Tests](https://github.com/Elliot-D-Hill/diversity/actions/workflows/tests.yml/badge.svg)
-[![Python 3.8 | 3.9 | 3.10 | 3.11](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue)](https://www.python.org/downloads/release/python-380/)
+[![Python 3.8 | 3.9 | 3.10 | 3.11](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue)](https://www.python.org/downloads/release/python-380/)
 
 - [diversity: partitioned frequency- and similarity-sensitive diversity in Python](#diversity-partitioned-frequency--and-similarity-sensitive-diversity-in-python)
 - [About](#about)
