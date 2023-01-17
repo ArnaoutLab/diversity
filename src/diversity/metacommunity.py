@@ -112,7 +112,7 @@ class Metacommunity:
             )
         if measure in ("alpha", "gamma", "normalized_alpha"):
             numerator = 1
-        if isinstance(self.similarity, NoneType):
+        if self.similarity is None:
             if measure in ("beta", "rho", "normalized_beta", "normalized_rho"):
                 numerator = self.abundance.metacommunity_abundance
             if measure in ("alpha", "beta", "rho"):

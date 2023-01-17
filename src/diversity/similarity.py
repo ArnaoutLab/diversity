@@ -21,7 +21,6 @@ make_similarity
 """
 from abc import ABC, abstractmethod
 from typing import Callable
-from types import NoneType
 from numpy import ndarray, empty, concatenate, float64
 from pandas import DataFrame, read_csv
 from ray import remote, get, put
@@ -223,7 +222,7 @@ def make_similarity(
         X,
         chunk_size,
     )
-    if isinstance(similarity, NoneType):
+    if similarity is None:
         return None
     elif isinstance(similarity, DataFrame):
         return SimilarityFromDataFrame(similarity=similarity)
