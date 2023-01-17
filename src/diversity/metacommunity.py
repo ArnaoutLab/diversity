@@ -8,10 +8,10 @@ Metacommunity
 """
 
 from functools import cached_property
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Optional, Union
 
 from pandas import DataFrame, Index, concat
-from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray, memmap
+from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray
 
 from diversity.log import LOGGER
 from diversity.abundance import make_abundance, Abundance
@@ -34,10 +34,10 @@ class Metacommunity:
 
     def __init__(
         self,
-        counts: DataFrame | ndarray,
-        similarity: DataFrame | ndarray | memmap | str | Callable | None = None,
-        X: ndarray | None = None,
-        chunk_size: int | None = 100,
+        counts: Union[DataFrame, ndarray],
+        similarity: Union[DataFrame, ndarray, str, Callable, None] = None,
+        X: Optional[ndarray] = None,
+        chunk_size: Optional[int] = 100,
     ) -> None:
         """
         Parameters
@@ -213,7 +213,7 @@ class Metacommunity:
         df.reset_index(inplace=True)
         return df
 
-    def to_dataframe(self, viewpoint: float | Iterable[float]):
+    def to_dataframe(self, viewpoint: Union[float, Iterable[float]]):
         """Table containing all metacommunity and subcommunity diversity values.
 
         Parameters

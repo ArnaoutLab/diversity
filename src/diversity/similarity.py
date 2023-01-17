@@ -20,7 +20,7 @@ make_similarity
     Chooses and creates instances of concrete Similarity implementations.
 """
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, Union
 from numpy import ndarray, empty, concatenate, float64
 from pandas import DataFrame, read_csv
 from ray import remote, get, put
@@ -193,7 +193,7 @@ class SimilarityFromFunction(Similarity):
 
 
 def make_similarity(
-    similarity: DataFrame | ndarray | str | Callable,
+    similarity: Union[DataFrame, ndarray, str, Callable],
     X: ndarray = None,
     chunk_size: int = 100,
 ) -> Similarity:

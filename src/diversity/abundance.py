@@ -15,6 +15,7 @@ make_abundance
 """
 from abc import ABC, abstractmethod
 from functools import cached_property
+from typing import Union
 
 from numpy import float64, ndarray, empty
 from pandas import DataFrame
@@ -89,7 +90,7 @@ class AbundanceFromArray(Abundance):
     abundances at the same time.
     """
 
-    def __init__(self, counts: DataFrame | ndarray) -> None:
+    def __init__(self, counts: Union[DataFrame, ndarray]) -> None:
         """
         Parameters
         ----------
@@ -120,7 +121,7 @@ class AbundanceFromArray(Abundance):
         return self.subcommunity_abundance / self.subcommunity_normalizing_constants
 
 
-def make_abundance(counts: DataFrame | ndarray) -> Abundance:
+def make_abundance(counts: Union[DataFrame, ndarray]) -> Abundance:
     """Initializes a concrete subclass of Abundance.
 
     Parameters
@@ -134,7 +135,7 @@ def make_abundance(counts: DataFrame | ndarray) -> Abundance:
     An instance of a concrete subclass of Abundance.
     """
     LOGGER.debug("make_abundance(counts=%s)", counts)
-    if isinstance(counts, DataFrame | ndarray):
+    if isinstance(counts, Union[DataFrame, ndarray]):
         return AbundanceFromArray(counts=counts)
     else:
         raise NotImplementedError(
