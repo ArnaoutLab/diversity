@@ -200,7 +200,7 @@ class Metacommunity:
         viewpoint:
             Affects the contribution of rare species to the diversity measure.
             When viewpoint = 0 all species (rare or frequent) contribute equally.
-            When viewpoint = infinity, only the single most frequent species contribute.
+            When viewpoint = infinity, only the single most frequent species contributes.
         """
         df = DataFrame(
             {
@@ -221,7 +221,7 @@ class Metacommunity:
         viewpoint:
             Affects the contribution of rare species to the diversity measure.
             When viewpoint = 0 all species (rare or frequent) contribute equally.
-            When viewpoint = infinity, only the single most frequent species contribute.
+            When viewpoint = infinity, only the single most frequent species contributes.
         """
         dataframes = []
         for q in atleast_1d(viewpoint):
