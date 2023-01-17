@@ -8,7 +8,6 @@ Metacommunity
 """
 
 from functools import cached_property
-from types import NoneType
 from typing import Callable, Iterable
 
 from pandas import DataFrame, Index, concat
