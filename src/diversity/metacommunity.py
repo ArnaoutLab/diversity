@@ -105,29 +105,28 @@ class Metacommunity:
         if measure not in self.MEASURES:
             raise (
                 ValueError(
-                    f"Invalid measure '{measure}'. "
-                    f"Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
+                    f"Invalid measure '{measure}'. Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
                 )
             )
-        if measure in ("alpha", "gamma", "normalized_alpha"):
-            numerator = 1
-        if self.similarity is None:
-            if measure in ("beta", "rho", "normalized_beta", "normalized_rho"):
+        match measure, self.similarity:
+            case "alpha" | "gamma" | "normalized_alpha", _:
+                numerator = 1
+            case "beta" | "rho" | "normalized_beta" | "normalized_rho", None:
                 numerator = self.abundance.metacommunity_abundance
-            if measure in ("alpha", "beta", "rho"):
-                denominator = self.abundance.subcommunity_abundance
-            elif measure == "gamma":
-                denominator = self.abundance.metacommunity_abundance
-            elif measure in ("normalized_alpha", "normalized_beta", "normalized_rho"):
-                denominator = self.abundance.normalized_subcommunity_abundance
-        elif isinstance(self.similarity, Similarity):
-            if measure in ("beta", "rho", "normalized_beta", "normalized_rho"):
+            case "beta" | "rho" | "normalized_beta" | "normalized_rho", Similarity():
                 numerator = self.metacommunity_similarity
-            if measure in ("alpha", "beta", "rho"):
+        match measure, self.similarity:
+            case "alpha" | "beta" | "rho", None:
+                denominator = self.abundance.subcommunity_abundance
+            case "gamma", None:
+                denominator = self.abundance.metacommunity_abundance
+            case "normalized_alpha" | "normalized_beta" | "normalized_rho", None:
+                denominator = self.abundance.normalized_subcommunity_abundance
+            case "alpha" | "beta" | "rho", Similarity():
                 denominator = self.subcommunity_similarity
-            elif measure == "gamma":
+            case "gamma", Similarity():
                 denominator = self.metacommunity_similarity
-            elif measure in ("normalized_alpha", "normalized_beta", "normalized_rho"):
+            case "normalized_alpha" | "normalized_beta" | "normalized_rho", Similarity():
                 denominator = self.normalized_subcommunity_similarity
         if measure == "gamma":
             denominator = broadcast_to(
