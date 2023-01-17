@@ -135,7 +135,7 @@ def make_abundance(counts: Union[DataFrame, ndarray]) -> Abundance:
     An instance of a concrete subclass of Abundance.
     """
     LOGGER.debug("make_abundance(counts=%s)", counts)
-    if isinstance(counts, Union[DataFrame, ndarray]):
+    if isinstance(counts, (DataFrame, ndarray)):
         return AbundanceFromArray(counts=counts)
     else:
         raise NotImplementedError(
