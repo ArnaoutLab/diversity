@@ -10,7 +10,7 @@ Metacommunity
 from typing import Callable, Iterable, Optional, Union
 
 from pandas import DataFrame, Index, concat
-from numpy import atleast_1d, divide, zeros, ndarray
+from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray
 
 from diversity.log import LOGGER
 from diversity.abundance import make_abundance, Abundance
@@ -94,8 +94,13 @@ class Metacommunity:
                     f"Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
                 )
             )
-        numerator = self.components.get_numerator(measure)
-        denominator = self.components.get_denominator(measure)
+        numerator = self.components.get_numerator(measure=measure)
+        denominator = self.components.get_denominator(measure=measure)
+        if measure == "gamma":
+            denominator = broadcast_to(
+                denominator,
+                self.abundance.normalized_subcommunity_abundance.shape,
+            )
         community_ratio = divide(
             numerator,
             denominator,
@@ -103,9 +108,9 @@ class Metacommunity:
             where=denominator != 0,
         )
         diversity_measure = power_mean(
-            1 - viewpoint,
-            self.abundance.normalized_subcommunity_abundance,
-            community_ratio,
+            order=1 - viewpoint,
+            weights=self.abundance.normalized_subcommunity_abundance,
+            items=community_ratio,
         )
         if measure in {"beta", "normalized_beta"}:
             return 1 / diversity_measure
