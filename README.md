@@ -102,7 +102,7 @@ metacommunity = Metacommunity(counts)
 
 ## Similarity-sensitive metacommunity from a dataframe or array
 
-For similarity-sensitive diversity, we must also supply a species similarity matrix to `Metacommunity` in addition to the counts table. The columns and rows of the similarity matrix must be in the same order as the rows of the counts table for valid results.
+For similarity-sensitive diversity, we must also supply a species similarity matrix to `Metacommunity` in addition to the counts table. The rows and columns of the similarity matrix must be in the same order as the rows of the counts table for valid results.
 
 ```python
 similarity_matrix = pd.DataFrame(
@@ -150,7 +150,7 @@ metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk
 
 ## Diversity measures
  
-Once a `Metacommunty` object has been initialized, we can calculate all diversity measures for the metacommunity and each subcommunity for a set of viewpoints. Here we calculate similarity-sensitive species richness, Shannon index, Simpson index, and Berger-Parker index (viewpoint = 0, 1, 2, and infinity, respectively).
+Once a `Metacommunty` object has been initialized, we can calculate all diversity measures for the metacommunity and each subcommunity for a set of viewpoints. Here we calculate the similarity-sensitive species richness, Shannon index, Simpson index, and Berger-Parker index (viewpoint = 0, 1, 2, and infinity, respectively) for the penguin metacommunity.
 
 ```python
 metacommunity.to_dataframe(viewpoint=[0, 1, 2, np.inf])
@@ -224,11 +224,11 @@ Some diversity indices compare the diversities of subsets of a community with re
 
 ## Frequency-sensitive diversity
 
-[In 1973, Hill introduced a framework](https://doi.org/10.2307/1934352) which unifies commonly used diversity indices into a single parameterized family of diversity measures. The so-called ***viewpoint parameter*** can be thought of as the sensitivity to rare species. At one end of the spectrum, when the viewpoint parameter is set to 0, species frequency is ignored entirely, and only the number of distinct species matters, while at the other end of the spectrum, when the viewpoint parameter is set to ∞, only the highest frequency species in a community is considered by the corresponding diversity measure. Common diversity measures such as ***species richness***, ***Shannon entropy***, the ***Gini-Simpson index***, and the ***Berger-Parker index*** have simple and natural relationships with Hill's indices at different values for the viewpoint parameter (0, 1, 2, ∞, respectively).
+[In 1973, Hill introduced a framework](https://doi.org/10.2307/1934352) which unifies commonly used diversity indices into a single parameterized family of diversity measures. The so-called ***viewpoint parameter*** can be thought of as the sensitivity to rare species. At one end of the spectrum, when the viewpoint parameter is set to 0, species frequency is ignored entirely, and only the number of distinct species matters, while at the other end of the spectrum, when the viewpoint parameter is set to $\infty$, only the highest frequency species in a community is considered by the corresponding diversity measure. Common diversity measures such as ***species richness***, ***Shannon entropy***, the ***Gini-Simpson index***, and the ***Berger-Parker index*** have simple and natural relationships with Hill's indices at different values for the viewpoint parameter (0, 1, 2, ∞, respectively).
 
 ## Similarity-sensitive diversity
 
-In addition to being sensitive to frequency, it often makes sense to account for similarity in a diversity measure. For example, a community of 2 different types of rodents, may be considered less diverse than a community where one of the rodent species was replaced by the same number of individuals of a bird species. [Reeve et al.](https://arxiv.org/abs/1404.6520) and [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1) present a general mathematically rigorous way of incorporating similarity measures into Hill's framework. The result is a family of similarity-sensitive diversity indices parameterized by the same viewpoint parameter as well as the similarity function used for the species in the meta- or subcommunities of interest. These similarity-sensitive diversity measures account for both the pairwise similarity between all species and their frequencies.
+In addition to being sensitive to frequency, it often makes sense to account for similarity in a diversity measure. For example, a community of two different types of rodents, may be considered less diverse than a community where one of the rodent species was replaced by the same number of individuals of a bird species. [Reeve et al.](https://arxiv.org/abs/1404.6520) and [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1) present a general mathematically rigorous way of incorporating similarity measures into Hill's framework. The result is a family of similarity-sensitive diversity indices parameterized by the same viewpoint parameter as well as the similarity function used for the species in the meta- or subcommunities of interest. These similarity-sensitive diversity measures account for both the pairwise similarity between all species and their frequencies.
 
 ## One package to calculate them all
 
