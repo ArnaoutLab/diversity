@@ -47,9 +47,13 @@ The `diversity` package calculates partitioned frequency- and similarity-sensiti
 
 
 **Supported diversity indices**: 
-- Species richness, Shannon index, Simpson index, Berger-Parker index, and anything in between (Hill numbers).
+- Species richness (viewpoint = 0)
+- Shannon index (viewpoint = 1)
+- Simpson index (viewpoint = 2)
+- Berger-Parker index (viewpoint = $\infty$)
+- Hill numbers ($-\infty \le$ viewpoint $\le \infty$)
 
-For a more rigorous description of the diversity measures and indices `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
+For a more rigorous description of the diversity measures `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 
 # Installation
 
@@ -94,7 +98,7 @@ counts = pd.DataFrame(
 
 Note: we include an index with the species names here for illustration, but in general, an index is not required for the counts (or similarity matrix).
 
-Next we create a `Metacommunity` object from the counts table.
+Next we create a `Metacommunity` object by passing it the counts table.
 
 ```python
 metacommunity = Metacommunity(counts)
@@ -102,7 +106,7 @@ metacommunity = Metacommunity(counts)
 
 ## Similarity-sensitive metacommunity from a dataframe or array
 
-For similarity-sensitive diversity, we must also supply a species similarity matrix to `Metacommunity` in addition to the counts table. The columns and rows of the similarity matrix must be in the same order as the rows of the counts table for valid results.
+For similarity-sensitive diversity, we must also supply a species similarity matrix to `Metacommunity` in addition to the counts table. The rows and columns of the similarity matrix must be in the same order as the rows of the counts table for valid results.
 
 ```python
 similarity_matrix = pd.DataFrame(
@@ -150,10 +154,10 @@ metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk
 
 ## Diversity measures
  
-Once a `Metacommunty` object has been initialized, we can calculate all diversity measures for the metacommunity and each subcommunity for a set of viewpoints. Here we calculate similarity-sensitive species richness, Shannon index, Simpson index, and Berger-Parker index (viewpoint = 0, 1, 2, and infinity, respectively).
+Once a `Metacommunty` object has been initialized, we can calculate all diversity measures for the metacommunity and each subcommunity for a set of viewpoints.
 
 ```python
-metacommunity.to_dataframe(viewpoint=[0, 1, 2, np.inf])
+metacommunity.to_dataframe(viewpoint=[0, 1, np.inf])
 ```
 
 |      | community     | viewpoint | alpha |  rho | beta | gamma | normalized_alpha | normalized_rho | normalized_beta |
@@ -166,10 +170,6 @@ metacommunity.to_dataframe(viewpoint=[0, 1, 2, np.inf])
 |    5 | Biscoe        |      1.00 |  3.03 | 1.60 | 0.62 |  1.89 |             1.49 |           0.79 |            1.27 |
 |    6 | Dream         |      1.00 |  4.01 | 2.03 | 0.49 |  1.98 |             1.48 |           0.75 |            1.34 |
 |    7 | Torgersen     |      1.00 |  7.11 | 4.18 | 0.24 |  1.70 |             1.00 |           0.59 |            1.70 |
-|    8 | metacommunity |      2.00 |  3.58 | 1.85 | 0.48 |  1.88 |             1.37 |           0.72 |            1.39 |
-|    9 | Biscoe        |      2.00 |  2.93 | 1.53 | 0.66 |  1.89 |             1.44 |           0.75 |            1.33 |
-|   10 | Dream         |      2.00 |  4.01 | 2.00 | 0.50 |  1.96 |             1.48 |           0.74 |            1.36 |
-|   11 | Torgersen     |      2.00 |  7.11 | 4.18 | 0.24 |  1.70 |             1.00 |           0.59 |            1.70 |
 |   12 | metacommunity |       inf |  2.57 | 1.31 | 0.24 |  1.70 |             1.00 |           0.59 |            1.55 |
 |   13 | Biscoe        |       inf |  2.57 | 1.31 | 0.76 |  1.70 |             1.26 |           0.64 |            1.55 |
 |   14 | Dream         |       inf |  3.83 | 1.72 | 0.58 |  1.70 |             1.41 |           0.63 |            1.58 |
