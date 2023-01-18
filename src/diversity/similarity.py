@@ -56,7 +56,7 @@ class Similarity(ABC):
 class SimilarityFromDataFrame(Similarity):
     """Implements Similarity using similarities stored in pandas dataframe."""
 
-    def __init__(self, similarity: DataFrame):
+    def __init__(self, similarity: DataFrame) -> None:
         """
         similarity:
             Similarities between species. Columns and index must be

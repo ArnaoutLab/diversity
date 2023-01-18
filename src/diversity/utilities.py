@@ -53,7 +53,7 @@ def __validate_power_mean_args(
     if weights.shape != items.shape:
         raise InvalidArgumentError(
             f"Shape of 'weights' ({weights.shape}) must be the same as"
-            f" shape fo 'items' ({items.shape})."
+            f" shape of 'items' ({items.shape})."
         )
     all_0_column = all(~weight_is_nonzero, axis=0)
     if any(all_0_column):
