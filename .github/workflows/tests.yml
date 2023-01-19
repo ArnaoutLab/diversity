@@ -34,7 +34,7 @@ jobs:
       run: tox
     - name: Creating coverage folder
       run: |
-        mkdir -p coverage
+        mkdir -p .coverage
     - name: Coverage Bagdge
       uses: tj-actions/coverage-badge-py@v1.8
       with:
