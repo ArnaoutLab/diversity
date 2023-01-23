@@ -128,7 +128,7 @@ class AbundanceFromDataFrame(Abundance):
         return counts / counts.sum()
 
 
-class AbundanceFromSparseMatrix(Abundance):
+class AbundanceFromSparseArray(Abundance):
     """Calculates metacommuntiy and subcommunity relative abundance
     components from a pandas.DataFrame containing species counts
     """

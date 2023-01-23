@@ -8,7 +8,7 @@ from scipy.sparse import csr_array, spmatrix
 from diversity.abundance import (
     Abundance,
     AbundanceFromDataFrame,
-    AbundanceFromSparseMatrix,
+    AbundanceFromSparseArray,
     make_abundance,
 )
 
@@ -161,7 +161,7 @@ class AbundanceOneSubcommunity:
     [
         (counts_array_3by2, Abundance),
         (counts_dataframe_3by2, AbundanceFromDataFrame),
-        (counts_sparse_array_3by2, AbundanceFromSparseMatrix),
+        (counts_sparse_array_3by2, AbundanceFromSparseArray),
     ],
 )
 def test_make_abundance(counts, expected):
