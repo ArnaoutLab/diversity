@@ -55,9 +55,9 @@ similarity_filecontent_3by3_tsv = (
 similarities_filecontents_3by3_csv = (
     "species_1,species_2,species_3\n" "1.0,0.5,0.1\n" "0.5,1.0,0.2\n" "0.1,0.2,1.0\n"
 )
-relative_abundances_3by1 = array([[1 / 1000], [1 / 10], [10]])
-relative_abundances_3by2 = array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]])
-relative_abundances_3by2_2 = array(
+relative_abundance_3by1 = array([[1 / 1000], [1 / 10], [10]])
+relative_abundance_3by2 = array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]])
+relative_abundance_3by2_2 = array(
     [
         [0.7, 0.3],
         [0.1, 0.3],
@@ -166,81 +166,87 @@ def make_similarity_from_file(tmp_path):
 
 
 @mark.parametrize(
-    "relative_abundances, expected, kwargs",
+    "relative_abundance, expected, kwargs",
     [
-        (relative_abundances_3by2, weighted_similarities_3by2_1, {}),
-        (relative_abundances_3by2, weighted_similarities_3by2_1, {"chunk_size": 2}),
+        (relative_abundance_3by2, weighted_similarities_3by2_1, {}),
+        (relative_abundance_3by2, weighted_similarities_3by2_1, {"chunk_size": 2}),
         (
-            relative_abundances_3by2,
+            relative_abundance_3by2,
             weighted_similarities_3by2_1,
             {
                 "filename": "similarity_matrix.csv",
                 "filecontent": similarities_filecontents_3by3_csv,
             },
         ),
-        (relative_abundances_3by1, weighted_similarities_3by1_1, {}),
+        (relative_abundance_3by1, weighted_similarities_3by1_1, {}),
     ],
 )
 def test_weighted_similarities(
-    relative_abundances, expected, kwargs, make_similarity_from_file
+    relative_abundance, expected, kwargs, make_similarity_from_file
 ):
     similarity = make_similarity_from_file(**kwargs)
-    assert allclose(similarity.weighted_similarities(relative_abundances), expected)
+    assert allclose(similarity.weighted_similarities(relative_abundance), expected)
 
 
 @mark.parametrize(
-    "similarity, relative_abundances, expected",
+    "similarity, relative_abundance, expected",
     [
         (
             similarity_dataframe_3by3,
-            relative_abundances_3by2,
+            relative_abundance_3by2,
             weighted_similarities_3by2_1,
         ),
         (
             similarity_dataframe_3by3,
-            relative_abundances_3by1,
+            relative_abundance_3by1,
             weighted_similarities_3by1_1,
         ),
         (
             similarity_array_3by3_1,
-            relative_abundances_3by1,
+            relative_abundance_3by1,
             weighted_similarities_3by1_1,
         ),
         (
             similarity_array_3by3_2,
-            relative_abundances_3by2_2,
+            relative_abundance_3by2_2,
             weighted_similarities_3by2_2,
         ),
     ],
 )
-def test_weighted_similarities_from_array(similarity, relative_abundances, expected):
+def test_weighted_similarities_from_array(similarity, relative_abundance, expected):
     similarity = make_similarity(similarity=similarity)
-    weighted_similarities = similarity.weighted_similarities(relative_abundances)
+    weighted_similarities = similarity.weighted_similarities(
+        relative_abundance=relative_abundance
+    )
     assert allclose(weighted_similarities, expected)
 
 
 def test_weighted_similarities_from_memmap(memmapped_similarity_matrix):
     similarity = make_similarity(similarity=memmapped_similarity_matrix)
-    weighted_similarities = similarity.weighted_similarities(relative_abundances_3by2)
+    weighted_similarities = similarity.weighted_similarities(
+        relative_abundance=relative_abundance_3by2
+    )
     assert allclose(weighted_similarities, weighted_similarities_3by2_1)
 
 
 @mark.parametrize(
-    "relative_abundances, X, chunk_size, expected",
+    "relative_abundance, X, chunk_size, expected",
     [
-        (relative_abundances_3by2, X_3by2, 2, weighted_similarities_3by2_3),
-        (relative_abundances_3by2, X_3by1, 1, weighted_similarities_3by2_4),
-        (relative_abundances_3by1, X_3by2, 4, weighted_similarities_3by1_2),
-        (relative_abundances_3by1, X_3by2, 2, weighted_similarities_3by1_2),
+        (relative_abundance_3by2, X_3by2, 2, weighted_similarities_3by2_3),
+        (relative_abundance_3by2, X_3by1, 1, weighted_similarities_3by2_4),
+        (relative_abundance_3by1, X_3by2, 4, weighted_similarities_3by1_2),
+        (relative_abundance_3by1, X_3by2, 2, weighted_similarities_3by1_2),
     ],
 )
 def test_weighted_similarities_from_function(
-    ray_fix, relative_abundances, similarity_function, X, chunk_size, expected
+    ray_fix, relative_abundance, similarity_function, X, chunk_size, expected
 ):
     similarity = make_similarity(
         similarity=similarity_function, X=X, chunk_size=chunk_size
     )
-    weighted_similarities = similarity.weighted_similarities(relative_abundances)
+    weighted_similarities = similarity.weighted_similarities(
+        relative_abundance=relative_abundance
+    )
     assert allclose(weighted_similarities, expected)
 
 
@@ -249,9 +255,9 @@ def test_weighted_similarity_chunk(ray_fix, similarity_function):
         weighted_similarity_chunk.remote(
             similarity=similarity_function,
             X=X_3by2,
-            relative_abundances=relative_abundances_3by2,
+            relative_abundance=relative_abundance_3by2,
             chunk_size=3,
-            i=0,
+            chunk_index=0,
         )
     )
     assert allclose(chunk, weighted_similarities_3by2_3)
