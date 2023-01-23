@@ -13,14 +13,21 @@ from pandas import DataFrame, Index, concat
 from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray
 
 from diversity.log import LOGGER
-from diversity.abundance import make_abundance, Abundance
-from diversity.similarity import make_similarity, Similarity
-from diversity.components import make_components, Components
+from diversity.abundance import make_abundance
+from diversity.similarity import make_similarity
+from diversity.components import make_components
 from diversity.utilities import power_mean
 
 
 class Metacommunity:
-    """Creates diversity components and calculates diversity measures."""
+    """Creates diversity components and calculates diversity measures.
+
+    A community consists of a set of species, each of which may appear
+    any (non-negative) number of times. A metacommunity consists of one
+    or more subcommunities and can be represented by the number of
+    appearances of each species in each of the subcommunities that the
+    species appears in.
+    """
 
     MEASURES = (
         "alpha",
@@ -43,18 +50,22 @@ class Metacommunity:
         Parameters
         ----------
         counts:
-            2-d array with one column per subcommunity, one row per species,
-            containing the count of each species in the corresponding subcommunities.
+            2-d array with one column per subcommunity, one row per
+            species, containing the count of each species in the
+            corresponding subcommunities.
         similarity:
-            For similarity-sensitive diversity measures. Use DataFrame or ndarray if the
-            similarity matrix fits in memory. Use a numpy memmap or a filepath if the similarity matrix
-            fits on the hard drive disk. Use a Callable function if the similarity matrix does not fit
-            on the disk.
+            For similarity-sensitive diversity measures. Use DataFrame
+            or ndarray if the similarity matrix fits in memory. Use a
+            numpy memmap or a filepath if the similarity matrix fits on
+            the hard drive disk. Use a Callable function if the
+            similarity matrix does not fit on the disk.
         X:
-            An array, where each pair of rows will be passed to 'similarity' if it is Callable.
+            An array, where each pair of rows will be passed to
+            'similarity' if it is Callable.
         chunk_size:
-            The number of file lines to process at a time when the similarity matrix
-            is read from a file. Larger chunk sizes are faster, but take more memory.
+            The number of file lines to process at a time when the
+            similarity matrix is read from a file. Larger chunk sizes
+            are faster, but take more memory.
         """
         LOGGER.debug(
             "make_metacommunity(counts=%s, similarity=%s, X=%s, chunk_size=%s",
@@ -63,11 +74,11 @@ class Metacommunity:
             X,
             chunk_size,
         )
-        self.abundance: Abundance = make_abundance(counts=counts)
-        self.similarity: Similarity = make_similarity(
+        self.abundance = make_abundance(counts=counts)
+        self.similarity = make_similarity(
             similarity=similarity, X=X, chunk_size=chunk_size
         )
-        self.components: Components = make_components(
+        self.components = make_components(
             abundance=self.abundance, similarity=self.similarity
         )
 
@@ -94,8 +105,8 @@ class Metacommunity:
                     f"Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
                 )
             )
-        numerator = self.components.get_numerator(measure=measure)
-        denominator = self.components.get_denominator(measure=measure)
+        numerator = self.components.numerators[measure]
+        denominator = self.components.denominators[measure]
         if measure == "gamma":
             denominator = broadcast_to(
                 denominator,
@@ -124,8 +135,8 @@ class Metacommunity:
         viewpoint:
             Viewpoint parameter for diversity measure.
         measure:
-            Name of the diversity measure. Valid measures
-            include: "alpha", "rho", "beta", "gamma", "normalized_alpha",
+            Name of the diversity measure. Valid measures include:
+            "alpha", "rho", "beta", "gamma", "normalized_alpha",
             "normalized_rho", and "normalized_beta"
 
         Returns
@@ -145,13 +156,15 @@ class Metacommunity:
         Parameters
         ----------
         viewpoint:
-            Affects the contribution of rare species to the diversity measure.
-            When viewpoint = 0 all species (rare or frequent) contribute equally.
-            When viewpoint = infinity, only the single most frequent species contribute.
+            Affects the contribution of rare species to the diversity
+            measure. When viewpoint = 0 all species (rare or frequent)
+            contribute equally. When viewpoint = infinity, only the
+            single most frequent species contribute.
 
         Returns
         -------
-        A pandas.DataFrame containing all subcommunity diversity measures for a given viewpoint
+        A pandas.DataFrame containing all subcommunity diversity
+        measures for a given viewpoint
         """
         df = DataFrame(
             {
@@ -160,7 +173,7 @@ class Metacommunity:
             }
         )
         df.insert(0, "viewpoint", viewpoint)
-        df.insert(0, "community", self.abundance.counts.columns)
+        df.insert(0, "community", self.abundance.subcommunities_names)
         return df
 
     def metacommunity_to_dataframe(self, viewpoint: float):
@@ -169,13 +182,15 @@ class Metacommunity:
         Parameters
         ----------
         viewpoint:
-            Affects the contribution of rare species to the diversity measure.
-            When viewpoint = 0 all species (rare or frequent) contribute equally.
-            When viewpoint = infinity, only the single most frequent species contributes.
+            Affects the contribution of rare species to the diversity
+            measure. When viewpoint = 0 all species (rare or frequent)
+            contribute equally. When viewpoint = infinity, only the
+            single most frequent species contributes.
 
         Returns
         -------
-        A pandas.DataFrame containing all metacommunity diversity measures for a given viewpoint
+        A pandas.DataFrame containing all metacommunity diversity
+        measures for a given viewpoint
         """
         df = DataFrame(
             {
@@ -189,18 +204,21 @@ class Metacommunity:
         return df
 
     def to_dataframe(self, viewpoint: Union[float, Iterable[float]]):
-        """Table containing all metacommunity and subcommunity diversity values.
+        """Table containing all metacommunity and subcommunity diversity
+        values.
 
         Parameters
         ----------
         viewpoint:
-            Affects the contribution of rare species to the diversity measure.
-            When viewpoint = 0 all species (rare or frequent) contribute equally.
-            When viewpoint = infinity, only the single most frequent species contributes.
+            Affects the contribution of rare species to the diversity
+            measure. When viewpoint = 0 all species (rare or frequent)
+            contribute equally. When viewpoint = infinity, only the
+            single most frequent species contributes.
 
         Returns
         -------
-        A pandas.DataFrame containing all metacommunity and subcommunity diversity measures for a given viewpoint
+        A pandas.DataFrame containing all metacommunity and subcommunity
+        diversity measures for a given viewpoint
         """
         dataframes = []
         for q in atleast_1d(viewpoint):
