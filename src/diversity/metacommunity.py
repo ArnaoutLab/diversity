@@ -151,7 +151,7 @@ class Metacommunity:
         )
 
     def subcommunities_to_dataframe(self, viewpoint: float):
-        """
+        """Table containing all subcommunity diversity values.
 
         Parameters
         ----------
