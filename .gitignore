@@ -130,10 +130,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-prof/
-test_files/
-.DS_Store/
-legacy_code/
-
 log.ipynb
-CHANGELOG
+.vscode
