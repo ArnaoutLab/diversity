@@ -2,21 +2,28 @@
 from dataclasses import dataclass
 from numpy import allclose, array, ndarray
 from pandas import DataFrame
-from pytest import mark, raises
+from pytest import fixture, mark, raises
+from scipy.sparse import csr_array, spmatrix
 
-from diversity.abundance import Abundance, AbundanceFromArray, make_abundance
+from diversity.abundance import (
+    Abundance,
+    AbundanceFromDataFrame,
+    AbundanceFromSparseMatrix,
+    make_abundance,
+)
 
 
 counts_array_3by2 = array([[2, 4], [3, 0], [0, 1]])
 counts_dataframe_3by2 = DataFrame(counts_array_3by2)
+counts_sparse_array_3by2 = csr_array(counts_array_3by2)
 
 
 @dataclass
 class AbundanceExclusiveSpecies:
     description: str = "2 subcommunities; both contain exclusive species"
     counts: ndarray = counts_array_3by2
-    subcommunity_abundance: ndarray = (
-        array([[2 / 10, 4 / 10], [3 / 10, 0 / 10], [0 / 10, 1 / 10]]),
+    subcommunity_abundance: ndarray = array(
+        [[2 / 10, 4 / 10], [3 / 10, 0 / 10], [0 / 10, 1 / 10]]
     )
     metacommunity_abundance: ndarray = array([[6 / 10], [3 / 10], [1 / 10]])
     subcommunity_normalizing_constants: ndarray = array([5 / 10, 5 / 10])
@@ -29,17 +36,15 @@ class AbundanceExclusiveSpecies:
 class AbundanceSingleExclusiveSpecies:
     description: str = "2 subcommunities; one contains exclusive species"
     counts: ndarray = array([[2, 4], [3, 0], [5, 1]])
-    subcommunity_abundance: ndarray = (
-        array([[2 / 15, 4 / 15], [3 / 15, 0 / 15], [5 / 15, 1 / 15]]),
+    subcommunity_abundance: ndarray = array(
+        [[2 / 15, 4 / 15], [3 / 15, 0 / 15], [5 / 15, 1 / 15]]
     )
-    metacommunity_abundance: ndarray = (
-        array(
-            [
-                [6 / 15],
-                [3 / 15],
-                [6 / 15],
-            ]
-        ),
+    metacommunity_abundance: ndarray = array(
+        [
+            [6 / 15],
+            [3 / 15],
+            [6 / 15],
+        ]
     )
     subcommunity_normalizing_constants: ndarray = array([10 / 15, 5 / 15])
     normalized_subcommunity_abundance: ndarray = array(
@@ -57,14 +62,12 @@ class AbundanceNoExclusiveSpecies:
             [1, 5],
         ],
     )
-    subcommunity_abundance: ndarray = (
-        array(
-            [
-                [2 / 16, 4 / 16],
-                [3 / 16, 1 / 16],
-                [1 / 16, 5 / 16],
-            ]
-        ),
+    subcommunity_abundance: ndarray = array(
+        [
+            [2 / 16, 4 / 16],
+            [3 / 16, 1 / 16],
+            [1 / 16, 5 / 16],
+        ]
     )
     metacommunity_abundance: ndarray = array([[6 / 16], [4 / 16], [6 / 16]])
     subcommunity_normalizing_constants: ndarray = array([6 / 16, 10 / 16])
@@ -109,6 +112,17 @@ class AbundanceMutuallyExclusive:
 
 
 @dataclass
+class AbundanceSparse(AbundanceMutuallyExclusive):
+    def __post_init__(self):
+        self.counts = csr_array(self.counts)
+        self.subcommunity_abundance = csr_array(self.subcommunity_abundance)
+        self.metacommunity_abundance = csr_array(self.metacommunity_abundance)
+        self.normalized_subcommunity_abundance = csr_array(
+            self.normalized_subcommunity_abundance
+        )
+
+
+@dataclass
 class AbundanceOneSubcommunity:
     description: str = "one community"
     counts = array(
@@ -132,7 +146,7 @@ class AbundanceOneSubcommunity:
             [3 / 10],
         ]
     )
-    subcommunity_normalizing_constants: ndarray = (array([10 / 10]),)
+    subcommunity_normalizing_constants: ndarray = array([10 / 10])
     normalized_subcommunity_abundance: ndarray = array(
         [
             [2 / 10],
@@ -145,13 +159,14 @@ class AbundanceOneSubcommunity:
 @mark.parametrize(
     "counts, expected",
     [
-        (counts_array_3by2, DataFrame),
-        (counts_dataframe_3by2, DataFrame),
+        (counts_array_3by2, Abundance),
+        (counts_dataframe_3by2, AbundanceFromDataFrame),
+        (counts_sparse_array_3by2, AbundanceFromSparseMatrix),
     ],
 )
 def test_make_abundance(counts, expected):
-    abundance = AbundanceFromArray(counts=counts)
-    assert isinstance(abundance.counts, expected)
+    abundance = make_abundance(counts=counts)
+    assert isinstance(abundance, expected)
 
 
 def test_make_abundance_not_implemented():
@@ -169,33 +184,66 @@ def test_make_abundance_not_implemented():
         AbundanceOneSubcommunity(),
     ],
 )
-class TestAbundanceFromArray:
-    def test_init(self, test_case):
-        assert isinstance(AbundanceFromArray(counts=test_case.counts), Abundance)
-
-    def test_subcommunity_abundance(self, test_case):
-        abundance = AbundanceFromArray(counts=test_case.counts)
+class TestAbundance:
+    def test_make_subcommunity_abundance(self, test_case):
+        abundance = make_abundance(counts=test_case.counts)
         assert allclose(
-            abundance.subcommunity_abundance, test_case.subcommunity_abundance
+            abundance.subcommunity_abundance,
+            test_case.subcommunity_abundance,
         )
 
     def test_metacommunity_abundance(self, test_case):
-        abundance = AbundanceFromArray(counts=test_case.counts)
-        print(test_case.metacommunity_abundance)
+        abundance = make_abundance(counts=test_case.counts)
         assert allclose(
             abundance.metacommunity_abundance, test_case.metacommunity_abundance
         )
 
     def test_subcommunity_normalizing_constants(self, test_case):
-        abundance = AbundanceFromArray(counts=test_case.counts)
+        abundance = make_abundance(counts=test_case.counts)
         assert allclose(
             abundance.subcommunity_normalizing_constants,
             test_case.subcommunity_normalizing_constants,
         )
 
     def test_normalized_subcommunity_abundance(self, test_case):
-        abundance = AbundanceFromArray(counts=test_case.counts)
+        abundance = make_abundance(counts=test_case.counts)
         assert allclose(
             abundance.normalized_subcommunity_abundance,
             test_case.normalized_subcommunity_abundance,
+        )
+
+
+class TestSparseAbundance:
+    @fixture(scope="class")
+    def test_case(self):
+        return AbundanceSparse()
+
+    def test_subcommunity_abundance(self, test_case):
+        abundance = make_abundance(counts=test_case.counts)
+        assert isinstance(abundance.subcommunity_abundance, spmatrix)
+        assert allclose(
+            abundance.subcommunity_abundance.data,
+            test_case.subcommunity_abundance.data,
+        )
+
+    def test_metacommunity_abundance(self, test_case):
+        abundance = make_abundance(counts=test_case.counts)
+        assert allclose(
+            abundance.metacommunity_abundance.data,
+            test_case.metacommunity_abundance.data,
+        )
+
+    def test_subcommunity_normalizing_constants(self, test_case):
+        abundance = make_abundance(counts=test_case.counts)
+        assert allclose(
+            abundance.subcommunity_normalizing_constants,
+            test_case.subcommunity_normalizing_constants,
+        )
+
+    def test_normalized_subcommunity_abundance(self, test_case):
+        abundance = make_abundance(counts=test_case.counts)
+        assert isinstance(abundance.normalized_subcommunity_abundance, spmatrix)
+        assert allclose(
+            abundance.normalized_subcommunity_abundance.data,
+            test_case.normalized_subcommunity_abundance.data,
         )
