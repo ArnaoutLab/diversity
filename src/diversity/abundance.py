@@ -161,7 +161,7 @@ def make_abundance(counts: Union[DataFrame, spmatrix, ndarray]) -> Abundance:
     if isinstance(counts, DataFrame):
         return AbundanceFromDataFrame(counts=counts)
     elif isinstance(counts, spmatrix):
-        return AbundanceFromSparseMatrix(counts=counts)
+        return AbundanceFromSparseArray(counts=counts)
     elif isinstance(counts, ndarray):
         return Abundance(counts=counts)
     else:
