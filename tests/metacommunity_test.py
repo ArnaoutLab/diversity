@@ -9,6 +9,7 @@ from numpy import (
 from pandas import DataFrame, concat
 from pandas.testing import assert_frame_equal
 from pytest import mark, raises
+from diversity.exceptions import InvalidArgumentError
 
 from diversity.log import LOGGER
 from diversity.abundance import Abundance
@@ -278,7 +279,7 @@ def test_subcommunity_diversity(data, measure):
 
 
 def test_subcommunity_diversity_invalid_measure():
-    with raises(ValueError):
+    with raises(InvalidArgumentError):
         Metacommunity(counts=counts_3by2).subcommunity_diversity(
             measure="omega", viewpoint=0
         )
