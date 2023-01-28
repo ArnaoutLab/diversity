@@ -51,7 +51,7 @@ The `diversity` package calculates partitioned frequency- and similarity-sensiti
 - Shannon index (viewpoint = 1)
 - Simpson index (viewpoint = 2)
 - Berger-Parker index (viewpoint = $\infty$)
-- Hill numbers ($- \infty \le$ viewpoint $\le \infty$)
+- Hill numbers (${-\infty\le \text{viewpoint} \le\infty}$)
 
 For a more rigorous description of the diversity measures `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 
