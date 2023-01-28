@@ -37,6 +37,9 @@ def __validate_power_mean_args(
     ----------
     weights, items, atol
         Same as for power_mean.
+    weight_is_nonzero
+        Boolean array of same shape as weights, indicating those whose
+        absolute value meets or exceeds atol.
 
     Raises
     ------
