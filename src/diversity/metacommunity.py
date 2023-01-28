@@ -128,7 +128,7 @@ class Metacommunity:
         return diversity_measure
 
     def metacommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
-        """Calculates metcommunity diversity measures.
+        """Calculates metacommunity diversity measures.
 
         Parameters
         ----------
