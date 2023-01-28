@@ -8,14 +8,13 @@ main
 from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger
+from numpy import int64
 
-from numpy import array, unique
 from pandas import read_csv, concat
 
-from diversity.metacommunity import make_metacommunity
-from diversity.parameters import configure_arguments
 from diversity.log import LOG_HANDLER, LOGGER
-from diversity.utilities import get_file_delimiter
+from diversity import Metacommunity
+from diversity.parameters import configure_arguments
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
@@ -36,48 +35,17 @@ def main(args):
     LOGGER.info(" ".join([f"python{python_version()}", *argv]))
     LOGGER.debug(f"args: {args}")
 
-    delimiter = get_file_delimiter(args.input_filepath)
-    species_counts = read_csv(
-        args.input_filepath,
-        sep=delimiter,
-        usecols=[args.subcommunity_column, args.species_column, args.count_column],
-        dtype={
-            args.subcommunity_column: str,
-            args.species_column: str,
-            args.count_column: int,
-        },
+    counts = read_csv(args.input_filepath, sep=None, engine="python", dtype=int64)
+    LOGGER.debug(f"data: {counts}")
+    metacommunity = Metacommunity(
+        counts=counts,
+        similarity=args.similarity,
+        chunk_size=args.chunk_size,
     )
-
-    LOGGER.debug(f"data: {species_counts}")
-
-    if args.subcommunities is None:
-        subcommunities = unique(species_counts[args.subcommunity_column])
-    else:
-        subcommunities = array(args.subcommunities)
-
-    meta = make_metacommunity(
-        counts=species_counts,
-        subcommunities=subcommunities,
-        similarity_method=args.similarity_matrix_filepath,
-        subcommunity_column=args.subcommunity_column,
-        species_column=args.species_column,
-        count_column=args.count_column,
-        similarity_kwargs={"chunk_size": args.chunk_size},
-    )
-
-    community_views = []
-    for view in args.viewpoint:
-        community_views.append(meta.subcommunities_to_dataframe(view))
-        community_views.append(meta.metacommunity_to_dataframe(view))
-
-    community_views = concat(community_views, ignore_index=True)
-    community_views.viewpoint = community_views.viewpoint.map(
-        lambda v: format(v, ".2f")
-    )
+    community_views = metacommunity.to_dataframe(viewpoint=args.viewpoint)
     community_views.to_csv(
         args.output_filepath, sep="\t", float_format="%.4f", index=False
     )
-
     LOGGER.info("Done!")
 
 

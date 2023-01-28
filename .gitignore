@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+*.DS_Store*
+
 # C extensions
 *.so
 
@@ -128,11 +130,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-prof/
-test_files/
-.DS_Store/
-legacy_code/
-
-junk_code.txt
-examples.ipynb
-CHANGELOG
+log.ipynb
+.vscode

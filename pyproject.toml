@@ -1,6 +1,35 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "diversity"
+authors = [
+    { name = "Elliot Hill", email = "elliot.douglas.hill@gmail.com" },
+    { name = "Jasper Braun" },
 ]
-build-backend = "setuptools.build_meta"
+version = "0.0.1"
+description = "Partitioned frequency- and similarity-sensitive diversity"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = ["numpy==1.24.0", "pandas>=1.5.2", "ray>=2.2.0"]
+
+[project.optional-dependencies]
+tests = ["pytest>=6.2.5", "pytest-cov>=3.0.0"]
+lint = ["black>=22.3.0"]
+ci = ["tox>=3.24.5", "tox-gh-actions>=2.9.1"]
+
+[project.urls]
+"Homepage" = "https://github.com/Elliot-D-Hill/diversity"
+"Bug Tracker" = "https://github.com/Elliot-D-Hill/diversity/issues"
+
+[tool.pytest.ini_options]
+addopts = "--cov --cov-report html --cov-report term-missing --cov-fail-under 100"
+
+[tool.coverage.run]
+source = ["src"]

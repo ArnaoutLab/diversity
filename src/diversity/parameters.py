@@ -47,37 +47,12 @@ def configure_arguments():
     """
     parser = ArgumentParser()
     parser.add_argument(
-        "-b",
-        "--subcommunities",
-        help=(
-            "Names of subcommunities to include. Effectively makes"
-            " diversity ignore all rows and columns in input file and"
-            " similarity matrix file corresponing to subcommunities"
-            " not in this list and to species not found in any of"
-            " theses subcommunities. The subcommunity names must"
-            " correspond to names in the subcommunity column in input"
-            " file. If unspecified, all subcommunities are included."
-        ),
-        nargs="*",
-        default=None,
-    )
-    parser.add_argument(
-        "-c",
-        "--count_column",
-        help="Header of the column containing the counts.",
-        default="count",
-    )
-    parser.add_argument(
         "-i",
         "--input_filepath",
         help=(
-            "A csv or tsv file containing one column for subcommunity"
-            " names (with header 'subcommunity', or specified via -u),"
-            " one column for species names (with header 'species', or"
-            " specified via -p), and one column of counts, which"
-            " contains the number of individuals of the row's species"
-            " in the row's subcommunity (with header 'count', or"
-            " specified via -c)."
+            "A csv or tsv file with one column per subcommunity, one "
+            "row per species, where each element contains the count of "
+            "each species in the corresponding subcommunities."
         ),
     )
     parser.add_argument(
@@ -97,26 +72,14 @@ def configure_arguments():
         help="A filepath to where the program's output will be saved",
     )
     parser.add_argument(
-        "-p",
-        "--species_column",
-        help="Header of the column containing the species names.",
-        default="species",
-    )
-    parser.add_argument(
         "-s",
-        "--similarity_matrix_filepath",
+        "--similarity",
         help=(
             "The filepath to a csv or tsv file containing a similarity"
             " for the species in the input file. The file must have a"
             " header listing the species names corresponding to each"
             " column, and column and row ordering must be the same."
         ),
-    )
-    parser.add_argument(
-        "-u",
-        "--subcommunity_column",
-        help="Header for the column containing the subcommunity names.",
-        default="subcommunity",
     )
     parser.add_argument(
         "-v",

@@ -1,0 +1,10 @@
+[report]
+exclude_lines =
+    # Skip which are passed (e.g., lines used in @abstractmethod)
+    pass
+
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain if non-runnable code isn't run:
+    if __name__ == .__main__.:
