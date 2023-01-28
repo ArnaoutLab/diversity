@@ -100,7 +100,7 @@ class Metacommunity:
         """
         if measure not in self.MEASURES:
             raise (
-                ValueError(
+                InvalidArgumentError(
                     f"Invalid measure '{measure}'. "
                     f"Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
                 )
