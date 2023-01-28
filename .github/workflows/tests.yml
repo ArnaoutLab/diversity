@@ -8,8 +8,13 @@ on:
     paths-ignore:
       - '**/README.md'
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   tests:
+    name: "Python ${{ matrix.python-version }} on ${{ matrix.os }}"
     runs-on: ${{ matrix.os}}
     strategy:
       matrix:
