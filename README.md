@@ -45,14 +45,6 @@ The `diversity` package calculates partitioned frequency- and similarity-sensiti
   - $\bar{B}$ - effective number of distinct subcommunities
   - $G$ - metacommunity diversity
 
-
-**Common diversity indices**: 
-
-- Species richness (viewpoint = 0)
-- Shannon index (viewpoint = 1)
-- Simpson index (viewpoint = 2)
-- Berger-Parker index (viewpoint = $\infty$)
-
 For a more rigorous description of the diversity measures `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 
 # Installation
@@ -224,7 +216,7 @@ Some diversity indices compare the diversities of subsets of a community with re
 
 ## Frequency-sensitive diversity
 
-[In 1973, Hill introduced a framework](https://doi.org/10.2307/1934352) which unifies commonly used diversity indices into a single parameterized family of diversity measures. The so-called ***viewpoint parameter*** can be thought of as the sensitivity to rare species. At one end of the spectrum, when the viewpoint parameter is set to 0, species frequency is ignored entirely, and only the number of distinct species matters, while at the other end of the spectrum, when the viewpoint parameter is set to $\infty$, only the highest frequency species in a community is considered by the corresponding diversity measure. Common diversity measures such as ***species richness***, ***Shannon entropy***, the ***Gini-Simpson index***, and the ***Berger-Parker index*** have simple and natural relationships with Hill's indices at different values for the viewpoint parameter (0, 1, 2, \infty, respectively).
+[In 1973, Hill introduced a framework](https://doi.org/10.2307/1934352) which unifies commonly used diversity indices into a single parameterized family of diversity measures. The so-called ***viewpoint parameter*** can be thought of as the sensitivity to rare species. At one end of the spectrum, when the viewpoint parameter is set to 0, species frequency is ignored entirely, and only the number of distinct species matters, while at the other end of the spectrum, when the viewpoint parameter is set to $\infty$, only the highest frequency species in a community is considered by the corresponding diversity measure. Common diversity measures such as ***species richness***, ***Shannon entropy***, the ***Gini-Simpson index***, and the ***Berger-Parker index*** have simple and natural relationships with Hill's indices at different values for the viewpoint parameter (0, 1, 2, $\infty$, respectively).
 
 ## Similarity-sensitive diversity
 
