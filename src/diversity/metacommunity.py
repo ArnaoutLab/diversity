@@ -11,6 +11,7 @@ from typing import Callable, Iterable, Optional, Union
 
 from pandas import DataFrame, Index, concat
 from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray
+from diversity.exceptions import InvalidArgumentError
 
 from diversity.log import LOGGER
 from diversity.abundance import make_abundance
@@ -102,7 +103,8 @@ class Metacommunity:
             raise (
                 InvalidArgumentError(
                     f"Invalid measure '{measure}'. "
-                    f"Argument 'measure' must be one of: {', '.join(self.MEASURES)}"
+                    "Argument 'measure' must be one of: "
+                    f"{', '.join(self.MEASURES)}"
                 )
             )
         numerator = self.components.numerators[measure]
