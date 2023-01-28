@@ -9,9 +9,9 @@
 - [Usage and Examples](#usage-and-examples)
   - [Frequency-sensitive metacommunity from a dataframe or array](#frequency-sensitive-metacommunity-from-a-dataframe-or-array)
   - [Frequency- and similarity-sensitive metacommunity from a dataframe or array](#frequency--and-similarity-sensitive-metacommunity-from-a-dataframe-or-array)
+  - [Diversity measures](#diversity-measures)
   - [Frequency- and similarity-sensitive metacommunity from a file](#frequency--and-similarity-sensitive-metacommunity-from-a-file)
   - [Frequency- and similarity-sensitive metacommunity from a function](#frequency--and-similarity-sensitive-metacommunity-from-a-function)
-  - [Diversity measures](#diversity-measures)
   - [Command line interface](#command-line-interface)
 - [Background](#background)
   - [Diversity indices](#diversity-indices)
@@ -98,7 +98,7 @@ metacommunity = Metacommunity(counts)
 
 ## Frequency- and similarity-sensitive metacommunity from a dataframe or array
 
-For similarity-sensitive diversity, we must also supply a species similarity matrix to `Metacommunity` in addition to the counts table. The rows and columns of the similarity matrix must be in the same order as the rows of the counts table for valid results.
+For frequency- and similarity-sensitive diversity, we must also supply a species similarity matrix to `Metacommunity` in addition to the counts table. The rows and columns of the similarity matrix must be in the same order as the rows of the counts table for valid results.
 
 ```python
 similarity_matrix = pd.DataFrame(
@@ -119,29 +119,6 @@ similarity_matrix = pd.DataFrame(
 
 ```python
 metacommunity = Metacommunity(counts, similarity=similarity_matrix)
-```
-
-## Frequency- and similarity-sensitive metacommunity from a file
-
-For medium sized datasets, the similarity matrix may not fit in RAM. To avoid loading the entire matrix into RAM, you can pass a filepath to the `similarity` argument to read a file from a hard disk drive.
-
-```python
-metacommunity = Metacommunity(counts, similarity='similarity_matrix.csv', chunk_size=100)
-```
-
-## Frequency- and similarity-sensitive metacommunity from a function
-For large datasets, the similarity matrix may not fit on the disk, in which case it can be constructed and processed in chunks by passing a similarity function to `similarity` and an array of features to `X`. Each row of `X` represents the feature values of a species.
-```python
-X = np.array([
-  [1, 2], 
-  [3, 4], 
-  [5, 6]
-])
-
-def similarity_function(species_i, species_j):
-  return 1 / (1 + np.norm(species_i, species_j))
-
-metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk_size=100)
 ```
 
 ## Diversity measures
@@ -181,6 +158,29 @@ and likewise for the metacommunity:
 metacommunity.metacommunity_diversity(viewpoint=2, measure='beta')
 
 0.48236433045721444
+```
+
+## Frequency- and similarity-sensitive metacommunity from a file
+
+For medium sized datasets, the similarity matrix may not fit in RAM. To avoid loading the entire matrix into RAM, you can pass a filepath to the `similarity` argument to read a file from a hard disk drive.
+
+```python
+metacommunity = Metacommunity(counts, similarity='similarity_matrix.csv', chunk_size=100)
+```
+
+## Frequency- and similarity-sensitive metacommunity from a function
+For large datasets, the similarity matrix may not fit on the disk, in which case it can be constructed and processed in chunks by passing a similarity function to `similarity` and an array of features to `X`. Each row of `X` represents the feature values of a species.
+```python
+X = np.array([
+  [1, 2], 
+  [3, 4], 
+  [5, 6]
+])
+
+def similarity_function(species_i, species_j):
+  return 1 / (1 + np.norm(species_i, species_j))
+
+metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk_size=100)
 ```
 
 ## Command line interface
