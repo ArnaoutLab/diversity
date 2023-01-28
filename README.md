@@ -1,6 +1,8 @@
 # diversity: partitioned frequency- and similarity-sensitive diversity in Python
 
 ![Tests](https://github.com/Elliot-D-Hill/diversity/actions/workflows/tests.yml/badge.svg)
+![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Elliot-D-Hill/d9cd150a6db23c5d2716a37aa4ea55b1/raw/covbadge.json
+)
 [![Python version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 
 - [diversity: partitioned frequency- and similarity-sensitive diversity in Python](#diversity-partitioned-frequency--and-similarity-sensitive-diversity-in-python)
@@ -8,9 +10,9 @@
 - [Installation](#installation)
 - [Usage and Examples](#usage-and-examples)
   - [Frequency-sensitive metacommunity from a dataframe or array](#frequency-sensitive-metacommunity-from-a-dataframe-or-array)
-  - [Similarity-sensitive metacommunity from a dataframe or array](#similarity-sensitive-metacommunity-from-a-dataframe-or-array)
-  - [Similarity-sensitive metacommunity from a file](#similarity-sensitive-metacommunity-from-a-file)
-  - [Similarity-sensitive metacommunity from a function](#similarity-sensitive-metacommunity-from-a-function)
+  - [Frequency- and similarity-sensitive metacommunity from a dataframe or array](#frequency--and-similarity-sensitive-metacommunity-from-a-dataframe-or-array)
+  - [Frequency- and similarity-sensitive metacommunity from a file](#frequency--and-similarity-sensitive-metacommunity-from-a-file)
+  - [Frequency- and similarity-sensitive metacommunity from a function](#frequency--and-similarity-sensitive-metacommunity-from-a-function)
   - [Diversity measures](#diversity-measures)
   - [Command line interface](#command-line-interface)
 - [Background](#background)
@@ -96,9 +98,9 @@ Next we create a `Metacommunity` object by passing it the counts table.
 metacommunity = Metacommunity(counts)
 ```
 
-## Similarity-sensitive metacommunity from a dataframe or array
+## Frequency- and similarity-sensitive metacommunity from a dataframe or array
 
-For similarity-sensitive diversity, we must also supply a species similarity matrix to `Metacommunity` in addition to the counts table. The rows and columns of the similarity matrix must be in the same order as the rows of the counts table for valid results.
+For both frequency- and similarity-sensitive diversity, we must also supply a species similarity matrix to `Metacommunity` in addition to the counts table. The rows and columns of the similarity matrix must be in the same order as the rows of the counts table for valid results.
 
 ```python
 similarity_matrix = pd.DataFrame(
@@ -121,7 +123,7 @@ similarity_matrix = pd.DataFrame(
 metacommunity = Metacommunity(counts, similarity=similarity_matrix)
 ```
 
-## Similarity-sensitive metacommunity from a file
+## Frequency- and similarity-sensitive metacommunity from a file
 
 For medium sized datasets, the similarity matrix may not fit in RAM. To avoid loading the entire matrix into RAM, you can pass a filepath to the `similarity` argument to read a file from a hard disk drive.
 
@@ -129,7 +131,7 @@ For medium sized datasets, the similarity matrix may not fit in RAM. To avoid lo
 metacommunity = Metacommunity(counts, similarity='similarity_matrix.csv', chunk_size=100)
 ```
 
-## Similarity-sensitive metacommunity from a function
+## Frequency- and similarity-sensitive metacommunity from a function
 For large datasets, the similarity matrix may not fit on the disk, in which case it can be constructed and processed in chunks by passing a similarity function to `similarity` and an array of features to `X`. Each row of `X` represents the feature values of a species.
 ```python
 X = np.array([
