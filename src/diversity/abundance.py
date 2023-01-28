@@ -5,7 +5,7 @@ Classes
 Abundance
     Abstract base class for relative species abundances in (meta-/sub-)
     communities.
-Abundance
+AbundanceFromArray
     Implements Abundance for fast, but memory-heavy calculations.
 
 Functions
