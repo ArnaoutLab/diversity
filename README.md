@@ -46,9 +46,12 @@ The `diversity` package calculates partitioned frequency- and similarity-sensiti
   - $G$ - metacommunity diversity
 
 
-**Supported diversity indices**: 
+**Common diversity indices**: 
 
-Species richness (viewpoint = 0), Shannon index (viewpoint = 1), Simpson index (viewpoint = 2), Berger-Parker index (viewpoint = $\infty$), and Hill numbers (-$\infty \le$ viewpoint $\le \infty$).
+- Species richness (viewpoint = 0)
+- Shannon index (viewpoint = 1)
+- Simpson index (viewpoint = 2)
+- Berger-Parker index (viewpoint = $\infty$)
 
 For a more rigorous description of the diversity measures `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 
