@@ -5,7 +5,6 @@
 
 - [diversity: partitioned frequency- and similarity-sensitive diversity in Python](#diversity-partitioned-frequency--and-similarity-sensitive-diversity-in-python)
 - [About](#about)
-- [Installation](#installation)
 - [Usage and Examples](#usage-and-examples)
   - [Frequency-sensitive metacommunity from a dataframe or array](#frequency-sensitive-metacommunity-from-a-dataframe-or-array)
   - [Frequency- and similarity-sensitive metacommunity from a dataframe or array](#frequency--and-similarity-sensitive-metacommunity-from-a-dataframe-or-array)
@@ -47,13 +46,13 @@ The `diversity` package calculates partitioned frequency- and similarity-sensiti
 
 For a more rigorous description of the diversity measures `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 
-# Installation
+<!-- # Installation
 
 `diversity` requires python version 3.8 or higher.
 
 ```bash
 pip install diversity
-```
+``` -->
 
 # Usage and Examples
 
