@@ -90,7 +90,7 @@ counts = pd.DataFrame(
 
 Notes:
 - The counts table can be a pandas.DataFrame, numpy.ndarray, or scipy.sparse array (not matrix)
-- We include an index with the species names here for illustration, but in general, an index is not required for the counts
+- We include an index with the species names here for illustration, but in general, an index is not required for the counts tables
 
 Next we create a `Metacommunity` object by passing it the counts table.
 
