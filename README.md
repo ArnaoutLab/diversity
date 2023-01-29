@@ -87,7 +87,9 @@ counts = pd.DataFrame(
 | Chinstrap |      0 |    68 |         0 |
 | Gentoo    |    120 |     0 |         0 |
 
-Note: we include an index with the species names here for illustration, but in general, an index is not required for the counts (or similarity matrix).
+Notes:
+- The counts table can be a pandas.DataFrame, numpy.ndarray, or scipy.sparse array (not matrix)
+- We include an index with the species names here for illustration, but in general, an index is not required for the counts tables
 
 Next we create a `Metacommunity` object by passing it the counts table.
 
@@ -97,7 +99,7 @@ metacommunity = Metacommunity(counts)
 
 ## Frequency- and similarity-sensitive metacommunity from a dataframe or array
 
-For frequency- and similarity-sensitive diversity, we must also supply a species similarity matrix to `Metacommunity` in addition to the counts table. The rows and columns of the similarity matrix must be in the same order as the rows of the counts table for valid results.
+For frequency- and similarity-sensitive diversity, we must also supply a species similarity matrix to `Metacommunity` in addition to the counts table.
 
 ```python
 similarity_matrix = pd.DataFrame(
@@ -115,6 +117,10 @@ similarity_matrix = pd.DataFrame(
 | Adelie    |        1 |  0.347385 | 0.222998 |
 | Chinstrap | 0.347385 |         1 | 0.258256 |
 | Gentoo    | 0.222998 |  0.258256 |        1 |
+
+Notes:
+- The rows and columns of the similarity matrix must be in the same order as the rows of the counts table for valid results
+- We include an index with the species names here for illustration, but in general, an index is not required for the similarity matrix
 
 ```python
 metacommunity = Metacommunity(counts, similarity=similarity_matrix)
