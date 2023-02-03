@@ -30,7 +30,6 @@ from numpy import ndarray, empty, concatenate, float64
 from pandas import DataFrame, read_csv
 from scipy.sparse import spmatrix
 from ray import remote, get, put
-from diversity.log import LOGGER
 
 
 class Similarity(ABC):
@@ -170,12 +169,6 @@ class SimilarityFromFunction(Similarity):
             chunk_size will make the calculation faster, but will also
             require more memory.
         """
-        LOGGER.debug(
-            "SimilarityFromFile(similarity=%s, X=%s, chunk_size=%s",
-            similarity,
-            X,
-            chunk_size,
-        )
         super().__init__(similarity=similarity)
         self.X = X
         self.chunk_size = chunk_size
@@ -224,12 +217,6 @@ def make_similarity(
     -------
     An instance of a concrete subclass of Similarity.
     """
-    LOGGER.debug(
-        "make_similarity(similarity=%s, X=%s, chunk_size=%s)",
-        similarity,
-        X,
-        chunk_size,
-    )
     if similarity is None:
         return None
     elif isinstance(similarity, DataFrame):

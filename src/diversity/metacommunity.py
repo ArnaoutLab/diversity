@@ -13,7 +13,6 @@ from pandas import DataFrame, Index, concat
 from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray
 from diversity.exceptions import InvalidArgumentError
 
-from diversity.log import LOGGER
 from diversity.abundance import make_abundance
 from diversity.similarity import make_similarity
 from diversity.components import make_components
@@ -68,13 +67,6 @@ class Metacommunity:
             similarity matrix is read from a file. Larger chunk sizes
             are faster, but take more memory.
         """
-        LOGGER.debug(
-            "make_metacommunity(counts=%s, similarity=%s, X=%s, chunk_size=%s",
-            counts,
-            similarity,
-            X,
-            chunk_size,
-        )
         self.abundance = make_abundance(counts=counts)
         self.similarity = make_similarity(
             similarity=similarity, X=X, chunk_size=chunk_size

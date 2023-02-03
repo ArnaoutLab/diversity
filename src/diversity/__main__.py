@@ -10,7 +10,7 @@ from platform import python_version
 from logging import captureWarnings, getLogger
 from numpy import int64
 
-from pandas import read_csv, concat
+from pandas import read_csv
 
 from diversity.log import LOG_HANDLER, LOGGER
 from diversity import Metacommunity

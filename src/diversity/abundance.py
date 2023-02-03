@@ -20,8 +20,6 @@ from numpy import arange, ndarray
 from pandas import DataFrame, RangeIndex
 from scipy.sparse import spmatrix, diags
 
-from diversity.log import LOGGER
-
 
 class Abundance:
     """Calculates metacommuntiy and subcommunity relative abundance
@@ -37,7 +35,6 @@ class Abundance:
             species, containing the count of each species in the
             corresponding subcommunities.
         """
-        LOGGER.debug("Abundance(counts=%s", counts)
         self.subcommunities_names = self.get_subcommunity_names(counts=counts)
         self.subcommunity_abundance = self.make_subcommunity_abundance(counts=counts)
 
@@ -157,7 +154,6 @@ def make_abundance(counts: Union[DataFrame, spmatrix, ndarray]) -> Abundance:
     -------
     An instance of a concrete subclass of Abundance.
     """
-    LOGGER.debug("make_abundance(counts=%s)", counts)
     if isinstance(counts, DataFrame):
         return AbundanceFromDataFrame(counts=counts)
     elif isinstance(counts, spmatrix):

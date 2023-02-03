@@ -25,7 +25,6 @@ from numpy import (
 )
 
 from diversity.exceptions import InvalidArgumentError
-from diversity.log import LOGGER
 
 
 def __validate_power_mean_args(
@@ -97,13 +96,6 @@ def power_mean(
     or infinity are used respectively. An exception is raised if all weights
     in a column are close to 0.
     """
-    LOGGER.debug(
-        "power_mean(order=%s, weights=%s, items=%s, atol=%s)",
-        order,
-        weights,
-        items,
-        atol,
-    )
     weight_is_nonzero = abs(weights) >= atol
     __validate_power_mean_args(weights, items, atol, weight_is_nonzero)
     if isclose(order, 0):
