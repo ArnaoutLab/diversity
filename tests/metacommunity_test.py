@@ -1,6 +1,6 @@
 """Tests for diversity.metacommunity."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from numpy import (
     allclose,
     array,
@@ -39,37 +39,41 @@ counts_6by2 = DataFrame(
 class FrequencyMetacommunity6by2:
     description = "frequency-sensitive metacommunity; 3 species, 2 subcommunities"
     viewpoint: float = 0.0
-    counts: DataFrame = counts_6by2
+    counts: DataFrame = field(default_factory=lambda: counts_6by2)
     similarity: None = None
     metacommunity_similarity: None = None
     subcommunity_similarity: None = None
     normalized_subcommunity_similarity: None = None
-    subcommunity_results: DataFrame = DataFrame(
-        {
-            "community": subcommunity_names,
-            "viewpoint": [0.0, 0.0],
-            "alpha": [6.0, 6.0],
-            "rho": [1.0, 1.0],
-            "beta": [1.0, 1.0],
-            "gamma": [6.0, 6.0],
-            "normalized_alpha": [3.0, 3.0],
-            "normalized_rho": [0.5, 0.5],
-            "normalized_beta": [2.0, 2.0],
-        },
+    subcommunity_results: DataFrame = field(
+        default_factory=lambda: DataFrame(
+            {
+                "community": subcommunity_names,
+                "viewpoint": [0.0, 0.0],
+                "alpha": [6.0, 6.0],
+                "rho": [1.0, 1.0],
+                "beta": [1.0, 1.0],
+                "gamma": [6.0, 6.0],
+                "normalized_alpha": [3.0, 3.0],
+                "normalized_rho": [0.5, 0.5],
+                "normalized_beta": [2.0, 2.0],
+            },
+        )
     )
-    metacommunity_results: DataFrame = DataFrame(
-        {
-            "community": ["metacommunity"],
-            "viewpoint": [0.0],
-            "alpha": [6.0],
-            "rho": [1.0],
-            "beta": [1.0],
-            "gamma": [6.0],
-            "normalized_alpha": [3.0],
-            "normalized_rho": [0.5],
-            "normalized_beta": [2.0],
-        },
-        index=[0],
+    metacommunity_results: DataFrame = field(
+        default_factory=lambda: DataFrame(
+            {
+                "community": ["metacommunity"],
+                "viewpoint": [0.0],
+                "alpha": [6.0],
+                "rho": [1.0],
+                "beta": [1.0],
+                "gamma": [6.0],
+                "normalized_alpha": [3.0],
+                "normalized_rho": [0.5],
+                "normalized_beta": [2.0],
+            },
+            index=[0],
+        )
     )
 
 
@@ -77,37 +81,41 @@ class FrequencyMetacommunity6by2:
 class FrequencyMetacomunity3by2:
     description = "frequency-sensitive metacommunity; 3 species, 3 subcommunities"
     viewpoint: float = 2.0
-    counts: DataFrame = counts_3by2
+    counts: DataFrame = field(default_factory=lambda: counts_3by2)
     similarity: None = None
     metacommunity_similarity: None = None
     subcommunity_similarity: None = None
     normalized_subcommunity_similarity: None = None
-    subcommunity_results: DataFrame = DataFrame(
-        {
-            "community": subcommunity_names,
-            "viewpoint": [2.0, 2.0],
-            "alpha": [4.0, 2.30769231],
-            "rho": [1.26315789, 1.16129032],
-            "beta": [0.79166667, 0.86111111],
-            "gamma": [2.66666667, 1.93548387],
-            "normalized_alpha": [1.6, 1.38461538],
-            "normalized_rho": [0.50526316, 0.69677419],
-            "normalized_beta": [1.97916667, 1.43518519],
-        }
+    subcommunity_results: DataFrame = field(
+        default_factory=lambda: DataFrame(
+            {
+                "community": subcommunity_names,
+                "viewpoint": [2.0, 2.0],
+                "alpha": [4.0, 2.30769231],
+                "rho": [1.26315789, 1.16129032],
+                "beta": [0.79166667, 0.86111111],
+                "gamma": [2.66666667, 1.93548387],
+                "normalized_alpha": [1.6, 1.38461538],
+                "normalized_rho": [0.50526316, 0.69677419],
+                "normalized_beta": [1.97916667, 1.43518519],
+            }
+        )
     )
-    metacommunity_results: DataFrame = DataFrame(
-        {
-            "community": ["metacommunity"],
-            "viewpoint": [2.0],
-            "alpha": [2.7777777777777777],
-            "rho": [1.2],
-            "beta": [0.8319209039548022],
-            "gamma": [2.173913043478261],
-            "normalized_alpha": [1.4634146341463414],
-            "normalized_rho": [0.6050420168067228],
-            "normalized_beta": [1.612461673236969],
-        },
-        index=[0],
+    metacommunity_results: DataFrame = field(
+        default_factory=lambda: DataFrame(
+            {
+                "community": ["metacommunity"],
+                "viewpoint": [2.0],
+                "alpha": [2.7777777777777777],
+                "rho": [1.2],
+                "beta": [0.8319209039548022],
+                "gamma": [2.173913043478261],
+                "normalized_alpha": [1.4634146341463414],
+                "normalized_rho": [0.6050420168067228],
+                "normalized_beta": [1.612461673236969],
+            },
+            index=[0],
+        )
     )
 
 
@@ -115,75 +123,87 @@ class FrequencyMetacomunity3by2:
 class SimilarityMetacommunity6by2:
     description = "similarity-sensitive metacommunity; 6 species, 2 subcommunities"
     viewpoint: float = 0.0
-    counts: ndarray = counts_6by2
-    similarity: ndarray = array(
-        [
-            [1.0, 0.5, 0.5, 0.7, 0.7, 0.7],
-            [0.5, 1.0, 0.5, 0.7, 0.7, 0.7],
-            [0.5, 0.5, 1.0, 0.7, 0.7, 0.7],
-            [0.7, 0.7, 0.7, 1.0, 0.5, 0.5],
-            [0.7, 0.7, 0.7, 0.5, 1.0, 0.5],
-            [0.7, 0.7, 0.7, 0.5, 0.5, 1.0],
-        ]
-    )
-    metacommunity_similarity: ndarray = array(
-        [
-            [0.68333333],
-            [0.68333333],
-            [0.68333333],
-            [0.68333333],
-            [0.68333333],
-            [0.68333333],
-        ]
-    )
-    subcommunity_similarity: ndarray = (
-        array(
+    counts: ndarray = field(default_factory=lambda: counts_6by2)
+    similarity: ndarray = field(
+        default_factory=lambda: array(
             [
-                [0.33333333, 0.35],
-                [0.33333333, 0.35],
-                [0.33333333, 0.35],
-                [0.35, 0.33333333],
-                [0.35, 0.33333333],
-                [0.35, 0.33333333],
-            ],
-        ),
+                [1.0, 0.5, 0.5, 0.7, 0.7, 0.7],
+                [0.5, 1.0, 0.5, 0.7, 0.7, 0.7],
+                [0.5, 0.5, 1.0, 0.7, 0.7, 0.7],
+                [0.7, 0.7, 0.7, 1.0, 0.5, 0.5],
+                [0.7, 0.7, 0.7, 0.5, 1.0, 0.5],
+                [0.7, 0.7, 0.7, 0.5, 0.5, 1.0],
+            ]
+        )
     )
-    normalized_subcommunity_similarity: ndarray = array(
-        [
-            [0.66666667, 0.7],
-            [0.66666667, 0.7],
-            [0.66666667, 0.7],
-            [0.7, 0.66666667],
-            [0.7, 0.66666667],
-            [0.7, 0.66666667],
-        ]
+    metacommunity_similarity: ndarray = field(
+        default_factory=lambda: array(
+            [
+                [0.68333333],
+                [0.68333333],
+                [0.68333333],
+                [0.68333333],
+                [0.68333333],
+                [0.68333333],
+            ]
+        )
     )
-    subcommunity_results: DataFrame = DataFrame(
-        {
-            "community": subcommunity_names,
-            "viewpoint": [0.0, 0.0],
-            "alpha": [3.0, 3.0],
-            "rho": [2.05, 2.05],
-            "beta": [0.487805, 0.487805],
-            "gamma": [1.463415, 1.463415],
-            "normalized_alpha": [1.5, 1.5],
-            "normalized_rho": [1.025, 1.025],
-            "normalized_beta": [0.97561, 0.97561],
-        }
+    subcommunity_similarity: ndarray = field(
+        default_factory=lambda: (
+            array(
+                [
+                    [0.33333333, 0.35],
+                    [0.33333333, 0.35],
+                    [0.33333333, 0.35],
+                    [0.35, 0.33333333],
+                    [0.35, 0.33333333],
+                    [0.35, 0.33333333],
+                ],
+            ),
+        )
     )
-    metacommunity_results: DataFrame = DataFrame(
-        {
-            "community": ["metacommunity"],
-            "viewpoint": [0.0],
-            "alpha": [3.0],
-            "rho": [2.05],
-            "beta": [0.487805],
-            "gamma": [1.463415],
-            "normalized_alpha": [1.5],
-            "normalized_rho": [1.025],
-            "normalized_beta": [0.97561],
-        },
-        index=[0],
+    normalized_subcommunity_similarity: ndarray = field(
+        default_factory=lambda: array(
+            [
+                [0.66666667, 0.7],
+                [0.66666667, 0.7],
+                [0.66666667, 0.7],
+                [0.7, 0.66666667],
+                [0.7, 0.66666667],
+                [0.7, 0.66666667],
+            ]
+        )
+    )
+    subcommunity_results: DataFrame = field(
+        default_factory=lambda: DataFrame(
+            {
+                "community": subcommunity_names,
+                "viewpoint": [0.0, 0.0],
+                "alpha": [3.0, 3.0],
+                "rho": [2.05, 2.05],
+                "beta": [0.487805, 0.487805],
+                "gamma": [1.463415, 1.463415],
+                "normalized_alpha": [1.5, 1.5],
+                "normalized_rho": [1.025, 1.025],
+                "normalized_beta": [0.97561, 0.97561],
+            }
+        )
+    )
+    metacommunity_results: DataFrame = field(
+        default_factory=lambda: DataFrame(
+            {
+                "community": ["metacommunity"],
+                "viewpoint": [0.0],
+                "alpha": [3.0],
+                "rho": [2.05],
+                "beta": [0.487805],
+                "gamma": [1.463415],
+                "normalized_alpha": [1.5],
+                "normalized_rho": [1.025],
+                "normalized_beta": [0.97561],
+            },
+            index=[0],
+        )
     )
 
 
@@ -191,51 +211,61 @@ class SimilarityMetacommunity6by2:
 class SimilarityMetacommunity3by2:
     description = "similarity-sensitive metacommunity; 3 species, 2 subcommunities"
     viewpoint: float = 2.0
-    counts: DataFrame = counts_3by2
-    similarity: DataFrame = similarity_dataframe_3by3
-    metacommunity_similarity: ndarray = array([[0.76], [0.62], [0.22]])
-    subcommunity_similarity: ndarray = (
-        array(
+    counts: DataFrame = field(default_factory=lambda: counts_3by2)
+    similarity: DataFrame = field(default_factory=lambda: similarity_dataframe_3by3)
+    metacommunity_similarity: ndarray = field(
+        default_factory=lambda: array([[0.76], [0.62], [0.22]])
+    )
+    subcommunity_similarity: ndarray = field(
+        default_factory=lambda: (
+            array(
+                [
+                    [0.25, 0.51],
+                    [0.35, 0.27],
+                    [0.07, 0.15],
+                ]
+            ),
+        )
+    )
+    normalized_subcommunity_similarity: ndarray = field(
+        default_factory=lambda: array(
             [
-                [0.25, 0.51],
-                [0.35, 0.27],
-                [0.07, 0.15],
+                [0.625, 0.85],
+                [0.875, 0.45],
+                [0.175, 0.25],
             ]
-        ),
+        )
     )
-    normalized_subcommunity_similarity: ndarray = array(
-        [
-            [0.625, 0.85],
-            [0.875, 0.45],
-            [0.175, 0.25],
-        ]
+    subcommunity_results: DataFrame = field(
+        default_factory=lambda: DataFrame(
+            {
+                "community": subcommunity_names,
+                "viewpoint": [2.0, 2.0],
+                "alpha": [3.07692308, 2.22222222],
+                "rho": [1.97775446, 1.48622222],
+                "beta": [0.50562394, 0.67284689],
+                "gamma": [1.52671756, 1.49253731],
+                "normalized_alpha": [1.23076923, 1.33333333],
+                "normalized_rho": [0.79110178, 0.89173333],
+                "normalized_beta": [1.26405985, 1.12141148],
+            }
+        )
     )
-    subcommunity_results: DataFrame = DataFrame(
-        {
-            "community": subcommunity_names,
-            "viewpoint": [2.0, 2.0],
-            "alpha": [3.07692308, 2.22222222],
-            "rho": [1.97775446, 1.48622222],
-            "beta": [0.50562394, 0.67284689],
-            "gamma": [1.52671756, 1.49253731],
-            "normalized_alpha": [1.23076923, 1.33333333],
-            "normalized_rho": [0.79110178, 0.89173333],
-            "normalized_beta": [1.26405985, 1.12141148],
-        }
-    )
-    metacommunity_results: DataFrame = DataFrame(
-        {
-            "community": ["metacommunity"],
-            "viewpoint": [2.0],
-            "alpha": [2.5],
-            "rho": [1.6502801833927663],
-            "beta": [0.5942352817544037],
-            "gamma": [1.5060240963855422],
-            "normalized_alpha": [1.2903225806451613],
-            "normalized_rho": [0.8485572790897555],
-            "normalized_beta": [1.1744247216675028],
-        },
-        index=[0],
+    metacommunity_results: DataFrame = field(
+        default_factory=lambda: DataFrame(
+            {
+                "community": ["metacommunity"],
+                "viewpoint": [2.0],
+                "alpha": [2.5],
+                "rho": [1.6502801833927663],
+                "beta": [0.5942352817544037],
+                "gamma": [1.5060240963855422],
+                "normalized_alpha": [1.2903225806451613],
+                "normalized_rho": [0.8485572790897555],
+                "normalized_beta": [1.1744247216675028],
+            },
+            index=[0],
+        )
     )
 
 
