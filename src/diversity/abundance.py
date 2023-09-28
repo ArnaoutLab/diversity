@@ -18,7 +18,7 @@ from typing import Iterable, Union
 
 from numpy import arange, ndarray
 from pandas import DataFrame, RangeIndex
-from scipy.sparse import spmatrix, diags
+from scipy.sparse import spmatrix, diags, issparse
 
 
 class Abundance:
@@ -156,10 +156,11 @@ def make_abundance(counts: Union[DataFrame, spmatrix, ndarray]) -> Abundance:
     """
     if isinstance(counts, DataFrame):
         return AbundanceFromDataFrame(counts=counts)
-    elif isinstance(counts, spmatrix):
-        return AbundanceFromSparseArray(counts=counts)
-    elif isinstance(counts, ndarray):
-        return Abundance(counts=counts)
+    elif hasattr(counts, 'shape'):
+        if issparse(counts):
+            return AbundanceFromSparseArray(counts=counts)
+        else:
+            return Abundance(counts=counts)
     else:
         raise NotImplementedError(
             f"Type {type(counts)} is not supported for argument "

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from numpy import allclose, array, ndarray
 from pandas import DataFrame
 from pytest import fixture, mark, raises
-from scipy.sparse import csr_array, spmatrix
+from scipy.sparse import csr_array, spmatrix, issparse
 
 from diversity.abundance import (
     Abundance,
@@ -267,7 +267,7 @@ class TestSparseAbundance:
 
     def test_subcommunity_abundance(self, test_case):
         abundance = make_abundance(counts=test_case.counts)
-        assert isinstance(abundance.subcommunity_abundance, spmatrix)
+        assert issparse(abundance.subcommunity_abundance)
         assert allclose(
             abundance.subcommunity_abundance.data,
             test_case.subcommunity_abundance.data,
@@ -289,7 +289,7 @@ class TestSparseAbundance:
 
     def test_normalized_subcommunity_abundance(self, test_case):
         abundance = make_abundance(counts=test_case.counts)
-        assert isinstance(abundance.normalized_subcommunity_abundance, spmatrix)
+        assert issparse(abundance.normalized_subcommunity_abundance)
         assert allclose(
             abundance.normalized_subcommunity_abundance.data,
             test_case.normalized_subcommunity_abundance.data,
