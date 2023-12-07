@@ -124,11 +124,11 @@ class Metacommunity:
             return 1 / diversity_measure
 
         if measure in {"rho_hat"}:
-            N = self.counts.shape[0]
+            N = self.counts.shape[1]
             return (diversity_measure - 1)/(N-1)
 
         if measure in {"beta_hat"}:
-            N = self.counts.shape[0]
+            N = self.counts.shape[1]
             return ((N/diversity_measure) - 1)/(N-1)
         
         return diversity_measure
