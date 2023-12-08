@@ -36,10 +36,10 @@ MAIN_TEST_CASES = [
             "0.7\t0.7\t0.7\t0.5\t0.5\t1.0\n"
         ),
         "output_filecontents": (
-            "community\tviewpoint\talpha\trho\tbeta\tgamma\tnormalized_alpha\tnormalized_rho\tnormalized_beta\n"
-            "metacommunity\t0\t3.0000\t2.0500\t0.4878\t1.4634\t1.5000\t1.0250\t0.9756\n"
-            "subcommunity_1\t0\t3.0000\t2.0500\t0.4878\t1.4634\t1.5000\t1.0250\t0.9756\n"
-            "subcommunity_2\t0\t3.0000\t2.0500\t0.4878\t1.4634\t1.5000\t1.0250\t0.9756\n"
+            "community\tviewpoint\talpha\trho\tbeta\tgamma\tnormalized_alpha\tnormalized_rho\tnormalized_beta\trho_hat\tbeta_hat\n"
+            "metacommunity\t0\t3.0000\t2.0500\t0.4878\t1.4634\t1.5000\t1.0250\t0.9756\t1.0500\t-0.0244\n"
+            "subcommunity_1\t0\t3.0000\t2.0500\t0.4878\t1.4634\t1.5000\t1.0250\t0.9756\t1.0500\t-0.0244\n"
+            "subcommunity_2\t0\t3.0000\t2.0500\t0.4878\t1.4634\t1.5000\t1.0250\t0.9756\t1.0500\t-0.0244\n"
         ),
     },
     {
@@ -62,19 +62,19 @@ MAIN_TEST_CASES = [
             "0.1\t0.2\t1.0\n"
         ),
         "output_filecontents": (
-            "community\tviewpoint\talpha\trho\tbeta\tgamma\tnormalized_alpha\tnormalized_rho\tnormalized_beta\n"
-            "metacommunity\t2.0000\t2.6304\t1.7678\t0.5627\t1.4649\t1.3253\t0.8898\t1.1235\n"
-            "subcommunity_1\t2.0000\t2.8947\t1.9194\t0.5210\t1.4745\t1.3158\t0.8724\t1.1462\n"
-            "subcommunity_2\t2.0000\t2.4444\t1.6587\t0.6029\t1.4570\t1.3333\t0.9047\t1.1053\n"
-            "metacommunity\t101.0000\t2.1739\t1.5705\t0.5987\t1.2849\t1.1858\t0.7713\t1.1816\n"
-            "subcommunity_1\t101.0000\t2.7641\t1.6836\t0.5940\t1.2908\t1.2564\t0.7653\t1.3067\n"
-            "subcommunity_2\t101.0000\t2.1608\t1.5610\t0.6406\t1.2814\t1.1786\t0.8515\t1.1744\n"
-            "metacommunity\t102.0000\t2.1569\t1.5333\t0.5970\t1.2791\t1.1765\t0.7614\t1.1957\n"
-            "subcommunity_1\t102.0000\t2.7500\t1.6750\t0.5970\t1.2791\t1.2500\t0.7614\t1.3134\n"
-            "subcommunity_2\t102.0000\t2.1569\t1.5333\t0.6522\t1.2791\t1.1765\t0.8364\t1.1957\n"
-            "metacommunity\tinf\t2.1569\t1.5333\t0.5970\t1.2791\t1.1765\t0.7614\t1.1957\n"
-            "subcommunity_1\tinf\t2.7500\t1.6750\t0.5970\t1.2791\t1.2500\t0.7614\t1.3134\n"
-            "subcommunity_2\tinf\t2.1569\t1.5333\t0.6522\t1.2791\t1.1765\t0.8364\t1.1957\n"
+            "community\tviewpoint\talpha\trho\tbeta\tgamma\tnormalized_alpha\tnormalized_rho\tnormalized_beta\trho_hat\tbeta_hat\n"
+            "metacommunity\t2.0000\t2.6304\t1.7678\t0.5627\t1.4649\t1.3253\t0.8898\t1.1235\t0.7562\t0.0742\n"
+            "subcommunity_1\t2.0000\t2.8947\t1.9194\t0.5210\t1.4745\t1.3158\t0.8724\t1.1462\t0.9194\t0.0420\n"
+            "subcommunity_2\t2.0000\t2.4444\t1.6587\t0.6029\t1.4570\t1.3333\t0.9047\t1.1053\t0.6587\t0.2058\n"
+            "metacommunity\t101.0000\t2.1739\t1.5705\t0.5987\t1.2849\t1.1858\t0.7713\t1.1816\t0.5645\t0.1894\n"
+            "subcommunity_1\t101.0000\t2.7641\t1.6836\t0.5940\t1.2908\t1.2564\t0.7653\t1.3067\t0.6836\t0.1879\n"
+            "subcommunity_2\t101.0000\t2.1608\t1.5610\t0.6406\t1.2814\t1.1786\t0.8515\t1.1744\t0.5610\t0.2812\n"
+            "metacommunity\t102.0000\t2.1569\t1.5333\t0.5970\t1.2791\t1.1765\t0.7614\t1.1957\t0.5333\t0.1940\n"
+            "subcommunity_1\t102.0000\t2.7500\t1.6750\t0.5970\t1.2791\t1.2500\t0.7614\t1.3134\t0.6750\t0.1940\n"
+            "subcommunity_2\t102.0000\t2.1569\t1.5333\t0.6522\t1.2791\t1.1765\t0.8364\t1.1957\t0.5333\t0.3043\n"
+            "metacommunity\tinf\t2.1569\t1.5333\t0.5970\t1.2791\t1.1765\t0.7614\t1.1957\t0.5333\t0.1940\n"
+            "subcommunity_1\tinf\t2.7500\t1.6750\t0.5970\t1.2791\t1.2500\t0.7614\t1.3134\t0.6750\t0.1940\n"
+            "subcommunity_2\tinf\t2.1569\t1.5333\t0.6522\t1.2791\t1.1765\t0.8364\t1.1957\t0.5333\t0.3043\n"
         ),
     },
     {
@@ -97,19 +97,19 @@ MAIN_TEST_CASES = [
             "0.1\t0.2\t1.0\n"
         ),
         "output_filecontents": (
-            "community\tviewpoint\talpha\trho\tbeta\tgamma\tnormalized_alpha\tnormalized_rho\tnormalized_beta\n"
-            "metacommunity\t2.0000\t2.6304\t1.7678\t0.5627\t1.4649\t1.3253\t0.8898\t1.1235\n"
-            "subcommunity_1\t2.0000\t2.8947\t1.9194\t0.5210\t1.4745\t1.3158\t0.8724\t1.1462\n"
-            "subcommunity_2\t2.0000\t2.4444\t1.6587\t0.6029\t1.4570\t1.3333\t0.9047\t1.1053\n"
-            "metacommunity\t101.0000\t2.1739\t1.5705\t0.5987\t1.2849\t1.1858\t0.7713\t1.1816\n"
-            "subcommunity_1\t101.0000\t2.7641\t1.6836\t0.5940\t1.2908\t1.2564\t0.7653\t1.3067\n"
-            "subcommunity_2\t101.0000\t2.1608\t1.5610\t0.6406\t1.2814\t1.1786\t0.8515\t1.1744\n"
-            "metacommunity\t102.0000\t2.1569\t1.5333\t0.5970\t1.2791\t1.1765\t0.7614\t1.1957\n"
-            "subcommunity_1\t102.0000\t2.7500\t1.6750\t0.5970\t1.2791\t1.2500\t0.7614\t1.3134\n"
-            "subcommunity_2\t102.0000\t2.1569\t1.5333\t0.6522\t1.2791\t1.1765\t0.8364\t1.1957\n"
-            "metacommunity\tinf\t2.1569\t1.5333\t0.5970\t1.2791\t1.1765\t0.7614\t1.1957\n"
-            "subcommunity_1\tinf\t2.7500\t1.6750\t0.5970\t1.2791\t1.2500\t0.7614\t1.3134\n"
-            "subcommunity_2\tinf\t2.1569\t1.5333\t0.6522\t1.2791\t1.1765\t0.8364\t1.1957\n"
+            "community\tviewpoint\talpha\trho\tbeta\tgamma\tnormalized_alpha\tnormalized_rho\tnormalized_beta\trho_hat\tbeta_hat\n"
+            "metacommunity\t2.0000\t2.6304\t1.7678\t0.5627\t1.4649\t1.3253\t0.8898\t1.1235\t0.7562\t0.0742\n"
+            "subcommunity_1\t2.0000\t2.8947\t1.9194\t0.5210\t1.4745\t1.3158\t0.8724\t1.1462\t0.9194\t0.0420\n"
+            "subcommunity_2\t2.0000\t2.4444\t1.6587\t0.6029\t1.4570\t1.3333\t0.9047\t1.1053\t0.6587\t0.2058\n"
+            "metacommunity\t101.0000\t2.1739\t1.5705\t0.5987\t1.2849\t1.1858\t0.7713\t1.1816\t0.5645\t0.1894\n"
+            "subcommunity_1\t101.0000\t2.7641\t1.6836\t0.5940\t1.2908\t1.2564\t0.7653\t1.3067\t0.6836\t0.1879\n"
+            "subcommunity_2\t101.0000\t2.1608\t1.5610\t0.6406\t1.2814\t1.1786\t0.8515\t1.1744\t0.5610\t0.2812\n"
+            "metacommunity\t102.0000\t2.1569\t1.5333\t0.5970\t1.2791\t1.1765\t0.7614\t1.1957\t0.5333\t0.1940\n"
+            "subcommunity_1\t102.0000\t2.7500\t1.6750\t0.5970\t1.2791\t1.2500\t0.7614\t1.3134\t0.6750\t0.1940\n"
+            "subcommunity_2\t102.0000\t2.1569\t1.5333\t0.6522\t1.2791\t1.1765\t0.8364\t1.1957\t0.5333\t0.3043\n"
+            "metacommunity\tinf\t2.1569\t1.5333\t0.5970\t1.2791\t1.1765\t0.7614\t1.1957\t0.5333\t0.1940\n"
+            "subcommunity_1\tinf\t2.7500\t1.6750\t0.5970\t1.2791\t1.2500\t0.7614\t1.3134\t0.6750\t0.1940\n"
+            "subcommunity_2\tinf\t2.1569\t1.5333\t0.6522\t1.2791\t1.1765\t0.8364\t1.1957\t0.5333\t0.3043\n"
         ),
     },
 ]
