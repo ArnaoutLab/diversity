@@ -1,3 +1,14 @@
+import sys
+sys.path = ['/Users/arnaoutlab/Desktop/diversity_package-main/src',
+ '/Users/arnaoutlab/Desktop/diversity_package-main',
+ '/Users/arnaoutlab/Desktop/~/Documents/GitHub/vader',
+ '/Users/arnaoutlab/.pyenv/versions/3.9.16/lib/python39.zip',
+ '/Users/arnaoutlab/.pyenv/versions/3.9.16/lib/python3.9',
+ '/Users/arnaoutlab/.pyenv/versions/3.9.16/lib/python3.9/lib-dynload',
+ '',
+ '/Users/arnaoutlab/.local/lib/python3.9/site-packages',
+ '/Users/arnaoutlab/.pyenv/versions/3.9.16/lib/python3.9/site-packages']
+
 """Tests for diversity.metacommunity."""
 
 from dataclasses import dataclass, field
@@ -263,7 +274,7 @@ class SimilarityMetacommunity3by2:
                 "normalized_rho": [0.79110178, 0.89173333],
                 "normalized_beta": [1.26405985, 1.12141148],
                 "rho_hat": [0.977754, 0.486222],
-                "beta_hat": [0.011248, 0.345694]
+                "beta_hat": [0.011247877758913116, 0.345694]
             }
         )
     )
@@ -289,9 +300,9 @@ class SimilarityMetacommunity3by2:
 
 metacommunity_data = (
     FrequencyMetacommunity6by2(),
-    #FrequencyMetacommunity3by2(),
-    #SimilarityMetacommunity6by2(),
-    #SimilarityMetacommunity3by2(),
+    FrequencyMetacommunity3by2(),
+    SimilarityMetacommunity6by2(),
+    SimilarityMetacommunity3by2(),
 )
 
 
