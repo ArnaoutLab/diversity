@@ -73,7 +73,9 @@ A frequency-sensitive metacommunity can be created in Python by passing a counts
 
 ```python
 import pandas as pd
+import numpy as np
 from diversity import Metacommunity
+
 counts_1a = pd.DataFrame({"Dataset 1a": [30, 1, 1, 1, 1, 1]}, 
    index=["apple", "orange", "banana", "pear", "blueberry", "grape"])
 metacommunity_1a = Metacommunity(counts_1a)
