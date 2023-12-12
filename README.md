@@ -124,8 +124,8 @@ no_species_2a = len(labels_2a)
 S_2a = np.identity(n=no_species_2a)
 low=0.88; high=0.92	  # we assume birds are ~90% similar to each other
 for i in range(no_species_2a):
-for j in range(i+1, no_species_2a):
-S_2a[i][j] = np.random.uniform(low=low, high=high)
+    for j in range(i+1, no_species_2a):
+        S_2a[i][j] = np.random.uniform(low=low, high=high)
 S_2a = np.maximum( S_2a, S_2a.transpose() )
 S_2a = pd.DataFrame({labels_2a[i]: S_2a[i] for i in range(no_species_2a)}, index=labels_2a)
 ```
@@ -238,7 +238,7 @@ Recall $\bar{\rho}$ indicates how well a subcommunity represents the metacommuni
 Note the invertebrates are more diverse than the vertebrates, which we can see by calculating $q=0$ $\alpha$ diversity of these subcommunities:
 
 ```python
-Metacommunity_2b_1.subcommunity_diversity(viewpoint=0, measure='alpha')
+metacommunity_2b_1.subcommunity_diversity(viewpoint=0, measure='alpha')
 ```
 
 This outputs:
