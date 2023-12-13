@@ -23,19 +23,23 @@
 
 # About
 
-The `diversity` package calculates partitioned frequency- and similarity-sensitive diversity measures for a given metacommunity and its subcommunities. In ecology, a community is a grouping of several different species which share a common living space or geographical region (for example, all the animals living in a lake), and a metacommunity consists of several different communities which can interact with one another or have some species in common (for example, all the animals in a lake split into different depths). Each community that makes up a metacommunity is called a subcommunity. Even though these terms originate in ecology, we use them in a broader sense. If one is interested in analyzing a subset of a dataset, then the subset is a subcommunity and the entire dataset is the metacommunity. Alternatively, if one is interested in how individual datasets (e.g. from individual research subjects) compare to all datasets used in a study, the individual datasets are subcommunities and the set of all datasets is the metacommunity. (When there is only a single dataset under study, we use “subcommunity” and “metacommunity” interchangeably as convenient.)
+The `diversity` package calculates partitioned frequency- and similarity-sensitive diversity measures for a given metacommunity and its subcommunities.
+
+In ecology, a community is a grouping of several different species which share a common living space or geographical region (for example, all the animals living in a lake), and a metacommunity consists of several different communities which can interact with one another or have some species in common (for example, all the animals in a lake split into different depths). Each community that makes up a metacommunity is called a subcommunity.
+
+Even though these terms originate in ecology, we use them in a broader sense. If one is interested in analyzing a subset of a dataset, then the subset is a subcommunity and the entire dataset is the metacommunity. Alternatively, if one is interested in how individual datasets (e.g. from individual research subjects) compare to all datasets used in a study, the individual datasets are subcommunities and the set of all datasets is the metacommunity. (When there is only a single dataset under study, we use “subcommunity” and “metacommunity” interchangeably as convenient.)
 
 **Supported subcommunity diversity measures**:
 
-  - $\alpha$ - estimate of naive-community metacommunity diversity
-  - $\bar{\alpha}$ - diversity of subcommunity j in isolation
-  - $\rho$ - redundancy of subcommunity j
-  - $\bar{\rho}$ - representativeness of subcommunity j
-  - $\beta$ - distinctiveness of subcommunity j
-  - $\bar{\beta}$ - estimate of the effective number of distinct subcommunities
-  - $\gamma$ - contribution per individual toward metacommunity diversity
+  - $\alpha$ - diversity of subcommunity $j$ in isolation, per individual
+  - $\bar{\alpha}$ - diversity of subcommunity $j$ in isolation
+  - $\rho$ - redundancy of subcommunity $j$
+  - $\bar{\rho}$ - representativeness of subcommunity $j$
   - $\hat{\rho}$ - rescaled version of redundancy ($\rho$)
+  - $\beta$ - distinctiveness of subcommunity $j$
+  - $\bar{\beta}$ - effective number of distinct subcommunities
   - $\hat{\beta}$ - rescaled version of distinctiveness ($\beta$) 
+  - $\gamma$ - contribution of subcommunity $j$ toward metacommunity diversity
 
 
 **Supported metacommunity diversity measures**:
@@ -43,16 +47,16 @@ The `diversity` package calculates partitioned frequency- and similarity-sensiti
   - $\bar{A}$ - average diversity of subcommunities
   - $R$ - average redundancy of subcommunities
   - $\bar{R}$ - average representativeness of subcommunities
+  - $\hat{R}$ - average rescaled redundancy of subcommunities
   - $B$ - average distinctiveness of subcommunities
   - $\bar{B}$ - effective number of distinct subcommunities
+  - $\hat{B}$ - average rescaled distinctiveness of subcommunities
   - $G$ - metacommunity diversity
-  - $\hat{R}$ - average rescaled redundancy
-  - $\hat{B}$ - average rescaled distinctiveness
 
 For a more rigorous description of the diversity measures `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 
 # Basic usage
-## alpha diversities 
+## Alpha diversities 
 
 We illustrate the basic usage of `diversity` on simple, field-of-study-agnostic datasets of fruits and animals. First, consider two datasets of size $n=35$ that each contains counts of six types of fruit: apples, oranges, bananas, pears, blueberries, and grapes (see the figure below).
 
@@ -210,7 +214,7 @@ array([2.14151583])
 
 Thus, $D_1^Z=2.14$. That this number is close to 2 reflects the fact that members in this community belong to two broad classes of animals: vertebrates and invertebrates. The remaining $0.14$ above $2$ is interpreted as reflecting the diversity within each phylum.
 
-## beta diversities
+## Beta diversities
 Recall beta diversity is between-group diversity. To illustrate, we will re-imagine Dataset 2b as a metacommunity made up of 2 subcommunities—the invertebrates and the vertebrates—defined as follows:
 
 ```python
