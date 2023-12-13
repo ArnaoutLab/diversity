@@ -5,18 +5,17 @@
 
 
 - [About](#about)
+  - [Definitions](#definitions)
+  - [Partitioned diversity](#partitioned-diversity)
+  - [Frequency-sensitive diversity](#frequency-sensitive-diversity)
+  - [Similarity-sensitive diversity](#similarity-sensitive-diversity)
+  - [Rescaled diversity indices](#rescaled-diversity-indices)
+  - [One package to rule them all](#one-package-to-rule-them-all)
 - [Basic usage](#basic-usage)
   - [alpha diversities](#alpha-diversities)
   - [beta diversities](#beta-diversities)
 - [Advanced usage](#advanced-usage)
 - [Command-line usage](#command-line-usage)
-- [Background](#background)
-  - [Diversity indices](#diversity-indices)
-  - [Partitioned diversity](#partitioned-diversity)
-  - [Frequency-sensitive diversity](#frequency-sensitive-diversity)
-  - [Similarity-sensitive diversity](#similarity-sensitive-diversity)
-  - [Rescaled diversity indices](#rescaled-diversity-indices)
-  - [One package to calculate them all](#one-package-to-calculate-them-all)
 - [Applications](#applications)
 - [Alternatives](#alternatives)
 
@@ -25,9 +24,34 @@
 
 The `diversity` package calculates partitioned frequency- and similarity-sensitive diversity measures for a given metacommunity and its subcommunities.
 
-In ecology, a community is a grouping of several different species which share a common living space or geographical region (for example, all the animals living in a lake), and a metacommunity consists of several different communities which can interact with one another or have some species in common (for example, all the animals in a lake split into different depths). Each community that makes up a metacommunity is called a subcommunity.
+## Definitions
 
-Even though these terms originate in ecology, we use them in a broader sense. If one is interested in analyzing a subset of a dataset, then the subset is a subcommunity and the entire dataset is the metacommunity. Alternatively, if one is interested in how individual datasets (e.g. from individual research subjects) compare to all datasets used in a study, the individual datasets are subcommunities and the set of all datasets is the metacommunity. (When there is only a single dataset under study, we use “subcommunity” and “metacommunity” interchangeably as convenient.)
+A ***community*** is a collection of elements called ***individuals***, each of which is assigned a label called its ***species***, where multiple individuals may have the same species. An example of a community is all the animals and plants living in a lake. A ***metacommunity*** consists of several communities which can interact with one another or have some species in common. An example of a metacommunity is all the animals in a lake split into different depths. Each community that makes up a metacommunity is called a ***subcommunity***.
+
+Even though the terms metacommunity and subcommunity originate in ecology, we use them in a broader sense. If one is interested in analyzing a subset of a dataset, then the subset is a subcommunity and the entire dataset is the metacommunity. Alternatively, if one is interested in how individual datasets (e.g. from individual research subjects) compare to all datasets used in a study, the individual datasets are subcommunities and the set of all datasets is the metacommunity. (When there is only a single dataset under study, we use “subcommunity” and “metacommunity” interchangeably as convenient.)
+
+A ***diversity index*** is a statistic associated with a community, which describes how much the species of its individuals vary. For example, a community of many individuals of the same species has a very low diversity whereas a community with multiple species and the same amount of individuals per species has a high diversity.
+
+## Partitioned diversity
+
+Some diversity indices compare the diversities of subsets of a community with respect to the overall community. The subsets are called ***subcommunities***, while the overall community is called a ***metacommunity***. For example, two subcommunities with the same frequency distribution but no shared species each comprise half of the combined metacommunity diversity.
+
+## Frequency-sensitive diversity
+
+[In 1973, Hill introduced a framework](https://doi.org/10.2307/1934352) which unifies commonly used diversity indices into a single parameterized family of diversity measures. The so-called ***viewpoint parameter*** can be thought of as the sensitivity to rare species. At one end of the spectrum, when the viewpoint parameter is set to 0, species frequency is ignored entirely, and only the number of distinct species matters, while at the other end of the spectrum, when the viewpoint parameter is set to $\infty$, only the highest frequency species in a community is considered by the corresponding diversity measure. Common diversity measures such as ***species richness***, ***Shannon entropy***, the ***Gini-Simpson index***, and the ***Berger-Parker index*** have simple and natural relationships with Hill's indices at different values for the viewpoint parameter ($0$, $1$, $2$, $\infty$, respectively).
+
+## Similarity-sensitive diversity
+
+In addition to being sensitive to frequency, it often makes sense to account for similarity in a diversity measure. For example, a community of two different types of rodents, may be considered less diverse than a community where one of the rodent species was replaced by the same number of individuals of a bird species. [Reeve et al.](https://arxiv.org/abs/1404.6520) and [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1) present a general mathematically rigorous way of incorporating similarity measures into Hill's framework. The result is a family of similarity-sensitive diversity indices parameterized by the same viewpoint parameter as well as the similarity function used for the species in the meta- or subcommunities of interest. These similarity-sensitive diversity measures account for both the pairwise similarity between all species and their frequencies.
+
+## Rescaled diversity indices
+
+In addition to the diversity measures introduced by Reeve et al, we also included two new rescaled measures $\hat{\rho}$ and $\hat{\beta}$, as well as their metacommunity counterparts. The motivation for introducing these measures is that $\rho$ can become very large if the number of subcommunities is large. Similarly, $\beta$ can become very small in this case. The rescaled versions are designed so that they remain of order unity even when there are lots of subcommunities.
+
+## One package to rule them all
+
+The `diversity` package is able to calculate all of the similarity- and frequency-sensitive subcommunity and metacommunity diversity measures described in [Reeve et al.](https://arxiv.org/abs/1404.6520). See the paper for more in-depth information on their derivation and interpretation.
+
 
 **Supported subcommunity diversity measures**:
 
@@ -53,7 +77,6 @@ Even though these terms originate in ecology, we use them in a broader sense. If
   - $\hat{B}$ - average rescaled distinctiveness of subcommunities
   - $G$ - metacommunity diversity
 
-For a more rigorous description of the diversity measures `diversity` can calculate see [Reeve et al., 2014](https://arxiv.org/abs/1404.6520). A brief informal discussion can be found in the [background](#background) section.
 
 # Basic usage
 ## Alpha diversities 
@@ -309,32 +332,6 @@ For further options, consult the help:
 ```python
 python -m diversity -h
 ```
-
-# Background
-
-## Diversity indices
-
-A ***community*** is a collection of elements called ***individuals***, each of which is assigned a label called its ***species***, where multiple individuals may have the same species. A ***diversity index*** is a statistic associated with a community, which describes how much the species of its individuals vary. For example, a community of many individuals of the same species has a very low diversity whereas a community with multiple species and the same amount of individuals per species has a high diversity.
-
-## Partitioned diversity
-
-Some diversity indices compare the diversities of subsets of a community with respect to the overall community. The subsets are called ***subcommunities***, while the overall community is called a ***metacommunity***. For example, two subcommunities with the same frequency distribution but no shared species each comprise half of the combined metacommunity diversity.
-
-## Frequency-sensitive diversity
-
-[In 1973, Hill introduced a framework](https://doi.org/10.2307/1934352) which unifies commonly used diversity indices into a single parameterized family of diversity measures. The so-called ***viewpoint parameter*** can be thought of as the sensitivity to rare species. At one end of the spectrum, when the viewpoint parameter is set to 0, species frequency is ignored entirely, and only the number of distinct species matters, while at the other end of the spectrum, when the viewpoint parameter is set to $\infty$, only the highest frequency species in a community is considered by the corresponding diversity measure. Common diversity measures such as ***species richness***, ***Shannon entropy***, the ***Gini-Simpson index***, and the ***Berger-Parker index*** have simple and natural relationships with Hill's indices at different values for the viewpoint parameter ($0$, $1$, $2$, $\infty$, respectively).
-
-## Similarity-sensitive diversity
-
-In addition to being sensitive to frequency, it often makes sense to account for similarity in a diversity measure. For example, a community of two different types of rodents, may be considered less diverse than a community where one of the rodent species was replaced by the same number of individuals of a bird species. [Reeve et al.](https://arxiv.org/abs/1404.6520) and [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1) present a general mathematically rigorous way of incorporating similarity measures into Hill's framework. The result is a family of similarity-sensitive diversity indices parameterized by the same viewpoint parameter as well as the similarity function used for the species in the meta- or subcommunities of interest. These similarity-sensitive diversity measures account for both the pairwise similarity between all species and their frequencies.
-
-## Rescaled diversity indices
-
-In addition to the diversity measures introduced by Reeve et al, we also included two new rescaled measures $\hat{\rho}$ and $\hat{\beta}$, as well as their metacommunity counterparts. The motivation for introducing these measures is that $\rho$ can become very large if the number of subcommunities is large. Similarly, $\beta$ can become very small in this case. The rescaled versions are designed so that they remain of order unity even when there are lots of subcommunities.
-
-## One package to calculate them all
-
-The `diversity` package is able to calculate all of the similarity- and frequency-sensitive subcommunity and metacommunity diversity measures described in [Reeve et al.](https://arxiv.org/abs/1404.6520). See the paper for more in-depth information on their derivation and interpretation.
 
 # Applications
 
