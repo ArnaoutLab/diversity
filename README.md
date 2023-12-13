@@ -337,10 +337,10 @@ python -m diversity -h
 
 For applications of the diversity package to various fields (immunomics, metagenomics, medical imaging and pathology), we refer to the Jupyter notebooks below:
 
-- [Immunomics](notebooks/immunomics_fig3.ipynb)
-- [Metagenomics](notebooks/metagenomics_figs4-5.ipynb)
-- [Medical imaging](notebooks/medical_imaging_fig6-7.ipynb)
-- [Pathology](notebooks/pathology_fig8.ipynb)
+- [Immunomics](notebooks/immunomics/immunomics_fig3.ipynb)
+- [Metagenomics](notebooks/metagenomics/metagenomics_figs4-5.ipynb)
+- [Medical imaging](notebooks/medical_imaging/medical_imaging_fig6-7.ipynb)
+- [Pathology](notebooks/pathology/pathology_fig8.ipynb)
 
 # Alternatives
 
