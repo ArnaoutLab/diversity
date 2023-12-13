@@ -1,3 +1,5 @@
+![alt text](images/diversity_logo.png)
+
 # diversity: partitioned frequency- and similarity-sensitive diversity in Python
 
 [![Python version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
