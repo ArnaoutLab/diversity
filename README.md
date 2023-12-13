@@ -1,6 +1,5 @@
-![alt text](images/diversity_logo.png)
-
 # diversity: partitioned frequency- and similarity-sensitive diversity in Python
+![alt text](images/diversity_logo.png)
 
 [![Python version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 
@@ -24,7 +23,7 @@
 
 # About
 
-The `diversity` package calculates partitioned frequency- and similarity-sensitive diversity measures for a given metacommunity and its subcommunities.
+The `diversity` package calculates partitioned frequency- and similarity-sensitive diversity measures for a given metacommunity and its subcommunities. In ecology, a community is a grouping of several different species which share a common living space or geographical region (for example, all the animals living in a lake), and a metacommunity consists of several different communities which can interact with one another or have some species in common (for example, all the animals in a lake split into different depths). Each community that makes up a metacommunity is called a subcommunity. Even though these terms originate in ecology, we use them in a broader sense. If one is interested in analyzing a subset of a dataset, then the subset is a subcommunity and the entire dataset is the metacommunity. Alternatively, if one is interested in how individual datasets (e.g. from individual research subjects) compare to all datasets used in a study, the individual datasets are subcommunities and the set of all datasets is the metacommunity. (When there is only a single dataset under study, we use “subcommunity” and “metacommunity” interchangeably as convenient.)
 
 **Supported subcommunity diversity measures**:
 
@@ -55,7 +54,7 @@ For a more rigorous description of the diversity measures `diversity` can calcul
 # Basic usage
 ## alpha diversities 
 
-We illustrate the basic usage of `diversity` on simple, field-of-study-agnostic datasets of fruits and animals. To better connect to previous work, we will use the term “subcommunity” synonymously with “dataset” and the term “metacommunity” whenever datasets are combined (when there is only a single dataset under study, we use “subcommunity” and “metacommunity” interchangeably as convenient). First, consider two datasets of size $n=35$ that each contains counts of six types of fruit: apples, oranges, bananas, pears, blueberries, and grapes (see the figure below).
+We illustrate the basic usage of `diversity` on simple, field-of-study-agnostic datasets of fruits and animals. First, consider two datasets of size $n=35$ that each contains counts of six types of fruit: apples, oranges, bananas, pears, blueberries, and grapes (see the figure below).
 
 <img src='images/fruits-1.png' width='350'>
 
