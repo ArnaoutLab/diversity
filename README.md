@@ -85,7 +85,7 @@ We illustrate the basic usage of `diversity` on simple, field-of-study-agnostic 
 
 <img src='images/fruits-1.png' width='350'>
 
-Dataset 1a is mostly apples; in dataset 1b, all fruits are represented at almost identical frequencies. The frequencies of the fruits in each dataset is tabulated below:
+We will refer to Dataset 1 and Dataset 2 interchangeably as Dataset 1a and Dataset 1b, respectively. Dataset 1a is mostly apples; in dataset 1b, all fruits are represented at almost identical frequencies. The frequencies of the fruits in each dataset is tabulated below:
 
 |           | Dataset 1a | Dataset 1b | 
 | :-------- | ---------: | ---------: | 
@@ -146,7 +146,7 @@ The diversity package can also calculate similarity-sensitive diversity measures
 
 <img src='images/fig2_thumbnail.png' width='350'>
 
-The datasets now each contain a set of animals in which each animal appears only once. We consider phylogenetic similarity (approximated roughly, for purposes of this example). Dataset 2a consists entirely of birds, so all entries in the similarity matrix are close to $1$:
+We will refer to Community 3 and Community 4 interchangeably as Dataset 2a and Dataset 2b, respectively. The datasets now each contain a set of animals in which each animal appears only once. We consider phylogenetic similarity (approximated roughly, for purposes of this example). Dataset 2a consists entirely of birds, so all entries in the similarity matrix are close to $1$:
 
 ```python
 labels_2a = ["owl", "swan", "duck", "eagle", "turkey", "dodo", "dove", "fowl", "flamingo"]
