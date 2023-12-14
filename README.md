@@ -342,6 +342,8 @@ For applications of the diversity package to various fields (immunomics, metagen
 - [Medical imaging](notebooks/medical_imaging/medical_imaging_fig6-7.ipynb)
 - [Pathology](notebooks/pathology/pathology_fig8.ipynb)
 
+The examples in the Basic usage section are also made available as a notebook [here](notebooks/fruits_and_animals/fruits_and_animals_fig1_2.ipynb).
+
 # Alternatives
 
 To date, we know of no other python package that implements the partitioned frequency- and similarity-sensitive diversity measures defined by [Reeve at al.](https://arxiv.org/abs/1404.6520). However, there is a [R package](https://github.com/boydorr/rdiversity) and a [Julia package](https://github.com/EcoJulia/Diversity.jl).
