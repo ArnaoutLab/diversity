@@ -118,12 +118,6 @@ Once a metacommunity has been created, diversity measures can be calculated. For
 metacommunity_1a.subcommunity_diversity(viewpoint=1, measure='alpha')
 ```
 
-which yields the output:
-
-```python
-array([1.89654919])
-```
-
 The output shows that $D_1=1.90$. To calculated multiple diversity measures at once and store them in a DataFrame, we type:
 
 ```python 
@@ -143,7 +137,7 @@ which produces the following output:
 
 
 
-Similarly, we find that $D_1=5.99$ for Dataset 1b. The larger value of $D_1$ for Dataset 1b aligns with the intuitive sense that more balance in the frequencies of unique elements means a more diverse dataset.
+Similarly, we find that $D_1 \approx 6.00$ for Dataset 1b. The larger value of $D_1$ for Dataset 1b aligns with the intuitive sense that more balance in the frequencies of unique elements means a more diverse dataset.
 
 The diversity package can also calculate similarity-sensitive diversity measures for any user-supplied definition of similarity. To illustrate, we now consider a second example in which the dataset elements are all unique. Uniqueness means element frequencies are identical, so similarity is the only factor that influences diversity calculations.
 
@@ -152,6 +146,8 @@ The diversity package can also calculate similarity-sensitive diversity measures
 The datasets now each contain a set of animals in which each animal appears only once. We consider phylogenetic similarity (approximated roughly, for purposes of this example). Dataset 2a consists entirely of birds, so all entries in the similarity matrix are close to $1$:
 
 ```python
+np.random.seed(42)
+
 labels_2a = ["owl", "swan", "duck", "eagle", "turkey", "dodo", "dove", "fowl", "flamingo"]
 no_species_2a = len(labels_2a)
 S_2a = np.identity(n=no_species_2a)
@@ -179,12 +175,6 @@ We can find $D_1^Z$ (using $q=1$ just for comparison to the previous example) si
 
 ```python
 metacommunity_2a.subcommunity_diversity(viewpoint=1, measure='alpha')
-```
-
-This produces the output:
-
-```python
-array([1.10144547])
 ```
 
 The output tells us that $D_1^Z=1.10$. The fact that this number is close to 1 reflects the fact that all individuals in this community are very similar to each other (all birds).
@@ -232,13 +222,7 @@ metacommunity_2b = Metacommunity(counts_2b, similarity=S_2b)
 metacommunity_2b.subcommunity_diversity(viewpoint=1, measure='alpha')
 ```
 
-which outputs:
-
-```python
-array([2.14151583])
-```
-
-Thus, $D_1^Z=2.14$. That this number is close to 2 reflects the fact that members in this community belong to two broad classes of animals: vertebrates and invertebrates. The remaining $0.14$ above $2$ is interpreted as reflecting the diversity within each phylum.
+which outputs $D_1^Z=2.14$. That this number is close to 2 reflects the fact that members in this community belong to two broad classes of animals: vertebrates and invertebrates. The remaining $0.14$ above $2$ is interpreted as reflecting the diversity within each phylum.
 
 ## Beta diversities
 Recall beta diversity is between-group diversity. To illustrate, we will re-imagine Dataset 2b as a metacommunity made up of 2 subcommunities—the invertebrates and the vertebrates—defined as follows:
@@ -261,26 +245,14 @@ metacommunity_2b_1.subcommunity_diversity(viewpoint=0,
 measure='normalized_rho')
 ```
 
-with the output:
-
-```python
-array([0.62814808, 0.67443493])
-```
-
-Recall $\bar{\rho}$ indicates how well a subcommunity represents the metacommunity. We find that $\bar{\rho}$ of the two subcommunities are rather low—0.63 and 0.67 for the invertebrates and the vertebrates, respectively—reflecting the low similarity between these groups. 
+with the output $[0.62814808, 0.67443493]$. Recall $\bar{\rho}$ indicates how well a subcommunity represents the metacommunity. We find that $\bar{\rho}$ of the two subcommunities are rather low—0.63 and 0.67 for the invertebrates and the vertebrates, respectively—reflecting the low similarity between these groups. 
 Note the invertebrates are more diverse than the vertebrates, which we can see by calculating $q=0$ $\alpha$ diversity of these subcommunities:
 
 ```python
 metacommunity_2b_1.subcommunity_diversity(viewpoint=0, measure='alpha')
 ```
 
-This outputs:
-
-```python
-array([3.53787004, 2.29512853])
-```
-
-In contrast, suppose we split Dataset 2b into two subsets at random, without regard to phylum:
+which outputs $[3.53787004, 2.29512853]$. In contrast, suppose we split Dataset 2b into two subsets at random, without regard to phylum:
 
 ```python
 counts_2b_2 = pd.DataFrame(
@@ -299,13 +271,7 @@ metacommunity_2b_2 = Metacommunity(counts_2b_2, similarity=S_2b)
 metacommunity_2b_2.subcommunity_diversity(viewpoint=0, measure='normalized_rho')
 ```
 
-yielding:
-
-```python
-array([0.93236011, 0.91945679])
-```
-
-we find that the $\bar{\rho}$ of the two subsets are now, respectively, 0.93 and 0.92. These high values reflect the fact that the vertebrates and the invertebrates are roughly equally represented.
+yielding $[0.93236011, 0.91945679]$. We find that the $\bar{\rho}$ of the two subsets are now, respectively, $0.93$ and $0.92$. These high values reflect the fact that the vertebrates and the invertebrates are roughly equally represented.
 
 # Advanced usage
 
