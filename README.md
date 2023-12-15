@@ -137,7 +137,7 @@ which produces the following output:
 
 
 
-Similarly, we find that $D_1 \approx 6.00$ for Dataset 1b. The larger value of $D_1$ for Dataset 1b aligns with the intuitive sense that more balance in the frequencies of unique elements means a more diverse dataset.
+Similarly, we find that $D_1 \approx 5.99$ for Dataset 1b. The larger value of $D_1$ for Dataset 1b aligns with the intuitive sense that more balance in the frequencies of unique elements means a more diverse dataset.
 
 The diversity package can also calculate similarity-sensitive diversity measures for any user-supplied definition of similarity. To illustrate, we now consider a second example in which the dataset elements are all unique. Uniqueness means element frequencies are identical, so similarity is the only factor that influences diversity calculations.
 
@@ -245,14 +245,14 @@ metacommunity_2b_1.subcommunity_diversity(viewpoint=0,
 measure='normalized_rho')
 ```
 
-with the output $[0.62814808, 0.67443493]$. Recall $\bar{\rho}$ indicates how well a subcommunity represents the metacommunity. We find that $\bar{\rho}$ of the two subcommunities are rather low—0.63 and 0.67 for the invertebrates and the vertebrates, respectively—reflecting the low similarity between these groups. 
+with the output $[0.63, 0.67]$. Recall $\bar{\rho}$ indicates how well a subcommunity represents the metacommunity. We find that $\bar{\rho}$ of the two subcommunities are rather low—0.63 and 0.67 for the invertebrates and the vertebrates, respectively—reflecting the low similarity between these groups. 
 Note the invertebrates are more diverse than the vertebrates, which we can see by calculating $q=0$ $\alpha$ diversity of these subcommunities:
 
 ```python
 metacommunity_2b_1.subcommunity_diversity(viewpoint=0, measure='alpha')
 ```
 
-which outputs $[3.53787004, 2.29512853]$. In contrast, suppose we split Dataset 2b into two subsets at random, without regard to phylum:
+which outputs $[3.54, 2.30]$. In contrast, suppose we split Dataset 2b into two subsets at random, without regard to phylum:
 
 ```python
 counts_2b_2 = pd.DataFrame(
@@ -271,7 +271,7 @@ metacommunity_2b_2 = Metacommunity(counts_2b_2, similarity=S_2b)
 metacommunity_2b_2.subcommunity_diversity(viewpoint=0, measure='normalized_rho')
 ```
 
-yielding $[0.93236011, 0.91945679]$. We find that the $\bar{\rho}$ of the two subsets are now, respectively, $0.93$ and $0.92$. These high values reflect the fact that the vertebrates and the invertebrates are roughly equally represented.
+yielding $[0.93, 0.92]$. We find that the $\bar{\rho}$ of the two subsets are now, respectively, $0.93$ and $0.92$. These high values reflect the fact that the vertebrates and the invertebrates are roughly equally represented.
 
 # Advanced usage
 
