@@ -242,10 +242,10 @@ We can obtain the representativeness $\bar{\rho}$ (“rho-bar”) of each subcom
 ```python
 metacommunity_2b_1 = Metacommunity(counts_2b_1, similarity=S_2b)
 metacommunity_2b_1.subcommunity_diversity(viewpoint=0, 
-measure='normalized_rho')
+measure='rho_hat')
 ```
 
-with the output $[0.63, 0.67]$. Recall $\bar{\rho}$ indicates how well a subcommunity represents the metacommunity. We find that $\bar{\rho}$ of the two subcommunities are rather low—0.63 and 0.67 for the invertebrates and the vertebrates, respectively—reflecting the low similarity between these groups. 
+with the output $[0.41, 0.21]$. Recall $\hat{\rho}$ indicates how well a subcommunity represents the metacommunity. We find that $\hat{\rho}$ of the two subcommunities are rather low—$0.41$ and $0.21$ for the invertebrates and the vertebrates, respectively—reflecting the low similarity between these groups. 
 Note the invertebrates are more diverse than the vertebrates, which we can see by calculating $q=0$ $\alpha$ diversity of these subcommunities:
 
 ```python
@@ -268,10 +268,10 @@ Proceeding again as above,
 
 ```python
 metacommunity_2b_2 = Metacommunity(counts_2b_2, similarity=S_2b)
-metacommunity_2b_2.subcommunity_diversity(viewpoint=0, measure='normalized_rho')
+metacommunity_2b_2.subcommunity_diversity(viewpoint=0, measure='rho_hat')
 ```
 
-yielding $[0.93, 0.92]$. We find that the $\bar{\rho}$ of the two subsets are now, respectively, $0.93$ and $0.92$. These high values reflect the fact that the vertebrates and the invertebrates are roughly equally represented.
+yielding $[0.68, 1.07]$. We find that the $\hat{\rho}$ of the two subsets are now, respectively, $0.68$ and $1.07$. These high values reflect the fact that the vertebrates and the invertebrates are roughly equally represented.
 
 # Advanced usage
 
