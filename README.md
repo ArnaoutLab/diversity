@@ -36,7 +36,7 @@ A ***diversity index*** is a statistic associated with a community, which descri
 
 ## Partitioned diversity
 
-Some diversity indices compare the diversities of subsets of a community with respect to the overall community. For example, two subcommunities with the same frequency distribution but no shared species each comprise half of the combined metacommunity diversity.
+Some diversity indices compare the diversities of the subcommunities with respect to the overall metacommunity. For example, two subcommunities with the same frequency distribution but no shared species each comprise half of the combined metacommunity diversity.
 
 ## Frequency-sensitive diversity
 
@@ -99,7 +99,7 @@ Dataset 1a is mostly apples; in dataset 1b, all fruits are represented at almost
 | grape     |          1 |          5 |
 | total     |         35 |         35 | 
 
-A frequency-sensitive metacommunity can be created in Python by passing a counts DataFrame to a `Metacommunity` object:
+A frequency-sensitive metacommunity can be created in Python by passing a `counts` DataFrame to a `Metacommunity` object:
 
 ```python
 import pandas as pd
@@ -108,6 +108,7 @@ from diversity import Metacommunity
 
 counts_1a = pd.DataFrame({"Dataset 1a": [30, 1, 1, 1, 1, 1]}, 
    index=["apple", "orange", "banana", "pear", "blueberry", "grape"])
+
 metacommunity_1a = Metacommunity(counts_1a)
 ```
 
@@ -135,6 +136,20 @@ which produces the following output:
 |    5 | Dataset 1a    |       inf |  1.17 | 1.00 | 1.00 |  1.17 |             1.17 |           1.00 |            1.00 |    1.00 |     1.00 |
 
 
+Next, let us repeat for Dataset 1b. Again, we make the `counts` dataframe and a `Metacommunity` object:
+
+```python
+counts_1b = pd.DataFrame({"Community 1b": [6, 6, 6, 6, 6, 5]},
+    index=["apple", "orange", "banana", "pear", "blueberry", "grape"])
+
+metacommunity_1b = Metacommunity(counts_1b)
+```
+
+To obtain $D_1$, we run:
+
+```python
+metacommunity_1b.subcommunity_diversity(viewpoint=1, measure='alpha')
+```
 
 Similarly, we find that $D_1 \approx 5.99$ for Dataset 1b. The larger value of $D_1$ for Dataset 1b aligns with the intuitive sense that more balance in the frequencies of unique elements means a more diverse dataset.
 
@@ -145,18 +160,40 @@ The diversity package can also calculate similarity-sensitive diversity measures
 The datasets now each contain a set of animals in which each animal appears only once. We consider phylogenetic similarity (approximated roughly, for purposes of this example). Dataset 2a consists entirely of birds, so all entries in the similarity matrix are close to $1$:
 
 ```python
-np.random.seed(42)
-
-labels_2a = ["owl", "swan", "duck", "eagle", "turkey", "dodo", "dove", "fowl", "flamingo"]
+labels_2a = ["owl", "eagle", "flamingo", "swan", "duck", "chicken", "turkey", "dodo", "dove"]
 no_species_2a = len(labels_2a)
 S_2a = np.identity(n=no_species_2a)
-low=0.88; high=0.92	  # we assume birds are ~90% similar to each other
-for i in range(no_species_2a):
-    for j in range(i+1, no_species_2a):
-        S_2a[i][j] = np.random.uniform(low=low, high=high)
+
+
+S_2a[0][1:9] = (0.91, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88) # owl
+S_2a[1][2:9] = (      0.88, 0.89, 0.88, 0.88, 0.88, 0.89, 0.88) # eagle
+S_2a[2][3:9] = (            0.90, 0.89, 0.88, 0.88, 0.88, 0.89) # flamingo
+S_2a[3][4:9] = (                  0.92, 0.90, 0.89, 0.88, 0.88) # swan
+S_2a[4][5:9] = (                        0.91, 0.89, 0.88, 0.88) # duck
+S_2a[5][6:9] = (                              0.92, 0.88, 0.88) # chicken
+S_2a[6][7:9] = (                                    0.89, 0.88) # turkey
+S_2a[7][8:9] = (                                          0.88) # dodo
+                                                                # dove
+
+
 S_2a = np.maximum( S_2a, S_2a.transpose() )
 S_2a = pd.DataFrame({labels_2a[i]: S_2a[i] for i in range(no_species_2a)}, index=labels_2a)
 ```
+
+which corresponds to the following table:
+
+|           |      owl |     eagle | flamingo |      swan |    duck |   chicken |    turkey |     dodo |       dove |
+| :-------- | -------: | --------: | -------: | --------: | ------: | --------: | --------: | -------: | ---------: |
+|       owl |        1 |      0.91 |     0.88 |      0.88 |    0.88 |      0.88 |      0.88 |     0.88 |       0.88 |
+|     eagle |     0.91 |         1 |     0.88 |      0.89 |    0.88 |      0.88 |      0.88 |     0.89 |       0.88 |
+|  flamingo |     0.88 |      0.88 |        1 |      0.90 |    0.89 |      0.88 |      0.88 |     0.88 |       0.89 |
+|      swan |     0.88 |      0.89 |     0.90 |         1 |    0.92 |      0.90 |      0.89 |     0.88 |       0.88 |
+|      duck |     0.88 |      0.88 |     0.89 |      0.92 |       1 |      0.91 |      0.89 |     0.88 |       0.88 |
+|   chicken |     0.88 |      0.88 |     0.88 |      0.90 |    0.91 |         1 |      0.92 |     0.88 |       0.88 |
+|    turkey |     0.88 |      0.88 |     0.88 |      0.89 |    0.89 |      0.92 |         1 |     0.89 |       0.88 |
+|      dodo |     0.88 |      0.89 |     0.88 |      0.88 |    0.88 |      0.88 |      0.89 |        1 |       0.88 |
+|      dove |     0.88 |      0.88 |     0.89 |      0.88 |    0.88 |      0.88 |      0.88 |     0.88 |          1 |
+
 
 We make a DataFrame of counts in the same way as in the previous example:
 
@@ -170,13 +207,13 @@ To compute the similarity-sensitive diversity indices, we now pass the similarit
 metacommunity_2a = Metacommunity(counts_2a, similarity=S_2a)
 ```
 
-We can find $D_1^Z$ (using $q=1$ just for comparison to the previous example) similarly to the above:
+We can find $D_0^Z$ (using $q=1$ just for comparison to the previous example) similarly to the above:
 
 ```python
-metacommunity_2a.subcommunity_diversity(viewpoint=1, measure='alpha')
+metacommunity_2a.subcommunity_diversity(viewpoint=0, measure='alpha')
 ```
 
-The output tells us that $D_1^Z=1.10$. The fact that this number is close to 1 reflects the fact that all individuals in this community are very similar to each other (all birds).
+The output tells us that $D_1^Z=1.11$. The fact that this number is close to 1 reflects the fact that all individuals in this community are very similar to each other (all birds).
 
 In contrast, Dataset 2b consists of members from two different phyla: vertebrates and invertebrates. As above, we define a similarity matrix:
 
@@ -218,10 +255,10 @@ To calculate the alpha diversity (with $q=1$ as above), we proceed as before, de
 ```python
 counts_2b = pd.DataFrame({"Community 2b": [1, 1, 1, 1, 1, 1, 1, 1, 1]}, index=labels_2b)
 metacommunity_2b = Metacommunity(counts_2b, similarity=S_2b)
-metacommunity_2b.subcommunity_diversity(viewpoint=1, measure='alpha')
+metacommunity_2b.subcommunity_diversity(viewpoint=0, measure='alpha')
 ```
 
-which outputs $D_1^Z=2.14$. That this number is close to 2 reflects the fact that members in this community belong to two broad classes of animals: vertebrates and invertebrates. The remaining $0.14$ above $2$ is interpreted as reflecting the diversity within each phylum.
+which outputs $D_0^Z=2.16$. That this number is close to 2 reflects the fact that members in this community belong to two broad classes of animals: vertebrates and invertebrates. The remaining $0.14$ above $2$ is interpreted as reflecting the diversity within each phylum.
 
 ## Beta diversities
 Recall beta diversity is between-group diversity. To illustrate, we will re-imagine Dataset 2b as a metacommunity made up of 2 subcommunities—the invertebrates and the vertebrates—defined as follows:
