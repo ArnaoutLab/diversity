@@ -296,7 +296,7 @@ metacommunity_2b_1.subcommunity_diversity(viewpoint=0,
 measure='rho_hat')
 ```
 
-with the output $[0.41, 0.21]$. Recall $\hat{\rho}$ indicates how well a subcommunity represents the metacommunity. We find that $\hat{\rho}$ of the two subcommunities are rather low—$0.41$ and $0.21$ for the invertebrates and the vertebrates, respectively—reflecting the low similarity between these groups. 
+with the output $[0.41, 0.21]$. Recall $\hat{\rho}$ indicates how well a subcommunity represents the metacommunity. We find that $\hat{\rho}$ of the two subcommunities are rather low— $0.41$ and $0.21$ for the invertebrates and the vertebrates, respectively—reflecting the low similarity between these groups. 
 Note the invertebrates are more diverse than the vertebrates, which we can see by calculating $q=0$ $\alpha$ diversity of these subcommunities:
 
 ```python
@@ -327,9 +327,9 @@ yielding $[0.68, 1.07]$. We find that the $\hat{\rho}$ of the two subsets are no
 # Advanced usage
 
 The similarity matrix format—DataFrame, memmap, filepath, or function—should be chosen based on the use case. Our recommendation is: 
-	If the similarity matrix fits in RAM, pass it as a pandas.DataFrame or numpy.ndarray
-	If the similarity matrix does not fit in RAM but does fit on your hard drive (HD), pass it as a cvs/tsv filepath or numpy.memmap
-	If the similarity matrix does not fit in either RAM or HD, pass a similarity function and the feature set file that will be used to calculate similarities. (Note that construction of the similarity matrix is an $O(N^2)$ operation; if your similarity function is expensive, this calculation can take time for large datasets.)
+*	If the similarity matrix fits in RAM, pass it as a pandas.DataFrame or numpy.ndarray
+*	If the similarity matrix does not fit in RAM but does fit on your hard drive (HD), pass it as a cvs/tsv filepath or numpy.memmap
+*	If the similarity matrix does not fit in either RAM or HD, pass a similarity function and the feature set that will be used to calculate similarities. (Note that construction of the similarity matrix is an $O(N^2)$ operation; if your similarity function is expensive, this calculation can take time for large datasets.)
 
 # Command-line usage
 The diversity package can also be used from the command line as a module (via `python -m`). The example below re-uses counts_2b_1 and S_2b from above, saved as .csv files (note `index=False`, since the csv files do not contain row labels):
