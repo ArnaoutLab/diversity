@@ -36,7 +36,7 @@ A ***diversity index*** is a statistic associated with a community, which descri
 
 ## Partitioned diversity
 
-Some diversity indices compare the diversities of subsets of a community with respect to the overall community. The subsets are called ***subcommunities***, while the overall community is called a ***metacommunity***. For example, two subcommunities with the same frequency distribution but no shared species each comprise half of the combined metacommunity diversity.
+Some diversity indices compare the diversities of subsets of a community with respect to the overall community. For example, two subcommunities with the same frequency distribution but no shared species each comprise half of the combined metacommunity diversity.
 
 ## Frequency-sensitive diversity
 
