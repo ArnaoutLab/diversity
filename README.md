@@ -151,7 +151,22 @@ To obtain $D_1$, we run:
 metacommunity_1b.subcommunity_diversity(viewpoint=1, measure='alpha')
 ```
 
-Similarly, we find that $D_1 \approx 5.99$ for Dataset 1b. The larger value of $D_1$ for Dataset 1b aligns with the intuitive sense that more balance in the frequencies of unique elements means a more diverse dataset.
+We find that $D_1 \approx 5.99$ for Dataset 1b. The larger value of $D_1$ for Dataset 1b aligns with the intuitive sense that more balance in the frequencies of unique elements means a more diverse dataset. To output multiple diversity measures at once, we run:
+
+```python
+metacommunity_1b.to_dataframe(viewpoint=[0, 1, np.inf])
+```
+
+which produces the output:
+
+|      | community     | viewpoint | alpha |  rho | beta | gamma | normalized_alpha | normalized_rho | normalized_beta | rho_hat | beta_hat |
+| ---: | :------------ | --------: | ----: | ---: | ---: | ----: | ---------------: | -------------: | --------------: | ------: | -------: |
+|    0 | metacommunity |      0.00 |  6.00 | 1.00 | 1.00 |  6.00 |             6.00 |           1.00 |            1.00 |    1.00 |     1.00 |
+|    1 | Dataset 1b    |      0.00 |  6.00 | 1.00 | 1.00 |  6.00 |             6.00 |           1.00 |            1.00 |    1.00 |     1.00 |
+|    2 | metacommunity |      1.00 |  5.99 | 1.00 | 1.00 |  5.99 |             5.99 |           1.00 |            1.00 |    1.00 |     1.00 |
+|    3 | Dataset 1b    |      1.00 |  5.99 | 1.00 | 1.00 |  5.99 |             5.99 |           1.00 |            1.00 |    1.00 |     1.00 |
+|    4 | metacommunity |       inf |  5.83 | 1.00 | 1.00 |  5.83 |             5.83 |           1.00 |            1.00 |    1.00 |     1.00 |
+|    5 | Dataset 1b    |       inf |  5.83 | 1.00 | 1.00 |  5.83 |             5.83 |           1.00 |            1.00 |    1.00 |     1.00 |
 
 The diversity package can also calculate similarity-sensitive diversity measures for any user-supplied definition of similarity. To illustrate, we now consider a second example in which the dataset elements are all unique. Uniqueness means element frequencies are identical, so similarity is the only factor that influences diversity calculations.
 
@@ -207,13 +222,13 @@ To compute the similarity-sensitive diversity indices, we now pass the similarit
 metacommunity_2a = Metacommunity(counts_2a, similarity=S_2a)
 ```
 
-We can find $D_0^Z$ (using $q=1$ just for comparison to the previous example) similarly to the above:
+We can find $D_0^Z$ similarly to the above:
 
 ```python
 metacommunity_2a.subcommunity_diversity(viewpoint=0, measure='alpha')
 ```
 
-The output tells us that $D_1^Z=1.11$. The fact that this number is close to 1 reflects the fact that all individuals in this community are very similar to each other (all birds).
+The output tells us that $D_0^Z=1.11$. The fact that this number is close to 1 reflects the fact that all individuals in this community are very similar to each other (all birds).
 
 In contrast, Dataset 2b consists of members from two different phyla: vertebrates and invertebrates. As above, we define a similarity matrix:
 
@@ -250,7 +265,7 @@ which corresponds to the following table:
 
 The values of the similarity matrix indicate high similarity among the vertebrates, high similarity among the invertebrates and low similarity between vertebrates and invertebrates.
 
-To calculate the alpha diversity (with $q=1$ as above), we proceed as before, defining counts, creating a Metacommunity object, and calling its `subcommunity_diversity` method with the desired settings:
+To calculate the alpha diversity (with $q=0$ as above), we proceed as before, defining counts, creating a Metacommunity object, and calling its `subcommunity_diversity` method with the desired settings:
 
 ```python
 counts_2b = pd.DataFrame({"Community 2b": [1, 1, 1, 1, 1, 1, 1, 1, 1]}, index=labels_2b)
@@ -258,7 +273,7 @@ metacommunity_2b = Metacommunity(counts_2b, similarity=S_2b)
 metacommunity_2b.subcommunity_diversity(viewpoint=0, measure='alpha')
 ```
 
-which outputs $D_0^Z=2.16$. That this number is close to 2 reflects the fact that members in this community belong to two broad classes of animals: vertebrates and invertebrates. The remaining $0.14$ above $2$ is interpreted as reflecting the diversity within each phylum.
+which outputs $D_0^Z=2.16$. That this number is close to 2 reflects the fact that members in this community belong to two broad classes of animals: vertebrates and invertebrates. The remaining $0.16$ above $2$ is interpreted as reflecting the diversity within each phylum.
 
 ## Beta diversities
 Recall beta diversity is between-group diversity. To illustrate, we will re-imagine Dataset 2b as a metacommunity made up of 2 subcommunities—the invertebrates and the vertebrates—defined as follows:
