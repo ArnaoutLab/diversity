@@ -1,17 +1,3 @@
-import sys
-
-sys.path = ['/Users/arnaoutlab/Desktop/diversity_package/src',
- '/Users/arnaoutlab/Desktop/diversity_package',
- '/Users/arnaoutlab/Desktop',
- '/Users/arnaoutlab/Desktop',
- '/Users/arnaoutlab/Desktop/~/Documents/GitHub/vader',
- '/Users/arnaoutlab/.pyenv/versions/3.9.16/lib/python39.zip',
- '/Users/arnaoutlab/.pyenv/versions/3.9.16/lib/python3.9',
- '/Users/arnaoutlab/.pyenv/versions/3.9.16/lib/python3.9/lib-dynload',
- '',
- '/Users/arnaoutlab/.local/lib/python3.9/site-packages',
- '/Users/arnaoutlab/.pyenv/versions/3.9.16/lib/python3.9/site-packages']
-
 """Tests for diversity.utilities."""
 
 from numpy import allclose, array, inf
