@@ -21,13 +21,13 @@ class FrequencySensitiveComponents(Components):
         self.numerators = {
             **dict.fromkeys(["alpha", "gamma", "normalized_alpha"], 1),
             **dict.fromkeys(
-                ["beta", "rho", "normalized_beta", "normalized_rho"],
+                ["beta", "rho", "normalized_beta", "normalized_rho", "beta_hat", "rho_hat"],
                 self.abundance.metacommunity_abundance,
             ),
         }
         self.denominators = {
             **dict.fromkeys(
-                ["alpha", "beta", "rho"], self.abundance.subcommunity_abundance
+                ["alpha", "beta", "rho", "beta_hat", "rho_hat"], self.abundance.subcommunity_abundance
             ),
             **dict.fromkeys(
                 ["normalized_alpha", "normalized_beta", "normalized_rho"],
@@ -47,12 +47,12 @@ class SimilaritySensitiveComponents(Components):
         self.numerators = {
             **dict.fromkeys(["alpha", "gamma", "normalized_alpha"], 1),
             **dict.fromkeys(
-                ["beta", "rho", "normalized_beta", "normalized_rho"],
+                ["beta", "rho", "normalized_beta", "normalized_rho", "beta_hat", "rho_hat"],
                 self.metacommunity_similarity,
             ),
         }
         self.denominators = {
-            **dict.fromkeys(["alpha", "beta", "rho"], self.subcommunity_similarity),
+            **dict.fromkeys(["alpha", "beta", "rho", "beta_hat", "rho_hat"], self.subcommunity_similarity),
             **dict.fromkeys(
                 ["normalized_alpha", "normalized_beta", "normalized_rho"],
                 self.normalized_subcommunity_similarity,

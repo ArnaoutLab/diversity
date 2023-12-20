@@ -37,6 +37,8 @@ class Metacommunity:
         "normalized_alpha",
         "normalized_rho",
         "normalized_beta",
+        "rho_hat",
+        "beta_hat"
     )
 
     def __init__(
@@ -67,6 +69,7 @@ class Metacommunity:
             similarity matrix is read from a file. Larger chunk sizes
             are faster, but take more memory.
         """
+        self.counts = counts
         self.abundance = make_abundance(counts=counts)
         self.similarity = make_similarity(
             similarity=similarity, X=X, chunk_size=chunk_size
@@ -119,6 +122,15 @@ class Metacommunity:
         )
         if measure in {"beta", "normalized_beta"}:
             return 1 / diversity_measure
+
+        if measure in {"rho_hat"} and self.counts.shape[1] > 1:
+            N = self.counts.shape[1]
+            return (diversity_measure - 1)/(N-1)
+
+        if measure in {"beta_hat"} and self.counts.shape[1] > 1:
+            N = self.counts.shape[1]
+            return ((N/diversity_measure) - 1)/(N-1)
+        
         return diversity_measure
 
     def metacommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
