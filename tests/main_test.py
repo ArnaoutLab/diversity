@@ -4,7 +4,7 @@ from argparse import Namespace
 from numpy import inf
 from pytest import mark
 
-from diversity.__main__ import main
+from metacommunity_diversity.__main__ import main
 
 MAIN_TEST_CASES = [
     {

@@ -1,14 +1,14 @@
 from numpy import allclose
 from pytest import mark
 
-from diversity.metacommunity import Metacommunity
-from diversity.components import (
+from metacommunity_diversity.metacommunity import Metacommunity
+from metacommunity_diversity.components import (
     FrequencySensitiveComponents,
     SimilaritySensitiveComponents,
 )
-from diversity.abundance import make_abundance
-from diversity.similarity import make_similarity
-from diversity.components import make_components
+from metacommunity_diversity.abundance import make_abundance
+from metacommunity_diversity.similarity import make_similarity
+from metacommunity_diversity.components import make_components
 from tests.metacommunity_test import metacommunity_data
 
 

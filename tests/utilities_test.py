@@ -3,8 +3,8 @@
 from numpy import allclose, array, inf
 from pytest import mark, raises
 
-from diversity.exceptions import InvalidArgumentError
-from diversity.utilities import power_mean
+from metacommunity_diversity.exceptions import InvalidArgumentError
+from metacommunity_diversity.utilities import power_mean
 
 weights_3by3 = array(
     [

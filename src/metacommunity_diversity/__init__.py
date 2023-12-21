@@ -6,4 +6,4 @@ in https://arxiv.org/abs/1404.6520.
 See diversity.metacommunity.Metacommunity
 """
 
-from diversity.metacommunity import Metacommunity
+from metacommunity_diversity.metacommunity import Metacommunity

@@ -11,12 +11,12 @@ from typing import Callable, Iterable, Optional, Union
 
 from pandas import DataFrame, Index, concat
 from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray
-from diversity.exceptions import InvalidArgumentError
+from metacommunity_diversity.exceptions import InvalidArgumentError
 
-from diversity.abundance import make_abundance
-from diversity.similarity import make_similarity
-from diversity.components import make_components
-from diversity.utilities import power_mean
+from metacommunity_diversity.abundance import make_abundance
+from metacommunity_diversity.similarity import make_similarity
+from metacommunity_diversity.components import make_components
+from metacommunity_diversity.utilities import power_mean
 
 
 class Metacommunity:
