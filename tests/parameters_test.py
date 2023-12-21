@@ -1,8 +1,8 @@
 """Tests for diversity.parameters."""
 from pytest import mark, warns
 
-from diversity.parameters import configure_arguments
-from diversity.exceptions import ArgumentWarning
+from metacommunity_diversity.parameters import configure_arguments
+from metacommunity_diversity.exceptions import ArgumentWarning
 
 CONFIGURE_ARGUMENTS_TEST_CASES = [
     {

@@ -1,6 +1,6 @@
 ![alt text](images/diversity_logo.png)
 
-# <h1> <i>diversity</i>: A Python package for measuring the composition of complex datasets</h1>
+# <h1> <i>metacommunity-diversity</i>: A Python package for measuring the composition of complex datasets</h1>
 
 [![Tests](https://github.com/ArnaoutLab/diversity/actions/workflows/tests.yml/badge.svg)](https://github.com/ArnaoutLab/diversity/actions/workflows/tests.yml)
 [![Python version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
@@ -24,7 +24,7 @@
 
 # About
 
-The `diversity` package calculates partitioned frequency- and similarity-sensitive diversity measures for a given metacommunity and its subcommunities.
+The `metacommunity-diversity` package calculates partitioned frequency- and similarity-sensitive diversity measures for a given metacommunity and its subcommunities.
 
 ## Definitions
 
@@ -52,7 +52,7 @@ In addition to the diversity measures introduced by Reeve et al, we also include
 
 ## One package to rule them all
 
-The `diversity` package is able to calculate all of the similarity- and frequency-sensitive subcommunity and metacommunity diversity measures described in [Reeve et al.](https://arxiv.org/abs/1404.6520). See the paper for more in-depth information on their derivation and interpretation.
+The `metacommunity-diversity` package is able to calculate all of the similarity- and frequency-sensitive subcommunity and metacommunity diversity measures described in [Reeve et al.](https://arxiv.org/abs/1404.6520). See the paper for more in-depth information on their derivation and interpretation.
 
 
 **Supported subcommunity diversity measures**:
@@ -83,7 +83,7 @@ The `diversity` package is able to calculate all of the similarity- and frequenc
 # Basic usage
 ## Alpha diversities 
 
-We illustrate the basic usage of `diversity` on simple, field-of-study-agnostic datasets of fruits and animals. First, consider two datasets of size $n=35$ that each contains counts of six types of fruit: apples, oranges, bananas, pears, blueberries, and grapes (see the figure below).
+We illustrate the basic usage of `metacommunity-diversity` on simple, field-of-study-agnostic datasets of fruits and animals. First, consider two datasets of size $n=35$ that each contains counts of six types of fruit: apples, oranges, bananas, pears, blueberries, and grapes (see the figure below).
 
 <img src='images/fruits-1.png' width='350'>
 
@@ -104,7 +104,7 @@ A frequency-sensitive metacommunity can be created in Python by passing a `count
 ```python
 import pandas as pd
 import numpy as np
-from diversity import Metacommunity
+from metacommunity_diversity import Metacommunity
 
 counts_1a = pd.DataFrame({"Dataset 1a": [30, 1, 1, 1, 1, 1]}, 
    index=["apple", "orange", "banana", "pear", "blueberry", "grape"])
@@ -168,7 +168,7 @@ which produces the output:
 |    4 | metacommunity |       inf |  5.83 | 1.00 | 1.00 |  5.83 |             5.83 |           1.00 |            1.00 |    1.00 |     1.00 |
 |    5 | Dataset 1b    |       inf |  5.83 | 1.00 | 1.00 |  5.83 |             5.83 |           1.00 |            1.00 |    1.00 |     1.00 |
 
-The diversity package can also calculate similarity-sensitive diversity measures for any user-supplied definition of similarity. To illustrate, we now consider a second example in which the dataset elements are all unique. Uniqueness means element frequencies are identical, so similarity is the only factor that influences diversity calculations.
+The `metacommunity-diversity` package can also calculate similarity-sensitive diversity measures for any user-supplied definition of similarity. To illustrate, we now consider a second example in which the dataset elements are all unique. Uniqueness means element frequencies are identical, so similarity is the only factor that influences diversity calculations.
 
 <img src='images/fig2_thumbnail.png' width='350'>
 

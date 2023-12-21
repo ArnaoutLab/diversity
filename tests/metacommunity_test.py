@@ -9,12 +9,12 @@ from numpy import (
 from pandas import DataFrame, concat
 from pandas.testing import assert_frame_equal
 from pytest import mark, raises
-from diversity.exceptions import InvalidArgumentError
+from metacommunity_diversity.exceptions import InvalidArgumentError
 
-from diversity.log import LOGGER
-from diversity.abundance import Abundance
-from diversity.similarity import Similarity
-from diversity import Metacommunity
+from metacommunity_diversity.log import LOGGER
+from metacommunity_diversity.abundance import Abundance
+from metacommunity_diversity.similarity import Similarity
+from metacommunity_diversity import Metacommunity
 from tests.similarity_test import similarity_dataframe_3by3
 
 MEASURES = (

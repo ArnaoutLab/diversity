@@ -1,8 +1,8 @@
 from functools import cached_property
 from numpy import ndarray
 
-from diversity.abundance import Abundance
-from diversity.similarity import Similarity
+from metacommunity_diversity.abundance import Abundance
+from metacommunity_diversity.similarity import Similarity
 
 
 class Components:
