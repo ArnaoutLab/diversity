@@ -1,4 +1,29 @@
-![alt text](images/diversity_logo.png)
+Metadata-Version: 2.1
+Name: greylock
+Version: 0.0.2
+Summary: A Python package for measuring the composition of complex datasets
+Project-URL: Homepage, https://github.com/ArnaoutLab/greylock
+Project-URL: Bug Tracker, https://github.com/ArnaoutLab/greylock/issues
+Author: Jasper Braun
+Author-email: Elliot Hill <elliot.douglas.hill@gmail.com>
+License-File: LICENSE
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.8
+Requires-Dist: numpy==1.24.0
+Requires-Dist: pandas>=1.5.2
+Requires-Dist: ray>=2.2.0
+Requires-Dist: scipy==1.10.0
+Provides-Extra: ci
+Requires-Dist: tox-gh-actions>=2.9.1; extra == 'ci'
+Requires-Dist: tox>=3.24.5; extra == 'ci'
+Provides-Extra: lint
+Requires-Dist: black>=22.3.0; extra == 'lint'
+Provides-Extra: tests
+Requires-Dist: pytest-cov>=3.0.0; extra == 'tests'
+Requires-Dist: pytest>=6.2.5; extra == 'tests'
+Description-Content-Type: text/markdown
 
 # <h1> <i>greylock</i>: A Python package for measuring the composition of complex datasets</h1>
 
@@ -92,8 +117,6 @@ The `greylock` package is able to calculate all of the similarity- and frequency
 
 We illustrate the basic usage of `greylock` on simple, field-of-study-agnostic datasets of fruits and animals. First, consider two datasets of size $n=35$ that each contains counts of six types of fruit: apples, oranges, bananas, pears, blueberries, and grapes.
 
-<img src='images/fruits-1.png' width='350'>
-
 Dataset 1a is mostly apples; in dataset 1b, all fruits are represented at almost identical frequencies. The frequencies of the fruits in each dataset is tabulated below:
 
 |           | Dataset 1a | Dataset 1b | 
@@ -176,8 +199,6 @@ which produces the output:
 |    5 | Dataset 1b    |       inf |  5.83 | 1.00 | 1.00 |  5.83 |             5.83 |           1.00 |            1.00 |    1.00 |     1.00 |
 
 The `greylock` package can also calculate similarity-sensitive diversity measures for any user-supplied definition of similarity. To illustrate, we now consider a second example in which the dataset elements are all unique. Uniqueness means element frequencies are identical, so similarity is the only factor that influences diversity calculations.
-
-<img src='images/fig2_thumbnail.png' width='350'>
 
 The datasets now each contain a set of animals in which each animal appears only once. We consider phylogenetic similarity (approximated roughly, for purposes of this example). Dataset 2a consists entirely of birds, so all entries in the similarity matrix are close to $1$:
 

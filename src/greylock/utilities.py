@@ -24,7 +24,7 @@ from numpy import (
     ndarray,
 )
 
-from metacommunity_diversity.exceptions import InvalidArgumentError
+from greylock.exceptions import InvalidArgumentError
 
 
 def __validate_power_mean_args(

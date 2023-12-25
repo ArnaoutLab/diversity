@@ -3,10 +3,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "metacommunity_diversity"
+name = "greylock"
 authors = [
     { name = "Elliot Hill", email = "elliot.douglas.hill@gmail.com" },
-    { name = "Jasper Braun" },
+    { name = "Jasper Braun", email = "jasperbraun90@gmail.com" },
 ]
 version = "0.0.1"
 description = "A Python package for measuring the composition of complex datasets"
@@ -25,8 +25,8 @@ lint = ["black>=22.3.0"]
 ci = ["tox>=3.24.5", "tox-gh-actions>=2.9.1"]
 
 [project.urls]
-"Homepage" = "https://github.com/Elliot-D-Hill/diversity"
-"Bug Tracker" = "https://github.com/Elliot-D-Hill/diversity/issues"
+"Homepage" = "https://github.com/ArnaoutLab/greylock"
+"Bug Tracker" = "https://github.com/ArnaoutLab/greylock/issues"
 
 [tool.pytest.ini_options]
 addopts = "--cov --cov-report html --cov-report term-missing --cov-fail-under 100"
