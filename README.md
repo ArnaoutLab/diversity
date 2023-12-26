@@ -3,7 +3,7 @@
 # <h1> <i>greylock</i>: A Python package for measuring the composition of complex datasets</h1>
 
 [![Python version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
-
+[![Tests](https://github.com/ArnaoutLab/diversity/actions/workflows/tests.yml/badge.svg)](https://github.com/ArnaoutLab/diversity/actions/workflows/tests.yml)
 
 - [About](#about)
   - [Definitions](#definitions)
@@ -25,7 +25,7 @@
 `greylock` calculates effective numbers in an extended version of the Hill framework, with extensions due to Leinster and Cobbold and Reeve et al. “Extending” a hill makes a mountain. At 3,489 feet (1,063 meters, Mount Greylock is Massachusetts’ tallest mountain. It is named for Gray Lock, (c. 1670–1750),  a historical figure of the Abnaki, an indigenous people of New England.
 
 ## Availability and installation
-The package is available on GitHub at https://github.com/ArnaoutLab/greylock. It can be installed by running
+The package is available on GitHub at https://github.com/ArnaoutLab/diversity. It can be installed by running
 
 `pip install greylock`
 
@@ -37,7 +37,7 @@ from the command-line interface. The test suite runs successfully on Macintosh, 
 
 If you use this package, please cite it as:
 
-Nguyen et al., <i>greylock</i>. <https://github.com/ArnaoutLab/greylock>
+Nguyen et al., <i>greylock</i>. <https://github.com/ArnaoutLab/diversity>
 
 ## Definitions
 
