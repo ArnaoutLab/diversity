@@ -3,7 +3,7 @@
 # <h1> <i>greylock</i>: A Python package for measuring the composition of complex datasets</h1>
 
 [![Python version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
-
+[![Tests](https://github.com/ArnaoutLab/diversity/actions/workflows/tests.yml/badge.svg)](https://github.com/ArnaoutLab/diversity/actions/workflows/tests.yml)
 
 - [About](#about)
   - [Definitions](#definitions)
