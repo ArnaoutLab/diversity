@@ -3,7 +3,7 @@
 The diversity measures that can be calculated are described rigorously
 in https://arxiv.org/abs/1404.6520.
 
-See diversity.metacommunity.Metacommunity
+See greylock.metacommunity.Metacommunity
 """
 
-from metacommunity_diversity.metacommunity import Metacommunity
+from greylock.metacommunity import Metacommunity

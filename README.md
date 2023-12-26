@@ -1,8 +1,7 @@
 ![alt text](images/diversity_logo.png)
 
-# <h1> <i>metacommunity-diversity</i>: A Python package for measuring the composition of complex datasets</h1>
+# <h1> <i>greylock</i>: A Python package for measuring the composition of complex datasets</h1>
 
-[![Tests](https://github.com/ArnaoutLab/diversity/actions/workflows/tests.yml/badge.svg)](https://github.com/ArnaoutLab/diversity/actions/workflows/tests.yml)
 [![Python version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 
 
@@ -21,10 +20,24 @@
 - [Applications](#applications)
 - [Alternatives](#alternatives)
 
-
 # About
 
-The `metacommunity-diversity` package calculates partitioned frequency- and similarity-sensitive diversity measures for a given metacommunity and its subcommunities.
+`greylock` calculates effective numbers in an extended version of the Hill framework, with extensions due to Leinster and Cobbold and Reeve et al. “Extending” a hill makes a mountain. At 3,489 feet (1,063 meters, Mount Greylock is Massachusetts’ tallest mountain. It is named for Gray Lock, (c. 1670–1750),  a historical figure of the Abnaki, an indigenous people of New England.
+
+## Availability and installation
+The package is available on GitHub at https://github.com/ArnaoutLab/greylock. It can be installed by running
+
+`pip install greylock`
+
+from the command-line interface. The test suite runs successfully on Macintosh, Windows, and Unix systems. The unit tests (including a coverage report) can be run after installation by
+
+`pytest --pyargs greylock --cov greylock`
+
+## How to cite this work
+
+If you use this package, please cite it as:
+
+Nguyen et al., <i>greylock</i>. <https://github.com/ArnaoutLab/greylock>
 
 ## Definitions
 
@@ -52,7 +65,7 @@ In addition to the diversity measures introduced by Reeve et al, we also include
 
 ## One package to rule them all
 
-The `metacommunity-diversity` package is able to calculate all of the similarity- and frequency-sensitive subcommunity and metacommunity diversity measures described in [Reeve et al.](https://arxiv.org/abs/1404.6520). See the paper for more in-depth information on their derivation and interpretation.
+The `greylock` package is able to calculate all of the similarity- and frequency-sensitive subcommunity and metacommunity diversity measures described in [Reeve et al.](https://arxiv.org/abs/1404.6520). See the paper for more in-depth information on their derivation and interpretation.
 
 
 **Supported subcommunity diversity measures**:
@@ -83,7 +96,7 @@ The `metacommunity-diversity` package is able to calculate all of the similarity
 # Basic usage
 ## Alpha diversities 
 
-We illustrate the basic usage of `metacommunity-diversity` on simple, field-of-study-agnostic datasets of fruits and animals. First, consider two datasets of size $n=35$ that each contains counts of six types of fruit: apples, oranges, bananas, pears, blueberries, and grapes (see the figure below).
+We illustrate the basic usage of `greylock` on simple, field-of-study-agnostic datasets of fruits and animals. First, consider two datasets of size $n=35$ that each contains counts of six types of fruit: apples, oranges, bananas, pears, blueberries, and grapes.
 
 <img src='images/fruits-1.png' width='350'>
 
@@ -104,7 +117,7 @@ A frequency-sensitive metacommunity can be created in Python by passing a `count
 ```python
 import pandas as pd
 import numpy as np
-from metacommunity_diversity import Metacommunity
+from greylock import Metacommunity
 
 counts_1a = pd.DataFrame({"Dataset 1a": [30, 1, 1, 1, 1, 1]}, 
    index=["apple", "orange", "banana", "pear", "blueberry", "grape"])
@@ -168,7 +181,7 @@ which produces the output:
 |    4 | metacommunity |       inf |  5.83 | 1.00 | 1.00 |  5.83 |             5.83 |           1.00 |            1.00 |    1.00 |     1.00 |
 |    5 | Dataset 1b    |       inf |  5.83 | 1.00 | 1.00 |  5.83 |             5.83 |           1.00 |            1.00 |    1.00 |     1.00 |
 
-The `metacommunity-diversity` package can also calculate similarity-sensitive diversity measures for any user-supplied definition of similarity. To illustrate, we now consider a second example in which the dataset elements are all unique. Uniqueness means element frequencies are identical, so similarity is the only factor that influences diversity calculations.
+The `greylock` package can also calculate similarity-sensitive diversity measures for any user-supplied definition of similarity. To illustrate, we now consider a second example in which the dataset elements are all unique. Uniqueness means element frequencies are identical, so similarity is the only factor that influences diversity calculations.
 
 <img src='images/fig2_thumbnail.png' width='350'>
 
@@ -332,7 +345,7 @@ The similarity matrix format—DataFrame, memmap, filepath, or function—should
 *	If the similarity matrix does not fit in either RAM or HD, pass a similarity function and the feature set that will be used to calculate similarities. (Note that construction of the similarity matrix is an $O(N^2)$ operation; if your similarity function is expensive, this calculation can take time for large datasets.)
 
 # Command-line usage
-The diversity package can also be used from the command line as a module (via `python -m`). The example below re-uses counts_2b_1 and S_2b from above, saved as .csv files (note `index=False`, since the csv files do not contain row labels):
+The `greylock` package can also be used from the command line as a module (via `python -m`). The example below re-uses counts_2b_1 and S_2b from above, saved as .csv files (note `index=False`, since the csv files do not contain row labels):
 
 ```python
 counts_2b_1.to_csv("counts_2b_1.csv", index=False)
@@ -341,21 +354,17 @@ S_2b.to_csv("S_2b.csv", index=False)
 
 Then from the command line: 
 
-```python
-python -m diversity -i counts_2b_1.csv -s S_2b.csv -v 0 1 inf. 
-```
+`python -m greylock -i counts_2b_1.csv -s S_2b.csv -v 0 1 inf`
 
 The output is a table with all the diversity indices for q=0, 1, and ∞. Note that while .csv or .tsv are acceptable as input, the output is always tab-delimited. The input filepath (`-i`) and the similarity matrix filepath (`-s`) can be URLs to data files hosted on the web. Also note that values of $q>100$ are all calculated as $q=\infty$.
 
 For further options, consult the help:
 
-```python
-python -m diversity -h
-```
+`python -m greylock -h`
 
 # Applications
 
-For applications of the diversity package to various fields (immunomics, metagenomics, medical imaging and pathology), we refer to the Jupyter notebooks below:
+For applications of the `greylock` package to various fields (immunomics, metagenomics, medical imaging and pathology), we refer to the Jupyter notebooks below:
 
 - [Immunomics](https://github.com/ArnaoutLab/diversity_notebooks_and_data/blob/main/immunomics/immunomics_fig3.ipynb)
 - [Metagenomics](https://github.com/ArnaoutLab/diversity_notebooks_and_data/blob/main/metagenomics/metagenomics_figs4-5.ipynb)

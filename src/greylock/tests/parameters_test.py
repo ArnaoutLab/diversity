@@ -1,8 +1,8 @@
-"""Tests for diversity.parameters."""
+"""Tests for greylock.parameters."""
 from pytest import mark, warns
 
-from metacommunity_diversity.parameters import configure_arguments
-from metacommunity_diversity.exceptions import ArgumentWarning
+from greylock.parameters import configure_arguments
+from greylock.exceptions import ArgumentWarning
 
 CONFIGURE_ARGUMENTS_TEST_CASES = [
     {
