@@ -1,15 +1,15 @@
 from numpy import allclose
 from pytest import mark
 
-from metacommunity_diversity.metacommunity import Metacommunity
-from metacommunity_diversity.components import (
+from greylock.metacommunity import Metacommunity
+from greylock.components import (
     FrequencySensitiveComponents,
     SimilaritySensitiveComponents,
 )
-from metacommunity_diversity.abundance import make_abundance
-from metacommunity_diversity.similarity import make_similarity
-from metacommunity_diversity.components import make_components
-from tests.metacommunity_test import metacommunity_data
+from greylock.abundance import make_abundance
+from greylock.similarity import make_similarity
+from greylock.components import make_components
+from greylock.tests.metacommunity_test import metacommunity_data
 
 
 @mark.parametrize(

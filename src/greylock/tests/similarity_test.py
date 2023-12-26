@@ -4,8 +4,8 @@ from pandas import DataFrame
 from ray import get, init, shutdown
 from pytest import fixture, raises, mark
 
-from metacommunity_diversity.log import LOGGER
-from metacommunity_diversity.similarity import (
+from greylock.log import LOGGER
+from greylock.similarity import (
     SimilarityFromArray,
     SimilarityFromDataFrame,
     SimilarityFromFile,

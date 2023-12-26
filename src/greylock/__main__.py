@@ -12,9 +12,9 @@ from numpy import int64
 
 from pandas import read_csv
 
-from metacommunity_diversity.log import LOG_HANDLER, LOGGER
-from metacommunity_diversity import Metacommunity
-from metacommunity_diversity.parameters import configure_arguments
+from greylock.log import LOG_HANDLER, LOGGER
+from greylock import Metacommunity
+from greylock.parameters import configure_arguments
 
 # Ensure warnings are handled properly.
 captureWarnings(True)
