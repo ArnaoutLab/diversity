@@ -15,7 +15,7 @@ from metacommunity_diversity.log import LOGGER
 from metacommunity_diversity.abundance import Abundance
 from metacommunity_diversity.similarity import Similarity
 from metacommunity_diversity import Metacommunity
-from tests.similarity_test import similarity_dataframe_3by3
+from metacommunity_diversity.tests.similarity_test import similarity_dataframe_3by3
 
 MEASURES = (
     "alpha",

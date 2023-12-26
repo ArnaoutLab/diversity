@@ -9,7 +9,7 @@ from metacommunity_diversity.components import (
 from metacommunity_diversity.abundance import make_abundance
 from metacommunity_diversity.similarity import make_similarity
 from metacommunity_diversity.components import make_components
-from tests.metacommunity_test import metacommunity_data
+from metacommunity_diversity.tests.metacommunity_test import metacommunity_data
 
 
 @mark.parametrize(

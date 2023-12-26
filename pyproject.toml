@@ -5,8 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "metacommunity_diversity"
 authors = [
-    { name = "Elliot Hill", email = "elliot.douglas.hill@gmail.com" },
-    { name = "Jasper Braun" },
+    { name = "Elliot Hill", email = "elliot.douglas.hill@gmail.com" }
 ]
 version = "0.0.1"
 description = "A Python package for measuring the composition of complex datasets"
