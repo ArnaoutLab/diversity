@@ -5,7 +5,7 @@ from pandas import DataFrame
 from pytest import fixture, mark, raises
 from scipy.sparse import csr_array, spmatrix, issparse
 
-from metacommunity_diversity.abundance import (
+from greylock.abundance import (
     Abundance,
     AbundanceFromDataFrame,
     AbundanceFromSparseArray,
