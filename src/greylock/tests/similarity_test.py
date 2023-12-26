@@ -17,7 +17,7 @@ from greylock.similarity import (
 
 @fixture(scope="module")
 def ray_fix():
-    init(num_cpus=1)
+    init(num_cpus=1, num_gpus=1, local_mode=True)
     yield None
     shutdown()
 
