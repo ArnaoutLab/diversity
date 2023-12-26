@@ -17,7 +17,7 @@ from metacommunity_diversity.similarity import (
 
 @fixture(scope="module")
 def ray_fix():
-    init(num_cpus=1, num_gpus=0)
+    init(num_cpus=1, num_gpus=0, local_mode=True)
     yield None
     shutdown()
 
