@@ -28,8 +28,7 @@ ci = ["tox>=3.24.5", "tox-gh-actions>=2.9.1"]
 "Bug Tracker" = "https://github.com/Elliot-D-Hill/diversity/issues"
 
 [tool.pytest.ini_options]
-addopts = ["--import-mode=importlib", 
-"--cov --cov-report html --cov-report term-missing --cov-fail-under 100"]
+addopts = "--cov --cov-report html --cov-report term-missing --cov-fail-under 100"
 
 [tool.coverage.run]
 source = ["src"]
