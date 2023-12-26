@@ -25,7 +25,7 @@
 `greylock` calculates effective numbers in an extended version of the Hill framework, with extensions due to Leinster and Cobbold and Reeve et al. “Extending” a hill makes a mountain. At 3,489 feet (1,063 meters, Mount Greylock is Massachusetts’ tallest mountain. It is named for Gray Lock, (c. 1670–1750),  a historical figure of the Abnaki, an indigenous people of New England.
 
 ## Availability and installation
-The package is available on GitHub at https://github.com/ArnaoutLab/greylock. It can be installed by running
+The package is available on GitHub at https://github.com/ArnaoutLab/diversity. It can be installed by running
 
 `pip install greylock`
 
@@ -37,7 +37,7 @@ from the command-line interface. The test suite runs successfully on Macintosh, 
 
 If you use this package, please cite it as:
 
-Nguyen et al., <i>greylock</i>. <https://github.com/ArnaoutLab/greylock>
+Nguyen et al., <i>greylock</i>. <https://github.com/ArnaoutLab/diversity>
 
 ## Definitions
 
