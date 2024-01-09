@@ -346,11 +346,11 @@ The similarity matrix format—DataFrame, memmap, filepath, or function—should
 counts_2b_1.to_csv("counts_2b_1.csv", index=False)
 S_2b.to_csv("S_2b.csv", index=False)
 ```
-then we can build a metacommunity as follows
+  then we can build a metacommunity as follows
 ```python
 metacommunity_2b_1 = Metacommunity(counts_2b_1, similarity='S_2b.csv')
 ```
-We can optionally use the `chunk_size` argument to specify how many rows of the similarity matrix are read from the file at a time.
+  We can optionally use the `chunk_size` argument to specify how many rows of the similarity matrix are read from the file at a time.
   
 *	If the similarity matrix does not fit in either RAM or HD, pass a similarity function and the feature set that will be used to calculate similarities. The syntax for building the metacommunity this way is `Metacommunity(counts, similarity, X, chunk_size)` where `similarity` is a callable, `X` is a numpy array containing the feature values, and `chunk_size` determines how many rows of of the similarity matrix are processed at a time. (Note that construction of the similarity matrix is an $O(N^2)$ operation; if your similarity function is expensive, this calculation can take time for large datasets.)
 
