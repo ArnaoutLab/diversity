@@ -131,7 +131,13 @@ Once a metacommunity has been created, diversity measures can be calculated. For
 metacommunity_1a.subcommunity_diversity(viewpoint=1, measure='alpha')
 ```
 
-The output shows that $D_1=1.90$. To calculated multiple diversity measures at once and store them in a DataFrame, we type:
+The output shows that $D_1=1.90$. To calculate the corresponding metacommunity diversity index:
+
+```python
+metacommunity_1a.metacommunity_diversity(viewpoint=1, measure='alpha')
+```
+
+In this example, the metacommunity indices are the same as the subcommunity ones, since there is only one subcommunity. To calculated multiple diversity measures at once and store them in a DataFrame, we type:
 
 ```python 
 metacommunity_1a.to_dataframe(viewpoint=[0, 1, np.inf])
