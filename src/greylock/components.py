@@ -21,13 +21,21 @@ class FrequencySensitiveComponents(Components):
         self.numerators = {
             **dict.fromkeys(["alpha", "gamma", "normalized_alpha"], 1),
             **dict.fromkeys(
-                ["beta", "rho", "normalized_beta", "normalized_rho", "beta_hat", "rho_hat"],
+                [
+                    "beta",
+                    "rho",
+                    "normalized_beta",
+                    "normalized_rho",
+                    "beta_hat",
+                    "rho_hat",
+                ],
                 self.abundance.metacommunity_abundance,
             ),
         }
         self.denominators = {
             **dict.fromkeys(
-                ["alpha", "beta", "rho", "beta_hat", "rho_hat"], self.abundance.subcommunity_abundance
+                ["alpha", "beta", "rho", "beta_hat", "rho_hat"],
+                self.abundance.subcommunity_abundance,
             ),
             **dict.fromkeys(
                 ["normalized_alpha", "normalized_beta", "normalized_rho"],
@@ -46,22 +54,35 @@ class SimilaritySensitiveComponents(Components):
         self.similarity = similarity
 
         all_similarity = self.similarity.weighted_similarities(
-            relative_abundance=self.abundance.unified_abundance_array)
+            relative_abundance=self.abundance.unified_abundance_array
+        )
         self.metacommunity_similarity = all_similarity[:, [0]]
-        self.subcommunity_similarity = all_similarity[:,
-                                                      1:(1+self.abundance.num_subcommunities)]
-        self.normalized_subcommunity_similarity = all_similarity[:,
-                                                                 (1+self.abundance.num_subcommunities):]
-        
+        self.subcommunity_similarity = all_similarity[
+            :, 1 : (1 + self.abundance.num_subcommunities)
+        ]
+        self.normalized_subcommunity_similarity = all_similarity[
+            :, (1 + self.abundance.num_subcommunities) :
+        ]
+
         self.numerators = {
             **dict.fromkeys(["alpha", "gamma", "normalized_alpha"], 1),
             **dict.fromkeys(
-                ["beta", "rho", "normalized_beta", "normalized_rho", "beta_hat", "rho_hat"],
+                [
+                    "beta",
+                    "rho",
+                    "normalized_beta",
+                    "normalized_rho",
+                    "beta_hat",
+                    "rho_hat",
+                ],
                 self.metacommunity_similarity,
             ),
         }
         self.denominators = {
-            **dict.fromkeys(["alpha", "beta", "rho", "beta_hat", "rho_hat"], self.subcommunity_similarity),
+            **dict.fromkeys(
+                ["alpha", "beta", "rho", "beta_hat", "rho_hat"],
+                self.subcommunity_similarity,
+            ),
             **dict.fromkeys(
                 ["normalized_alpha", "normalized_beta", "normalized_rho"],
                 self.normalized_subcommunity_similarity,

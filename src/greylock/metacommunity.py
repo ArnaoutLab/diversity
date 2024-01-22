@@ -38,7 +38,7 @@ class Metacommunity:
         "normalized_rho",
         "normalized_beta",
         "rho_hat",
-        "beta_hat"
+        "beta_hat",
     )
 
     def __init__(
@@ -125,12 +125,12 @@ class Metacommunity:
 
         if measure in {"rho_hat"} and self.counts.shape[1] > 1:
             N = self.counts.shape[1]
-            return (diversity_measure - 1)/(N-1)
+            return (diversity_measure - 1) / (N - 1)
 
         if measure in {"beta_hat"} and self.counts.shape[1] > 1:
             N = self.counts.shape[1]
-            return ((N/diversity_measure) - 1)/(N-1)
-        
+            return ((N / diversity_measure) - 1) / (N - 1)
+
         return diversity_measure
 
     def metacommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
