@@ -44,6 +44,15 @@ class SimilaritySensitiveComponents(Components):
     def __init__(self, abundance: Abundance, similarity: Similarity) -> None:
         super().__init__(abundance=abundance)
         self.similarity = similarity
+
+        all_similarity = self.similarity.weighted_similarities(
+            relative_abundance=self.abundance.unified_abundance_array)
+        self.metacommunity_similarity = all_similarity[:, [0]]
+        self.subcommunity_similarity = all_similarity[:,
+                                                      1:(1+self.abundance.num_subcommunities)]
+        self.normalized_subcommunity_similarity = all_similarity[:,
+                                                                 (1+self.abundance.num_subcommunities):]
+        
         self.numerators = {
             **dict.fromkeys(["alpha", "gamma", "normalized_alpha"], 1),
             **dict.fromkeys(
@@ -59,24 +68,6 @@ class SimilaritySensitiveComponents(Components):
             ),
             "gamma": self.metacommunity_similarity,
         }
-
-    @cached_property
-    def metacommunity_similarity(self) -> ndarray:
-        return self.similarity.weighted_similarities(
-            relative_abundance=self.abundance.metacommunity_abundance
-        )
-
-    @cached_property
-    def subcommunity_similarity(self) -> ndarray:
-        return self.similarity.weighted_similarities(
-            relative_abundance=self.abundance.subcommunity_abundance
-        )
-
-    @cached_property
-    def normalized_subcommunity_similarity(self) -> ndarray:
-        return self.similarity.weighted_similarities(
-            relative_abundance=self.abundance.normalized_subcommunity_abundance
-        )
 
 
 def make_components(

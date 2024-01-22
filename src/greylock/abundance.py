@@ -16,7 +16,7 @@ make_abundance
 from functools import cached_property
 from typing import Iterable, Union
 
-from numpy import arange, ndarray
+from numpy import arange, ndarray, concatenate
 from pandas import DataFrame, RangeIndex
 from scipy.sparse import spmatrix, diags, issparse
 
@@ -36,7 +36,19 @@ class Abundance:
             corresponding subcommunities.
         """
         self.subcommunities_names = self.get_subcommunity_names(counts=counts)
-        self.subcommunity_abundance = self.make_subcommunity_abundance(counts=counts)
+        self.num_subcommunities = counts.shape[1]
+        
+        subcommunity_abundance = self.make_subcommunity_abundance(counts=counts)
+        metacommunity_abundance = self.make_metacommunity_abundance(subcommunity_abundance)
+        normalized_subcommunity_abundance = self.make_normalized_subcommunity_abundance(subcommunity_abundance)
+        self.unified_abundance_array = concatenate( (
+            metacommunity_abundance,
+            subcommunity_abundance,
+            normalized_subcommunity_abundance), axis=1)
+        self.metacommunity_abundance = self.unified_abundance_array[:, [0]]
+        self.subcommunity_abundance = self.unified_abundance_array[:,
+                                                                   1:(1+self.num_subcommunities)]
+        self.normalized_subcommunity_abundance = self.unified_abundance_array[:, (1+self.num_subcommunities):]
 
     def get_subcommunity_names(self, counts: ndarray) -> Iterable:
         """Creates or accesses subcommunity column names then returns
@@ -75,8 +87,7 @@ class Abundance:
         """
         return counts / counts.sum()
 
-    @cached_property
-    def metacommunity_abundance(self) -> ndarray:
+    def make_metacommunity_abundance(self, subcommunity_abundance) -> ndarray:
         """Calculates the relative abundances in metacommunity.
 
         Returns
@@ -85,10 +96,9 @@ class Abundance:
         to unique species and each row contains the relative abundance
         of the species in the metacommunity.
         """
-        return self.subcommunity_abundance.sum(axis=1, keepdims=True)
+        return subcommunity_abundance.sum(axis=1, keepdims=True)
 
-    @cached_property
-    def subcommunity_normalizing_constants(self) -> ndarray:
+    def make_subcommunity_normalizing_constants(self, subcommunity_abundance) -> ndarray:
         """Calculates subcommunity normalizing constants.
 
         Returns
@@ -96,10 +106,9 @@ class Abundance:
         A numpy.ndarray of shape (n_subcommunities,), with the fraction
         of each subcommunity's size of the metacommunity.
         """
-        return self.subcommunity_abundance.sum(axis=0)
+        return subcommunity_abundance.sum(axis=0)
 
-    @cached_property
-    def normalized_subcommunity_abundance(self) -> ndarray:
+    def make_normalized_subcommunity_abundance(self, subcommunity_abundance) -> ndarray:
         """Calculates normalized relative abundances in subcommunities.
 
         Returns
@@ -109,7 +118,9 @@ class Abundance:
         subcommunities and each element is the abundance of the species
         in the subcommunity relative to the subcommunity size.
         """
-        return self.subcommunity_abundance / self.subcommunity_normalizing_constants
+        self.subcommunity_normalizing_constants = self.make_subcommunity_normalizing_constants(
+            subcommunity_abundance)
+        return subcommunity_abundance / self.subcommunity_normalizing_constants
 
 
 class AbundanceFromDataFrame(Abundance):
@@ -130,13 +141,13 @@ class AbundanceFromSparseArray(Abundance):
     components from a pandas.DataFrame containing species counts
     """
 
-    @cached_property
-    def metacommunity_abundance(self) -> ndarray:
-        return self.subcommunity_abundance.sum(axis=1)
+    def make_metacommunity_abundance(self, subcommunity_abundance) -> ndarray:
+        return subcommunity_abundance.sum(axis=1)
 
-    @cached_property
-    def normalized_subcommunity_abundance(self) -> ndarray:
-        return self.subcommunity_abundance @ diags(
+    def make_normalized_subcommunity_abundance(self, subcommunity_abundance) -> ndarray:
+        self.subcommunity_normalizing_constants = self.make_subcommunity_normalizing_constants(
+            subcommunity_abundance)
+        return subcommunity_abundance @ diags(
             1 / self.subcommunity_normalizing_constants
         )
 
