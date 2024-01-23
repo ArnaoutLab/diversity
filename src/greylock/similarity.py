@@ -28,7 +28,7 @@ from abc import ABC, abstractmethod
 from typing import Callable, Union
 from numpy import ndarray, empty, concatenate, float64
 from pandas import DataFrame, read_csv
-from scipy.sparse import spmatrix
+from scipy.sparse import spmatrix, issparse
 from ray import remote, get, put
 
 
@@ -227,6 +227,8 @@ def make_similarity(
         return SimilarityFromFile(similarity=similarity, chunk_size=chunk_size)
     elif isinstance(similarity, Callable):
         return SimilarityFromFunction(similarity=similarity, X=X, chunk_size=chunk_size)
+    elif issparse(similarity):
+        return SimilarityFromArray(similarity=similarity)
     else:
         raise NotImplementedError(
             f"Type {type(similarity)} is not supported for argument "
