@@ -46,6 +46,15 @@ class Abundance:
         self.unify_abundance_array()
 
     def unify_abundance_array(self):
+        """ Creates one matrix containing all the abundance matrices:
+        metacommunity, subcommunity, and normalized subcommunity.
+        These matrices are still available as views on the unified
+        data structure. (Because we are using basic slicing here, only
+        one copy of the data will exist after garbage collection.)
+
+        This allows for a major computational improvement in efficiency:
+        see components.SimilaritySensitiveComponents.
+        """
         self.unified_abundance_array = concatenate(
             (
                 self.metacommunity_abundance,

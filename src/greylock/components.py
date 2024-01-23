@@ -50,6 +50,15 @@ class SimilaritySensitiveComponents(Components):
     specified measure"""
 
     def __init__(self, abundance: Abundance, similarity: Similarity) -> None:
+        """ Create the weighted similarity vectors by multipying the
+        similarity matrix to each of the metacommunity abundance vector,
+        the subcommunity abundance vectors, and the normalized
+        subcommunity vectors.
+        Note that all of these vectors are unified into one matrix so
+        that the similarity matrix only has to be generated and used
+        once (in the case where a pre-computed similarity matrix is not
+        in RAM). That is, we make only one call to weighted_similarities().
+        """
         super().__init__(abundance=abundance)
         self.similarity = similarity
 
