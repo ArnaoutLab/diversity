@@ -274,6 +274,14 @@ def make_dense_array(spec):
     for i, value in enumerate(spec["data"]):
         a[spec["row"][i], spec["col"][i]] = value
     return a
+
+def compare_dense_sparse(counts, dense_similarity, sparse_similarity):
+    viewpoints = [0, 1, 2, inf]
+    meta_dense = Metacommunity(counts, similarity=dense_similarity)
+    meta_dense_df = meta_dense.to_dataframe(viewpoint=viewpoints)
+    meta_sparse = Metacommunity(counts, similarity=sparse_similarity)
+    meta_sparse_df = meta_sparse.to_dataframe(viewpoint=viewpoints)
+    assert meta_dense_df.equals(meta_sparse_df)
     
 @mark.parametrize(
     "sparse_class",
@@ -291,15 +299,35 @@ def make_dense_array(spec):
 def test_sparse_similarity(sparse_class):
     spec = similarity_sparse_entries
     dense_similarity = make_dense_array(spec)
-    sparse_similarity = sparse_class((spec["data"], (spec["row"], spec["col"])),
+    sparse_similarity = sparse_class((spec["data"],
+                                      (spec["row"], spec["col"])),
                                      shape=spec["shape"])
     counts = DataFrame({
         "Medford" : [3, 2, 0],
         "Somerville" : [1, 4, 0]
         })
-    viewpoints = [0, 1, 2, inf]
-    meta_dense = Metacommunity(counts, similarity=dense_similarity)
-    meta_dense_df = meta_dense.to_dataframe(viewpoint=viewpoints)
-    meta_sparse = Metacommunity(counts, similarity=sparse_similarity)
-    meta_sparse_df = meta_sparse.to_dataframe(viewpoint=viewpoints)
-    assert (meta_dense_df.to_numpy() == meta_sparse_df.to_numpy()).all()
+    compare_dense_sparse(counts, dense_similarity, sparse_similarity)
+    
+@mark.parametrize(
+    "sparse_class",
+    [
+        scipy.sparse.dia_array,
+        scipy.sparse.dia_matrix
+    ]
+)
+def test_diag_sparse(sparse_class):
+    data = array([[0.5] * 4,
+                     [1] * 4,
+                     [0.5] * 4
+                     ])
+    offsets = array([-1, 0, 1])
+    dense_similarity = array([[1. , 0.5, 0. , 0. ],
+                              [0.5, 1. , 0.5, 0. ],
+                              [0. , 0.5, 1. , 0.5],
+                              [0. , 0. , 0.5, 1. ]])
+    sparse_similarity = sparse_class((data, offsets), shape=(4, 4))
+    counts = DataFrame({
+        "Cambridge" : [5, 2, 0, 9],
+        "Boston" : [2, 3, 3, 2]})
+    compare_dense_sparse(counts, dense_similarity, sparse_similarity)
+
