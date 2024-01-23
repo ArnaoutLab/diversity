@@ -26,7 +26,7 @@ MEASURES = (
     "normalized_rho",
     "normalized_beta",
     "rho_hat",
-    "beta_hat"
+    "beta_hat",
 )
 
 subcommunity_names = ["subcommunity_1", "subcommunity_2"]
@@ -59,7 +59,7 @@ class FrequencyMetacommunity6by2:
                 "normalized_rho": [0.5, 0.5],
                 "normalized_beta": [2.0, 2.0],
                 "rho_hat": [0.0, 0.0],
-                "beta_hat": [1.0, 1.0]
+                "beta_hat": [1.0, 1.0],
             },
         )
     )
@@ -76,7 +76,7 @@ class FrequencyMetacommunity6by2:
                 "normalized_rho": [0.5],
                 "normalized_beta": [2.0],
                 "rho_hat": [0.0],
-                "beta_hat": [1.0]
+                "beta_hat": [1.0],
             },
             index=[0],
         )
@@ -105,7 +105,7 @@ class FrequencyMetacommunity3by2:
                 "normalized_rho": [0.50526316, 0.69677419],
                 "normalized_beta": [1.97916667, 1.43518519],
                 "rho_hat": [0.263158, 0.161290],
-                "beta_hat": [0.583333, 0.722222]
+                "beta_hat": [0.583333, 0.722222],
             }
         )
     )
@@ -122,7 +122,7 @@ class FrequencyMetacommunity3by2:
                 "normalized_rho": [0.6050420168067228],
                 "normalized_beta": [1.612461673236969],
                 "rho_hat": [0.190840],
-                "beta_hat": [0.659420]
+                "beta_hat": [0.659420],
             },
             index=[0],
         )
@@ -197,7 +197,7 @@ class SimilarityMetacommunity6by2:
                 "normalized_rho": [1.025, 1.025],
                 "normalized_beta": [0.97561, 0.97561],
                 "rho_hat": [1.05, 1.05],
-                "beta_hat": [-0.02439, -0.02439]
+                "beta_hat": [-0.02439, -0.02439],
             }
         )
     )
@@ -214,7 +214,7 @@ class SimilarityMetacommunity6by2:
                 "normalized_rho": [1.025],
                 "normalized_beta": [0.97561],
                 "rho_hat": [1.05],
-                "beta_hat": [-0.02439]
+                "beta_hat": [-0.02439],
             },
             index=[0],
         )
@@ -263,7 +263,7 @@ class SimilarityMetacommunity3by2:
                 "normalized_rho": [0.79110178, 0.89173333],
                 "normalized_beta": [1.26405985, 1.12141148],
                 "rho_hat": [0.977754, 0.486222],
-                "beta_hat": [0.011247877758913116, 0.345694]
+                "beta_hat": [0.011247877758913116, 0.345694],
             }
         )
     )
@@ -280,7 +280,7 @@ class SimilarityMetacommunity3by2:
                 "normalized_rho": [0.8485572790897555],
                 "normalized_beta": [1.1744247216675028],
                 "rho_hat": [0.608604],
-                "beta_hat": [0.026811]
+                "beta_hat": [0.026811],
             },
             index=[0],
         )
