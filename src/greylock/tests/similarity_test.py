@@ -1,7 +1,8 @@
 """Tests for diversity.similarity"""
-from numpy import allclose, array, dtype, memmap
+from numpy import allclose, ndarray, array, dtype, memmap, inf
 from pandas import DataFrame
 from ray import get, init, shutdown
+import scipy.sparse
 from pytest import fixture, raises, mark
 
 from greylock.log import LOGGER
@@ -13,7 +14,7 @@ from greylock.similarity import (
     make_similarity,
     weighted_similarity_chunk,
 )
-
+from greylock import Metacommunity
 
 @fixture(scope="module")
 def ray_fix():
@@ -55,6 +56,12 @@ similarity_filecontent_3by3_tsv = (
 similarities_filecontents_3by3_csv = (
     "species_1,species_2,species_3\n" "1.0,0.5,0.1\n" "0.5,1.0,0.2\n" "0.1,0.2,1.0\n"
 )
+similarity_sparse_entries = {
+    "shape" : (3, 3),
+    "row" : array([0, 1, 2, 0, 1, 0, 2, ]),
+    "col" : array([0, 1, 2, 1, 0, 2, 0, ]),
+    "data" : array([1, 1, 1, 0.5, 0.5, 0.3, 0.3, ]),
+}
 relative_abundance_3by1 = array([[1 / 1000], [1 / 10], [10]])
 relative_abundance_3by2 = array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]])
 relative_abundance_3by2_2 = array(
@@ -261,3 +268,38 @@ def test_weighted_similarity_chunk(ray_fix, similarity_function):
         )
     )
     assert allclose(chunk, weighted_similarities_3by2_3)
+
+def make_dense_array(spec):
+    a = ndarray(spec["shape"])
+    for i, value in enumerate(spec["data"]):
+        a[spec["row"][i], spec["col"][i]] = value
+    return a
+    
+@mark.parametrize(
+    "sparse_class",
+    [
+        scipy.sparse.bsr_array,
+        scipy.sparse.coo_array,
+        scipy.sparse.csc_array,
+        scipy.sparse.csr_array,
+        scipy.sparse.bsr_matrix,
+        scipy.sparse.coo_matrix,
+        scipy.sparse.csc_matrix,
+        scipy.sparse.csr_matrix,
+    ]
+)
+def test_sparse_similarity(sparse_class):
+    spec = similarity_sparse_entries
+    dense_similarity = make_dense_array(spec)
+    sparse_similarity = sparse_class((spec["data"], (spec["row"], spec["col"])),
+                                     shape=spec["shape"])
+    counts = DataFrame({
+        "Medford" : [3, 2, 0],
+        "Somerville" : [1, 4, 0]
+        })
+    viewpoints = [0, 1, 2, inf]
+    meta_dense = Metacommunity(counts, similarity=dense_similarity)
+    meta_dense_df = meta_dense.to_dataframe(viewpoint=viewpoints)
+    meta_sparse = Metacommunity(counts, similarity=sparse_similarity)
+    meta_sparse_df = meta_sparse.to_dataframe(viewpoint=viewpoints)
+    assert (meta_dense_df.to_numpy() == meta_sparse_df.to_numpy()).all()
