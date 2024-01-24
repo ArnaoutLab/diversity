@@ -18,7 +18,7 @@ from typing import Iterable, Union
 
 from numpy import arange, ndarray, concatenate
 from pandas import DataFrame, RangeIndex
-from scipy.sparse import spmatrix, diags, issparse, hstack
+from scipy.sparse import spmatrix, diags, issparse, hstack, csc_array
 
 
 class Abundance:
@@ -46,7 +46,7 @@ class Abundance:
         self.unify_abundance_array()
 
     def unify_abundance_array(self):
-        """ Creates one matrix containing all the abundance matrices:
+        """Creates one matrix containing all the abundance matrices:
         metacommunity, subcommunity, and normalized subcommunity.
         These matrices are still available as views on the unified
         data structure. (Because we are using basic slicing here, only
@@ -171,6 +171,8 @@ class AbundanceFromSparseArray(Abundance):
                 self.normalized_subcommunity_abundance,
             )
         )
+        # Convert to a type that supports slicing:
+        self.unified_abundance_array = csc_array(self.unified_abundance_array)
         self.metacommunity_abundance = self.unified_abundance_array[:, [0]]
         self.subcommunity_abundance = self.unified_abundance_array[
             :, 1 : (1 + self.num_subcommunities)
