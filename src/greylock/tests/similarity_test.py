@@ -310,10 +310,19 @@ def make_array(spec, array_class=zeros):
 
 def compare_dense_sparse(counts, dense_similarity, sparse_similarity):
     viewpoints = [0, 1, 2, inf]
+    measures = (
+        "alpha",
+        "rho",
+        "beta",
+        "gamma",
+        "normalized_alpha",
+        "normalized_rho",
+        "normalized_beta",
+    )
     meta_dense = Metacommunity(counts, similarity=dense_similarity)
-    meta_dense_df = meta_dense.to_dataframe(viewpoint=viewpoints)
+    meta_dense_df = meta_dense.to_dataframe(viewpoint=viewpoints, measures=measures)
     meta_sparse = Metacommunity(counts, similarity=sparse_similarity)
-    meta_sparse_df = meta_sparse.to_dataframe(viewpoint=viewpoints)
+    meta_sparse_df = meta_sparse.to_dataframe(viewpoint=viewpoints, measures=measures)
     assert meta_dense_df.equals(meta_sparse_df)
 
 

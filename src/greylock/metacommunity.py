@@ -228,8 +228,10 @@ class Metacommunity:
         """
         dataframes = []
         for q in atleast_1d(viewpoint):
-            dataframes.append(self.metacommunity_to_dataframe(viewpoint=q,
-                                                              measures=measures))
-            dataframes.append(self.subcommunities_to_dataframe(viewpoint=q,
-                                                               measures=measures))
+            dataframes.append(
+                self.metacommunity_to_dataframe(viewpoint=q, measures=measures)
+            )
+            dataframes.append(
+                self.subcommunities_to_dataframe(viewpoint=q, measures=measures)
+            )
         return concat(dataframes).reset_index(drop=True)
