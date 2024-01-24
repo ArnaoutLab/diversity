@@ -156,7 +156,7 @@ class Metacommunity:
             subcommunity_diversity,
         )
 
-    def subcommunities_to_dataframe(self, viewpoint: float):
+    def subcommunities_to_dataframe(self, viewpoint: float, measures=MEASURES):
         """Table containing all subcommunity diversity values.
 
         Parameters
@@ -175,14 +175,14 @@ class Metacommunity:
         df = DataFrame(
             {
                 measure: self.subcommunity_diversity(viewpoint, measure)
-                for measure in self.MEASURES
+                for measure in measures
             }
         )
         df.insert(0, "viewpoint", viewpoint)
         df.insert(0, "community", self.abundance.subcommunities_names)
         return df
 
-    def metacommunity_to_dataframe(self, viewpoint: float):
+    def metacommunity_to_dataframe(self, viewpoint: float, measures=MEASURES):
         """Table containing all metacommunity diversity values.
 
         Parameters
@@ -201,7 +201,7 @@ class Metacommunity:
         df = DataFrame(
             {
                 measure: self.metacommunity_diversity(viewpoint, measure)
-                for measure in self.MEASURES
+                for measure in measures
             },
             index=Index(["metacommunity"], name="community"),
         )
@@ -209,7 +209,7 @@ class Metacommunity:
         df.reset_index(inplace=True)
         return df
 
-    def to_dataframe(self, viewpoint: Union[float, Iterable[float]]):
+    def to_dataframe(self, viewpoint: Union[float, Iterable[float]], measures=MEASURES):
         """Table containing all metacommunity and subcommunity diversity
         values.
 
@@ -228,6 +228,10 @@ class Metacommunity:
         """
         dataframes = []
         for q in atleast_1d(viewpoint):
-            dataframes.append(self.metacommunity_to_dataframe(viewpoint=q))
-            dataframes.append(self.subcommunities_to_dataframe(viewpoint=q))
+            dataframes.append(
+                self.metacommunity_to_dataframe(viewpoint=q, measures=measures)
+            )
+            dataframes.append(
+                self.subcommunities_to_dataframe(viewpoint=q, measures=measures)
+            )
         return concat(dataframes).reset_index(drop=True)
