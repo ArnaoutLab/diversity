@@ -16,6 +16,7 @@ from greylock.similarity import (
 )
 from greylock import Metacommunity
 
+
 @fixture(scope="module")
 def ray_fix():
     init(num_cpus=1, num_gpus=1, local_mode=True)
@@ -57,10 +58,40 @@ similarities_filecontents_3by3_csv = (
     "species_1,species_2,species_3\n" "1.0,0.5,0.1\n" "0.5,1.0,0.2\n" "0.1,0.2,1.0\n"
 )
 similarity_sparse_entries = {
-    "shape" : (3, 3),
-    "row" : array([0, 1, 2, 0, 1, 0, 2, ]),
-    "col" : array([0, 1, 2, 1, 0, 2, 0, ]),
-    "data" : array([1, 1, 1, 0.5, 0.5, 0.3, 0.3, ]),
+    "shape": (3, 3),
+    "row": array(
+        [
+            0,
+            1,
+            2,
+            0,
+            1,
+            0,
+            2,
+        ]
+    ),
+    "col": array(
+        [
+            0,
+            1,
+            2,
+            1,
+            0,
+            2,
+            0,
+        ]
+    ),
+    "data": array(
+        [
+            1,
+            1,
+            1,
+            0.5,
+            0.5,
+            0.3,
+            0.3,
+        ]
+    ),
 }
 relative_abundance_3by1 = array([[1 / 1000], [1 / 10], [10]])
 relative_abundance_3by2 = array([[1 / 1000, 1 / 100], [1 / 10, 1 / 1], [10, 100]])
@@ -269,11 +300,13 @@ def test_weighted_similarity_chunk(ray_fix, similarity_function):
     )
     assert allclose(chunk, weighted_similarities_3by2_3)
 
+
 def make_array(spec, array_class=ndarray):
     a = array_class(spec["shape"], dtype=float32)
     for i, value in enumerate(spec["data"]):
         a[spec["row"][i], spec["col"][i]] = value
     return a
+
 
 def compare_dense_sparse(counts, dense_similarity, sparse_similarity):
     viewpoints = [0, 1, 2, inf]
@@ -282,7 +315,8 @@ def compare_dense_sparse(counts, dense_similarity, sparse_similarity):
     meta_sparse = Metacommunity(counts, similarity=sparse_similarity)
     meta_sparse_df = meta_sparse.to_dataframe(viewpoint=viewpoints)
     assert meta_dense_df.equals(meta_sparse_df)
-    
+
+
 @mark.parametrize(
     "sparse_class",
     [
@@ -294,42 +328,34 @@ def compare_dense_sparse(counts, dense_similarity, sparse_similarity):
         scipy.sparse.coo_matrix,
         scipy.sparse.csc_matrix,
         scipy.sparse.csr_matrix,
-    ]
+    ],
 )
 def test_sparse_similarity(sparse_class):
     spec = similarity_sparse_entries
     dense_similarity = make_array(spec)
-    sparse_similarity = sparse_class((spec["data"],
-                                      (spec["row"], spec["col"])),
-                                     shape=spec["shape"])
-    counts = DataFrame({
-        "Medford" : [3, 2, 0],
-        "Somerville" : [1, 4, 0]
-        })
+    sparse_similarity = sparse_class(
+        (spec["data"], (spec["row"], spec["col"])), shape=spec["shape"]
+    )
+    counts = DataFrame({"Medford": [3, 2, 0], "Somerville": [1, 4, 0]})
     compare_dense_sparse(counts, dense_similarity, sparse_similarity)
-    
-@mark.parametrize(
-    "sparse_class",
-    [
-        scipy.sparse.dia_array,
-        scipy.sparse.dia_matrix
-    ]
-)
+
+
+@mark.parametrize("sparse_class", [scipy.sparse.dia_array, scipy.sparse.dia_matrix])
 def test_diag_sparse(sparse_class):
-    data = array([[0.5] * 4,
-                     [1] * 4,
-                     [0.5] * 4
-                     ])
+    data = array([[0.5] * 4, [1] * 4, [0.5] * 4])
     offsets = array([-1, 0, 1])
-    dense_similarity = array([[1. , 0.5, 0. , 0. ],
-                              [0.5, 1. , 0.5, 0. ],
-                              [0. , 0.5, 1. , 0.5],
-                              [0. , 0. , 0.5, 1. ]])
+    dense_similarity = array(
+        [
+            [1.0, 0.5, 0.0, 0.0],
+            [0.5, 1.0, 0.5, 0.0],
+            [0.0, 0.5, 1.0, 0.5],
+            [0.0, 0.0, 0.5, 1.0],
+        ]
+    )
     sparse_similarity = sparse_class((data, offsets), shape=(4, 4))
-    counts = DataFrame({
-        "Cambridge" : [5, 2, 0, 9],
-        "Boston" : [2, 3, 3, 2]})
+    counts = DataFrame({"Cambridge": [5, 2, 0, 9], "Boston": [2, 3, 3, 2]})
     compare_dense_sparse(counts, dense_similarity, sparse_similarity)
+
 
 @mark.parametrize(
     "sparse_class",
@@ -338,14 +364,11 @@ def test_diag_sparse(sparse_class):
         scipy.sparse.lil_matrix,
         scipy.sparse.dok_array,
         scipy.sparse.dok_matrix,
-    ]
+    ],
 )
 def test_incremental_sparse(sparse_class):
     spec = similarity_sparse_entries
     dense_similarity = make_array(spec)
     sparse_similarity = make_array(spec, sparse_class)
-    counts = DataFrame( {
-        "Arlington" : [23, 12, 8],
-        "Watertown" : [15, 14, 19]
-        })
+    counts = DataFrame({"Arlington": [23, 12, 8], "Watertown": [15, 14, 19]})
     compare_dense_sparse(counts, dense_similarity, sparse_similarity)
