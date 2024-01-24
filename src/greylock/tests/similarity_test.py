@@ -1,5 +1,5 @@
 """Tests for diversity.similarity"""
-from numpy import allclose, ndarray, array, dtype, memmap, inf
+from numpy import allclose, ndarray, array, dtype, memmap, inf, float32
 from pandas import DataFrame
 from ray import get, init, shutdown
 import scipy.sparse
@@ -269,8 +269,8 @@ def test_weighted_similarity_chunk(ray_fix, similarity_function):
     )
     assert allclose(chunk, weighted_similarities_3by2_3)
 
-def make_dense_array(spec):
-    a = ndarray(spec["shape"])
+def make_array(spec, array_class=ndarray):
+    a = array_class(spec["shape"], dtype=float32)
     for i, value in enumerate(spec["data"]):
         a[spec["row"][i], spec["col"][i]] = value
     return a
@@ -298,7 +298,7 @@ def compare_dense_sparse(counts, dense_similarity, sparse_similarity):
 )
 def test_sparse_similarity(sparse_class):
     spec = similarity_sparse_entries
-    dense_similarity = make_dense_array(spec)
+    dense_similarity = make_array(spec)
     sparse_similarity = sparse_class((spec["data"],
                                       (spec["row"], spec["col"])),
                                      shape=spec["shape"])
@@ -331,3 +331,21 @@ def test_diag_sparse(sparse_class):
         "Boston" : [2, 3, 3, 2]})
     compare_dense_sparse(counts, dense_similarity, sparse_similarity)
 
+@mark.parametrize(
+    "sparse_class",
+    [
+        scipy.sparse.lil_array,
+        scipy.sparse.lil_matrix,
+        scipy.sparse.dok_array,
+        scipy.sparse.dok_matrix,
+    ]
+)
+def test_incremental_sparse(sparse_class):
+    spec = similarity_sparse_entries
+    dense_similarity = make_array(spec)
+    sparse_similarity = make_array(spec, sparse_class)
+    counts = DataFrame( {
+        "Arlington" : [23, 12, 8],
+        "Watertown" : [15, 14, 19]
+        })
+    compare_dense_sparse(counts, dense_similarity, sparse_similarity)
