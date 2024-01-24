@@ -1,5 +1,5 @@
 """Tests for diversity.similarity"""
-from numpy import allclose, ndarray, array, dtype, memmap, inf, float32
+from numpy import allclose, ndarray, array, dtype, memmap, inf, float32, zeros
 from pandas import DataFrame
 from ray import get, init, shutdown
 import scipy.sparse
@@ -301,7 +301,7 @@ def test_weighted_similarity_chunk(ray_fix, similarity_function):
     assert allclose(chunk, weighted_similarities_3by2_3)
 
 
-def make_array(spec, array_class=ndarray):
+def make_array(spec, array_class=zeros):
     a = array_class(spec["shape"], dtype=float32)
     for i, value in enumerate(spec["data"]):
         a[spec["row"][i], spec["col"][i]] = value
