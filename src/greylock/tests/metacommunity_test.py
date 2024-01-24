@@ -356,3 +356,20 @@ def test_to_dataframe(data):
         [data.metacommunity_results, data.subcommunity_results]
     ).reset_index(drop=True)
     assert_frame_equal(metacommunity.to_dataframe(viewpoint=data.viewpoint), expected)
+
+@mark.parametrize("data", metacommunity_data)
+def test_select_measures(data):
+    metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
+    selected_measures = ["alpha",
+                         "gamma",
+                         "normalized_rho",
+                         ]
+    expected_columns = selected_measures + [
+        "community", "viewpoint"]
+    df = metacommunity.to_dataframe(viewpoint=data.viewpoint,
+                                    measures=selected_measures)
+    for col in df:
+        assert col in expected_columns
+    for col in expected_columns:
+        assert col in df
+
