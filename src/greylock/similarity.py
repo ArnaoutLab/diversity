@@ -132,15 +132,20 @@ class SimilarityFromFile(Similarity):
 @remote
 def weighted_similarity_chunk(
     similarity: Callable,
-    X: ndarray,
+    X: Union[ndarray, DataFrame],
     relative_abundance: ndarray,
     chunk_size: int,
     chunk_index: int,
 ) -> ndarray:
+    def enum_helper(X):
+        if type(X) == DataFrame:
+            return X.itertuples()
+        else:
+            return X
     chunk = X[chunk_index : chunk_index + chunk_size]
     similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
-    for i, row_i in enumerate(chunk):
-        for j, row_j in enumerate(X):
+    for i, row_i in enumerate(enum_helper(chunk)):
+        for j, row_j in enumerate(enum_helper(X)):
             similarities_chunk[i, j] = similarity(row_i, row_j)
     return similarities_chunk @ relative_abundance
 
@@ -152,7 +157,7 @@ class SimilarityFromFunction(Similarity):
     def __init__(
         self,
         similarity: Callable,
-        X: ndarray,
+        X: Union[ndarray, DataFrame],
         chunk_size: int = 100,
     ) -> None:
         """
@@ -160,9 +165,11 @@ class SimilarityFromFunction(Similarity):
             A Callable that calculates similarity between a pair of
             species. Must take two rows from X and return a numeric
             similarity value.
+            If X is a 2D array, the rows will be 1D arrays.
+            If X is a DataFrame, the rows will be named tuples.
         X:
-            An array where each row contains the feature values for a
-            given species.
+            An array or DataFrame where each row contains the feature values
+            for a given species.
         chunk_size:
             Determines how many rows of the similarity matrix each will
             be processes at a time. In general, choosing a larger
@@ -194,7 +201,7 @@ class SimilarityFromFunction(Similarity):
 
 def make_similarity(
     similarity: Union[DataFrame, ndarray, str, Callable],
-    X: ndarray = None,
+    X: Union[ndarray, DataFrame] = None,
     chunk_size: int = 100,
 ) -> Similarity:
     """Initializes a concrete subclass of Similarity.
@@ -209,6 +216,7 @@ def make_similarity(
         diversity.similarity.SimilarityFromFunction
     X:
         A 2-d array where each row is a species
+        This can also be a DataFrame whose column names are valid identifiers. 
     chunk_size:
         See diversity.similarity.SimilarityFromFile. Only relevant
         if a str is passed as argument for similarity.
