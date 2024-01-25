@@ -211,6 +211,9 @@ S_2a[7][8:9] = (                                          0.88) # dodo
 
 
 S_2a = np.maximum( S_2a, S_2a.transpose() )
+```
+We may optionally convert this to a DataFrame:
+```python
 S_2a = pd.DataFrame({labels_2a[i]: S_2a[i] for i in range(no_species_2a)}, index=labels_2a)
 ```
 
@@ -235,7 +238,8 @@ We make a DataFrame of counts in the same way as in the previous example:
 counts_2a = pd.DataFrame({"Community 2a": [1, 1, 1, 1, 1, 1, 1, 1, 1]}, index=labels_2a)
 ```
 
-To compute the similarity-sensitive diversity indices, we now pass the similarity matrix to the similarity argument of the metacommunity object:
+To compute the similarity-sensitive diversity indices, we now pass the similarity matrix to the similarity argument of the metacommunity object.
+(Note that `S_2a` may be in the forme of either the numpy array or the DataFrame):
 
 ```python
 metacommunity_2a = Metacommunity(counts_2a, similarity=S_2a)
@@ -266,6 +270,7 @@ S_2b[7][8:9] = (                                          0.85) # llama
                                                                 #orangutan
 
 S_2b = np.maximum( S_2b, S_2b.transpose() )
+# optional, convert to DataFrame for inspection:
 S_2b = pd.DataFrame({labels_2b[i]: S_2b[i] for i in range(no_species_2b)}, index=labels_2b)
 ```
 
