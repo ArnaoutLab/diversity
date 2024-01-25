@@ -1,4 +1,5 @@
 """Tests for diversity.similarity"""
+from collections import defaultdict
 from numpy import allclose, ndarray, array, dtype, memmap, inf, float32, zeros
 from pandas import DataFrame
 from ray import get, init, shutdown
@@ -381,3 +382,197 @@ def test_incremental_sparse(sparse_class):
     sparse_similarity = make_array(spec, sparse_class)
     counts = DataFrame({"Arlington": [23, 12, 8], "Watertown": [15, 14, 19]})
     compare_dense_sparse(counts, dense_similarity, sparse_similarity)
+
+
+animal_features = DataFrame(
+    {
+        "breathes": [
+            "air",
+            "air",
+            "air",
+            "air",
+            "water",
+            "air",
+            "water",
+            "air",
+            "air",
+            "air",
+            "air",
+            "air",
+        ],
+        "covering": [
+            "fur",
+            "fur",
+            "fur",
+            "scales",
+            "scales",
+            "fur",
+            "scales",
+            "feathers",
+            "fur",
+            "fur",
+            "scales",
+            "fur",
+        ],
+        "diet": [
+            "meat",
+            "omni",
+            "plants",
+            "meat",
+            "omni",
+            "plants",
+            "omni",
+            "omni",
+            "meat",
+            "plants",
+            "plants",
+            "plants",
+        ],
+        "n_legs": [
+            4,
+            4,
+            4,
+            0,
+            0,
+            4,
+            0,
+            2,
+            4,
+            4,
+            4,
+            2,
+        ],
+    },
+    index=[
+        "cat",
+        "dog",
+        "rabbit",
+        "snake",
+        "goldfish",
+        "gerbil",
+        "betafish",
+        "chicken",
+        "tiger",
+        "giraffe",
+        "turtle",
+        "monkey",
+    ],
+)
+
+animal_communities = DataFrame(
+    {
+        "zoo": [
+            0,
+            0,
+            2,
+            6,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            4,
+            5,
+        ],
+        "petco": [
+            4,
+            6,
+            4,
+            4,
+            40,
+            8,
+            30,
+            0,
+            0,
+            0,
+            1,
+            0,
+        ],
+        "shelter": [
+            10,
+            15,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+        ],
+    },
+    index=[
+        "cat",
+        "dog",
+        "rabbit",
+        "snake",
+        "goldfish",
+        "gerbil",
+        "betafish",
+        "chicken",
+        "tiger",
+        "giraffe",
+        "turtle",
+        "monkey",
+    ],
+)
+
+
+def feature_similarity(animal_i, animal_j):
+    if animal_i.breathes != animal_j.breathes:
+        return 0.0
+    if animal_i.covering == animal_j.covering:
+        if animal_i.Index == animal_j.Index:
+            result = 1
+        else:
+            result = 0.98
+    else:
+        result = 0.5
+    if animal_i.n_legs != animal_j.n_legs:
+        result *= 0.5
+    if animal_i.diet != animal_j.diet:
+        if "omni" in (animal_i.diet, animal_j.diet):
+            result *= 0.9
+        else:
+            result *= 0.7
+    return result
+
+
+def animal_similarity_matrix():
+    columns = defaultdict(list)
+    index = []
+    results = []
+    for i, animal_i in enumerate(animal_features.itertuples()):
+        index.append(animal_i.Index)
+        for j, animal_j in enumerate(animal_features.itertuples()):
+            s = feature_similarity(animal_i, animal_j)
+            columns[animal_j.Index].append(s)
+            results.append((s, animal_i.Index, animal_j.Index))
+    return DataFrame(columns, index=index)
+
+
+def test_feature_similarity():
+    measures = [
+        "alpha",
+        "rho",
+        "beta",
+        "gamma",
+        "normalized_alpha",
+        "normalized_rho",
+        "normalized_beta",
+        "rho_hat",
+    ]
+    viewpoints = [0, 1, 2, inf]
+    m = Metacommunity(animal_communities, similarity=animal_similarity_matrix())
+    df1 = m.to_dataframe(viewpoint=viewpoints, measures=measures)
+    m = Metacommunity(
+        animal_communities,
+        similarity=feature_similarity,
+        X=animal_features,
+        chunk_size=4,
+    )
+    df2 = m.to_dataframe(viewpoint=viewpoints, measures=measures)
+    assert df1.equals(df2)
