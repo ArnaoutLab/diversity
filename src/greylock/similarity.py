@@ -29,7 +29,7 @@ from typing import Callable, Union
 from numpy import ndarray, empty, concatenate, float64
 from pandas import DataFrame, read_csv
 from scipy.sparse import spmatrix, issparse
-from ray import remote, get, put
+import ray
 
 
 class Similarity(ABC):
@@ -129,25 +129,24 @@ class SimilarityFromFile(Similarity):
         return weighted_similarities
 
 
-@remote
-def weighted_similarity_chunk(
-    similarity: Callable,
-    X: Union[ndarray, DataFrame],
-    relative_abundance: ndarray,
-    chunk_size: int,
-    chunk_index: int,
-) -> ndarray:
-    def enum_helper(X):
-        if type(X) == DataFrame:
-            return X.itertuples()
-        else:
-            return X
-    chunk = X[chunk_index : chunk_index + chunk_size]
-    similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
-    for i, row_i in enumerate(enum_helper(chunk)):
-        for j, row_j in enumerate(enum_helper(X)):
-            similarities_chunk[i, j] = similarity(row_i, row_j)
-    return similarities_chunk @ relative_abundance
+def get_weighted_similarity_chunk_f():
+    @ray.remote
+    def weighted_similarity_chunk(
+        similarity: Callable,
+        X: Union[ndarray, DataFrame],
+        relative_abundance: ndarray,
+        chunk_size: int,
+        chunk_index: int,
+    ) -> ndarray:
+        enum_helper = lambda X: (X.itertuples() if type(X) == DataFrame else X)
+        chunk = X[chunk_index : chunk_index + chunk_size]
+        similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
+        for i, row_i in enumerate(enum_helper(chunk)):
+            for j, row_j in enumerate(enum_helper(X)):
+                similarities_chunk[i, j] = similarity(row_i, row_j)
+        return similarities_chunk @ relative_abundance
+
+    return weighted_similarity_chunk
 
 
 class SimilarityFromFunction(Similarity):
@@ -183,8 +182,9 @@ class SimilarityFromFunction(Similarity):
     def weighted_similarities(
         self, relative_abundance: Union[ndarray, spmatrix]
     ) -> ndarray:
-        X_ref = put(self.X)
-        abundance_ref = put(relative_abundance)
+        weighted_similarity_chunk = get_weighted_similarity_chunk_f()
+        X_ref = ray.put(self.X)
+        abundance_ref = ray.put(relative_abundance)
         futures = []
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
             chunk_future = weighted_similarity_chunk.remote(
@@ -195,7 +195,7 @@ class SimilarityFromFunction(Similarity):
                 chunk_index=chunk_index,
             )
             futures.append(chunk_future)
-        weighted_similarity_chunks = get(futures)
+        weighted_similarity_chunks = ray.get(futures)
         return concatenate(weighted_similarity_chunks)
 
 
@@ -216,7 +216,7 @@ def make_similarity(
         diversity.similarity.SimilarityFromFunction
     X:
         A 2-d array where each row is a species
-        This can also be a DataFrame whose column names are valid identifiers. 
+        This can also be a DataFrame whose column names are valid identifiers.
     chunk_size:
         See diversity.similarity.SimilarityFromFile. Only relevant
         if a str is passed as argument for similarity.
