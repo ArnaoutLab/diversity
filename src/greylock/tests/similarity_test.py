@@ -19,13 +19,14 @@ from greylock.similarity import (
 from greylock import Metacommunity
 
 
-"""
 def ray_fix(monkeypatch):
     monkeypatch.setattr(ray, "put" , mockray.put)
     monkeypatch.setattr(ray, "get" , mockray.get)
     monkeypatch.setattr(ray, "remote" , mockray.remote)
-"""
 
+@fixture(autouse=True)
+def setup(monkeypatch):
+    ray_fix(monkeypatch)
 
 @fixture
 def similarity_function():
@@ -280,11 +281,8 @@ def test_weighted_similarities_from_memmap(memmapped_similarity_matrix):
     ],
 )
 def test_weighted_similarities_from_function(
-    monkeypatch, relative_abundance, similarity_function, X, chunk_size, expected
+    relative_abundance, similarity_function, X, chunk_size, expected
 ):
-    monkeypatch.setattr(ray, "put", mockray.put)
-    monkeypatch.setattr(ray, "get", mockray.get)
-    monkeypatch.setattr(ray, "remote", mockray.remote)
     similarity = make_similarity(
         similarity=similarity_function, X=X, chunk_size=chunk_size
     )
@@ -294,10 +292,7 @@ def test_weighted_similarities_from_function(
     assert allclose(weighted_similarities, expected)
 
 
-def test_weighted_similarity_chunk(monkeypatch, similarity_function):
-    monkeypatch.setattr(ray, "put", mockray.put)
-    monkeypatch.setattr(ray, "get", mockray.get)
-    monkeypatch.setattr(ray, "remote", mockray.remote)
+def test_weighted_similarity_chunk(similarity_function):
     weighted_similarity_chunk = get_weighted_similarity_chunk_f()
     chunk = ray.get(
         weighted_similarity_chunk.remote(

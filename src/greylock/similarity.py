@@ -138,7 +138,10 @@ def get_weighted_similarity_chunk_f():
         chunk_size: int,
         chunk_index: int,
     ) -> ndarray:
-        enum_helper = lambda X: (X.itertuples() if type(X) == DataFrame else X)
+        def enum_helper(X):
+            if type(X) == DataFrame:
+                return X.itertuples() 
+            return X
         chunk = X[chunk_index : chunk_index + chunk_size]
         similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
         for i, row_i in enumerate(enum_helper(chunk)):
