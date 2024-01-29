@@ -2,7 +2,8 @@
 from collections import defaultdict
 from numpy import allclose, ndarray, array, dtype, memmap, inf, float32, zeros
 from pandas import DataFrame
-from ray import get, init, shutdown
+import ray
+import greylock.tests.mockray as mockray
 import scipy.sparse
 from pytest import fixture, raises, mark
 
@@ -13,16 +14,20 @@ from greylock.similarity import (
     SimilarityFromFile,
     SimilarityFromFunction,
     make_similarity,
-    weighted_similarity_chunk,
+    get_weighted_similarity_chunk_f,
 )
 from greylock import Metacommunity
 
 
-@fixture(scope="module")
-def ray_fix():
-    init(num_cpus=1, num_gpus=1, local_mode=True)
-    yield None
-    shutdown()
+def ray_fix(monkeypatch):
+    monkeypatch.setattr(ray, "put", mockray.put)
+    monkeypatch.setattr(ray, "get", mockray.get)
+    monkeypatch.setattr(ray, "remote", mockray.remote)
+
+
+@fixture(autouse=True)
+def setup(monkeypatch):
+    ray_fix(monkeypatch)
 
 
 @fixture
@@ -278,7 +283,7 @@ def test_weighted_similarities_from_memmap(memmapped_similarity_matrix):
     ],
 )
 def test_weighted_similarities_from_function(
-    ray_fix, relative_abundance, similarity_function, X, chunk_size, expected
+    relative_abundance, similarity_function, X, chunk_size, expected
 ):
     similarity = make_similarity(
         similarity=similarity_function, X=X, chunk_size=chunk_size
@@ -289,8 +294,9 @@ def test_weighted_similarities_from_function(
     assert allclose(weighted_similarities, expected)
 
 
-def test_weighted_similarity_chunk(ray_fix, similarity_function):
-    chunk = get(
+def test_weighted_similarity_chunk(similarity_function):
+    weighted_similarity_chunk = get_weighted_similarity_chunk_f()
+    chunk = ray.get(
         weighted_similarity_chunk.remote(
             similarity=similarity_function,
             X=X_3by2,
