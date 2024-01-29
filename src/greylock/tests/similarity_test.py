@@ -20,13 +20,15 @@ from greylock import Metacommunity
 
 
 def ray_fix(monkeypatch):
-    monkeypatch.setattr(ray, "put" , mockray.put)
-    monkeypatch.setattr(ray, "get" , mockray.get)
-    monkeypatch.setattr(ray, "remote" , mockray.remote)
+    monkeypatch.setattr(ray, "put", mockray.put)
+    monkeypatch.setattr(ray, "get", mockray.get)
+    monkeypatch.setattr(ray, "remote", mockray.remote)
+
 
 @fixture(autouse=True)
 def setup(monkeypatch):
     ray_fix(monkeypatch)
+
 
 @fixture
 def similarity_function():

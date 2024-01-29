@@ -130,6 +130,12 @@ class SimilarityFromFile(Similarity):
 
 
 def get_weighted_similarity_chunk_f():
+    """
+    Create the remote function only when needed.
+    This gives the unit test framework a chance to
+    replace ray with a mock before using 'remote'.
+    """
+
     @ray.remote
     def weighted_similarity_chunk(
         similarity: Callable,
@@ -140,8 +146,9 @@ def get_weighted_similarity_chunk_f():
     ) -> ndarray:
         def enum_helper(X):
             if type(X) == DataFrame:
-                return X.itertuples() 
+                return X.itertuples()
             return X
+
         chunk = X[chunk_index : chunk_index + chunk_size]
         similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
         for i, row_i in enumerate(enum_helper(chunk)):
