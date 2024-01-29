@@ -22,7 +22,7 @@
 
 # About
 
-`greylock` calculates effective numbers in an extended version of the Hill framework, with extensions due to Leinster and Cobbold and Reeve et al. “Extending” a hill makes a mountain. At 3,489 feet (1,063 meters, Mount Greylock is Massachusetts’ tallest mountain. It is named for Gray Lock, (c. 1670–1750),  a historical figure of the Abnaki, an indigenous people of New England.
+`greylock` calculates effective numbers in an extended version of the Hill framework, with extensions due to Leinster and Cobbold and Reeve et al. “Extending” a hill makes a mountain. At 3,489 feet (1,063 meters), Mount Greylock is Massachusetts’ tallest mountain. It is named for Gray Lock (c. 1670–1750),  a historical figure of the Abnaki, an indigenous people of New England.
 
 ## Availability and installation
 The package is available on GitHub at https://github.com/ArnaoutLab/diversity. It can be installed by running
@@ -350,19 +350,81 @@ yielding $[0.68, 1.07]$. We find that the $\hat{\rho}$ of the two subsets are no
 
 # Advanced usage
 
-The similarity matrix format—DataFrame, memmap, filepath, or function—should be chosen based on the use case. Our recommendation is: 
-*	If the similarity matrix fits in RAM, pass it as a pandas.DataFrame or numpy.ndarray
-*	If the similarity matrix does not fit in RAM but does fit on your hard drive (HD), pass it as a cvs/tsv filepath or numpy.memmap. To illustrate passing a csv file, we re-use the counts_2b_1 and S_2b from above and save the latter as .csv files (note `index=False`, since the csv files do not contain row labels):
+In the examples above, the entire similarity matrix has been created in RAM (as a `numpy.ndarray` or `pandas.DataFrame`) before being passed to the `Metacommunity` constructor. However, this may not be the best tactic for large datasets. The `greylock` package offers better options in these cases. Given that the
+simillarity matrix is of complexity $O(n^2)$ (where $n$ is the number of species), the creation, storage, and use of the similarity matrix are the most computationally resource-intense aspects of calculating diversity. Careful consideration of how to handle the similarity matrix can extend the range of problems that are tractable by many orders of magnitude.
+
+Any large similarity matrix that is created in Python as a `numpy.ndarray` benefits from being memory-mapped, as NumPy can then use the data without requiring it all to be in memory. See the NumPy [memmap documentation](https://numpy.org/doc/stable/reference/generated/numpy.memmap.html) for guidance. Because `memmap` is a subclass of `ndarray`, using this type of file storage for the similarity matrix requires no modification to your use of the Metacommunity API. This conversion, and the resulting storage of the data on disk, has the advantage that if you revise the downstream analysis, or perform additional analyses, re-calculation of the similarity matrix may be skipped.
+
+The strategy of calculate-once, use-many-times afforded by storage of the similarity matrix to a file allows you to do the work of calculating the similarity matrix in an entirely separate process. You may choose to calculate the similarity matrix in a more performant language, such as C++, and/or inspect the matrix in Excel. In these cases, it is  convenient to store the similarity matrix in a non-Python-specific format, such as a .csv or .tsv file. The entire csv/tsv file need not be read into memory before invoking the `Metacommunity` constructor; when this constructor is given the path of a cvs or tsv file, it will use the file's contents in a memory-efficient way, reading in chunks as they are used. 
+
+To illustrate passing a csv file, we re-use the counts_2b_1 and S_2b from above and save the latter as .csv files (note `index=False`, since the csv files should *not* contain row labels):
 ```python
 S_2b.to_csv("S_2b.csv", index=False)
 ```
 then we can build a metacommunity as follows
 ```python
-metacommunity_2b_1 = Metacommunity(counts_2b_1, similarity='S_2b.csv')
+metacommunity_2b_1 = Metacommunity(counts_2b_1, similarity='S_2b.csv', chunk_size=5)
 ```
-We can optionally use the `chunk_size` argument to specify how many rows of the similarity matrix are read from the file at a time.
-  
-*	If the similarity matrix does not fit in either RAM or HD, pass a similarity function and the feature set that will be used to calculate similarities. The syntax for building the metacommunity this way is `Metacommunity(counts, similarity, X, chunk_size)` where `similarity` is a callable, `X` is a numpy array containing the feature values, and `chunk_size` determines how many rows of of the similarity matrix are processed at a time. (Note that construction of the similarity matrix is an $O(N^2)$ operation; if your similarity function is expensive, this calculation can take time for large datasets.)
+The optional `chunk_size` argument specifies how many rows of the similarity matrix are read from the file at a time.
+
+Alternatively, to avoid a large footprint on either RAM or disk, the similarity matrix can be constructed and processed in chunks by passing a similarity function to `similarity` and an array or `DataFrame` of features to `X`. Each row of X represents the feature values of a species. For example, given numeric features all of the same type:
+
+```
+X = np.array([
+  [1, 2], 
+  [3, 4], 
+  [5, 6]
+])
+
+def similarity_function(species_i, species_j):
+  return 1 / (1 + np.linalg.norm(species_i - species_j))
+
+metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk_size=100)
+```
+
+If there are features of various types, and it would be convenient to address features by name, features can be supplied in a DataFrame. (Note that, because of the use of named tuples to represent species in the similarity function, it is helpful if the column names are valid Python identifiers.)
+
+```
+X = pd.DataFrame(
+    {
+        "breathes": [
+            "water",
+            "air",
+            "air",
+        ],
+        "covering": [
+            "scales",
+            "scales",
+            "fur",
+        ],
+        "n_legs": [
+            0,
+            0,
+            4,
+        ],
+    },
+    index=[
+        "tuna",
+        "snake",
+        "rabbit",
+    ],
+)
+
+def feature_similarity(animal_i, animal_j):
+    if animal_i.breathes != animal_j.breathes:
+        return 0.0
+    if animal_i.covering == animal_j.covering:
+        result = 1
+    else:
+        result = 0.5
+    if animal_i.n_legs != animal_j.n_legs:
+        result *= 0.5
+    return result
+
+metacommunity = Metacommunity(counts, similarity=feature_similarity, X=X, chunk_size=100)
+```
+
+Each `chunk_size` rows of the similarity matrix are processed as a separate job, and `greylock` uses the [Ray framework](https://pypi.org/project/ray/) to parallelize these jobs. Thanks to this parallelization, up to an N-fold speedup is possible (where N is the number of CPUs).
 
 # Command-line usage
 The `greylock` package can also be used from the command line as a module (via `python -m`). To illustrate using `greylock` this way, we re-use again the example with counts_2b_1 and S_2b, now with counts_2b_1 also saved as a csv file (note again `index=False`):
