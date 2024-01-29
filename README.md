@@ -367,11 +367,7 @@ metacommunity_2b_1 = Metacommunity(counts_2b_1, similarity='S_2b.csv', chunk_siz
 ```
 The optional `chunk_size` argument specifies how many rows of the similarity matrix are read from the file at a time.
 
-The similarity matrix format—DataFrame, memmap, filepath, or function—should be chosen based on the use case. Our recommendation is: 
-*	If the similarity matrix fits in RAM, pass it as a pandas.DataFrame or numpy.ndarray
-*	If the similarity matrix does not fit in RAM but does fit on your hard drive (HD), pass it as a cvs/tsv filepath or numpy.memmap. 
-  
-*	If the similarity matrix does not fit in either RAM or HD, pass a similarity function and the feature set that will be used to calculate similarities. The syntax for building the metacommunity this way is `Metacommunity(counts, similarity, X, chunk_size)` where `similarity` is a callable, `X` is a numpy array containing the feature values, and `chunk_size` determines how many rows of of the similarity matrix are processed at a time. (Note that construction of the similarity matrix is an $O(N^2)$ operation; if your similarity function is expensive, this calculation can take time for large datasets.)
+Alternatively, to avoid a large footprint on either RAM or disk, the similarity matrix may be created and consumed on the fly by passing a similarity function and the feature set that will be used to calculate similarities to the Metacommunity constructor. The syntax for building the metacommunity this way is `Metacommunity(counts, similarity, X, chunk_size)` where `similarity` is a callable, and `X` is a numpy array or DataFrame containing the feature values. Each `chunk_size` rows of the similarity matrix are processed as a separate job, and `greylock` uses the [Ray framework](https://pypi.org/project/ray/) to parallelize these jobs. Thanks to this parallelization, up to an N-fold speedup is possible (where N is the number of CPUs).
 
 # Command-line usage
 The `greylock` package can also be used from the command line as a module (via `python -m`). To illustrate using `greylock` this way, we re-use again the example with counts_2b_1 and S_2b, now with counts_2b_1 also saved as a csv file (note again `index=False`):
