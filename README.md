@@ -377,7 +377,7 @@ X = np.array([
 ])
 
 def similarity_function(species_i, species_j):
-  return 1 / (1 + np.ligalg.norm(species_i, species_j))
+  return 1 / (1 + np.linalg.norm(species_i - species_j))
 
 metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk_size=100)
 ```
@@ -385,7 +385,7 @@ metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk
 If there are features of various types, and it would be convenient to address features by name, features can be supplied in a DataFrame. (Note that, because of the use of named tuples to represent species in the similarity function, it is helpful if the column names are valid Python identifiers.)
 
 ```
-X = DataFrame(
+X = pd.DataFrame(
     {
         "breathes": [
             "water",
@@ -402,12 +402,13 @@ X = DataFrame(
             0,
             4,
         ],
+    },
     index=[
         "tuna",
         "snake",
         "rabbit",
     ],
-}
+)
 
 def feature_similarity(animal_i, animal_j):
     if animal_i.breathes != animal_j.breathes:
@@ -420,7 +421,7 @@ def feature_similarity(animal_i, animal_j):
         result *= 0.5
     return result
 
-metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk_size=100)
+metacommunity = Metacommunity(counts, similarity=feature_similarity, X=X, chunk_size=100)
 ```
 
 Each `chunk_size` rows of the similarity matrix are processed as a separate job, and `greylock` uses the [Ray framework](https://pypi.org/project/ray/) to parallelize these jobs. Thanks to this parallelization, up to an N-fold speedup is possible (where N is the number of CPUs).
