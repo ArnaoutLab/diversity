@@ -350,6 +350,11 @@ yielding $[0.68, 1.07]$. We find that the $\hat{\rho}$ of the two subsets are no
 
 # Advanced usage
 
+In the examples above, the entire similarity matrix has been created in RAM (as a `numpy.ndarray` or `pandas.DataFrame`) before being passed to the `Metacommunity` constructor. However, this may not be the best tactic for large datasets. The `greylock` package offers better options in these cases. Given that the
+simillarity matrix is of complexity $O(n^2)$ (where $n$ is the number of species), the creation, storage, and use of the similarity matrix are the most computationally resource-intense aspects of calculating diversity. Careful consideration of how to handle the similarity matrix can extend the range of problems that are tractable by many orders of magnitude.
+
+Any large similarity matrix that is created in Python as a `numpy.ndarray` benefits from being memory-mapped, as NumPy can then use the data without requiring it all to be in memory. See the NumPy [memmap documentation] (https://numpy.org/doc/stable/reference/generated/numpy.memmap.html) for guidance. Because `memmap` is a subclass of `ndarray`, using this type of file storage for the similarity matrix requires no modification to your use of the Metacommunity API. 
+
 The similarity matrix format—DataFrame, memmap, filepath, or function—should be chosen based on the use case. Our recommendation is: 
 *	If the similarity matrix fits in RAM, pass it as a pandas.DataFrame or numpy.ndarray
 *	If the similarity matrix does not fit in RAM but does fit on your hard drive (HD), pass it as a cvs/tsv filepath or numpy.memmap. To illustrate passing a csv file, we re-use the counts_2b_1 and S_2b from above and save the latter as .csv files (note `index=False`, since the csv files do not contain row labels):
