@@ -367,7 +367,63 @@ metacommunity_2b_1 = Metacommunity(counts_2b_1, similarity='S_2b.csv', chunk_siz
 ```
 The optional `chunk_size` argument specifies how many rows of the similarity matrix are read from the file at a time.
 
-Alternatively, to avoid a large footprint on either RAM or disk, the similarity matrix may be created and consumed on the fly by passing a similarity function and the feature set that will be used to calculate similarities to the Metacommunity constructor. The syntax for building the metacommunity this way is `Metacommunity(counts, similarity, X, chunk_size)` where `similarity` is a callable, and `X` is a numpy array or DataFrame containing the feature values. Each `chunk_size` rows of the similarity matrix are processed as a separate job, and `greylock` uses the [Ray framework](https://pypi.org/project/ray/) to parallelize these jobs. Thanks to this parallelization, up to an N-fold speedup is possible (where N is the number of CPUs).
+Alternatively, to avoid a large footprint on either RAM or disk, the similarity matrix can be constructed and processed in chunks by passing a similarity function to `similarity` and an array or `DataFrame` of features to `X`. Each row of X represents the feature values of a species. For example, given numeric features all of the same type:
+
+```
+X = np.array([
+  [1, 2], 
+  [3, 4], 
+  [5, 6]
+])
+
+def similarity_function(species_i, species_j):
+  return 1 / (1 + np.ligalg.norm(species_i, species_j))
+
+metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk_size=100)
+```
+
+If there are features of various types, and it would be convenient to address features by name, features can be supplied in a DataFrame. (Note that, because of the use of named tuples to represent species in the similarity function, it is helpful if the column names are valid Python identifiers.)
+
+```
+X = DataFrame(
+    {
+        "breathes": [
+            "water",
+            "air",
+            "air",
+        ],
+        "covering": [
+            "scales",
+            "scales",
+            "fur",
+        ],
+        "n_legs": [
+            0,
+            0,
+            4,
+        ],
+    index=[
+        "tuna",
+        "snake",
+        "rabbit",
+    ],
+}
+
+def feature_similarity(animal_i, animal_j):
+    if animal_i.breathes != animal_j.breathes:
+        return 0.0
+    if animal_i.covering == animal_j.covering:
+        result = 1
+    else:
+        result = 0.5
+    if animal_i.n_legs != animal_j.n_legs:
+        result *= 0.5
+    return result
+
+metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk_size=100)
+```
+
+Each `chunk_size` rows of the similarity matrix are processed as a separate job, and `greylock` uses the [Ray framework](https://pypi.org/project/ray/) to parallelize these jobs. Thanks to this parallelization, up to an N-fold speedup is possible (where N is the number of CPUs).
 
 # Command-line usage
 The `greylock` package can also be used from the command line as a module (via `python -m`). To illustrate using `greylock` this way, we re-use again the example with counts_2b_1 and S_2b, now with counts_2b_1 also saved as a csv file (note again `index=False`):
