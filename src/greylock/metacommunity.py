@@ -47,6 +47,7 @@ class Metacommunity:
         similarity: Union[DataFrame, ndarray, str, Callable, None] = None,
         X: Optional[ndarray] = None,
         chunk_size: Optional[int] = 100,
+        symmetric: bool = False,
     ) -> None:
         """
         Parameters
@@ -72,7 +73,7 @@ class Metacommunity:
         self.counts = counts
         self.abundance = make_abundance(counts=counts)
         self.similarity = make_similarity(
-            similarity=similarity, X=X, chunk_size=chunk_size
+            similarity=similarity, X=X, chunk_size=chunk_size, symmetric=symmetric
         )
         self.components = make_components(
             abundance=self.abundance, similarity=self.similarity
