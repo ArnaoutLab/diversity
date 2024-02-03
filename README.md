@@ -432,7 +432,7 @@ Set the `symmetric` argument to `True` when the following (typical) conditions h
 * The similarity of each species with itself is 1.0.
 * The number of subcommunities is much smaller than the number of species.
 
-If `symmetric=True` then the similarity function will only be called for pairs of rows `species[i], species[j]` where i < j, and the similarity of species[i] to species[j] will be re-used for the similarity of species[j] to species[i]. Thus, a nearly 2-fold speed-up is possible, if the similarity function is computationally expensive. (For a discussion of nonsymmetric similarity, see [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1).)
+If `symmetric=True` then the similarity function will only be called for pairs of rows `species[i], species[j]` where i < j, and the similarity of $species_i$ to $species_j$ will be re-used for the similarity of $species_j$ to $species_i$. Thus, a nearly 2-fold speed-up is possible, if the similarity function is computationally expensive. (For a discussion of nonsymmetric similarity, see [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1).)
 
 # Command-line usage
 The `greylock` package can also be used from the command line as a module (via `python -m`). To illustrate using `greylock` this way, we re-use again the example with counts_2b_1 and S_2b, now with counts_2b_1 also saved as a csv file (note again `index=False`):
