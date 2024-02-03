@@ -13,8 +13,10 @@ from greylock.similarity import (
     SimilarityFromDataFrame,
     SimilarityFromFile,
     SimilarityFromFunction,
+    SimilarityFromSymmetricFunction,
     make_similarity,
     get_weighted_similarity_chunk_f,
+    weighted_similarity_chunk_symmetric,
 )
 from greylock import Metacommunity
 
@@ -390,6 +392,43 @@ def test_incremental_sparse(sparse_class):
     compare_dense_sparse(counts, dense_similarity, sparse_similarity)
 
 
+def another_similarity_func(row_i, row_j):
+    i = row_i[0] / row_i[1]
+    j = row_j[0] / row_j[1]
+    return min(1.0, max(0.0, 0.4 * (3 - abs(i - j))))
+
+
+symmetric_example_X = array([[0, 88], [10, 10], [200, 100], [99, 33]])
+symmetric_example_abundance = array([[1, 0], [0, 1], [1, 0], [0, 10]])
+
+
+@mark.parametrize(
+    "chunk_index, expected",
+    [
+        (0, [[0.4, 0.8], [1.6, 4.0], [0.4, 0.8], [0.0, 0.4]]),
+        (2, [[0.0, 0.0], [0.0, 0.0], [0.0, 8.0], [0.8, 0.0]]),
+    ],
+)
+def test_weighted_similarity_chunk_symmetric(chunk_index, expected):
+    result = weighted_similarity_chunk_symmetric(
+        another_similarity_func,
+        symmetric_example_X,
+        symmetric_example_abundance,
+        2,
+        chunk_index,
+    )
+    assert allclose(result, array(expected))
+
+
+def test_symmetric_similarity():
+    expected = array([[1.4, 0.8], [1.6, 5.0], [1.4, 8.8], [0.8, 10.4]])
+    obj = SimilarityFromSymmetricFunction(
+        similarity=another_similarity_func, X=symmetric_example_X, chunk_size=2
+    )
+    result = obj.weighted_similarities(symmetric_example_abundance)
+    assert allclose(result, expected)
+
+
 animal_features = DataFrame(
     {
         "breathes": [
@@ -573,12 +612,27 @@ def test_feature_similarity():
     ]
     viewpoints = [0, 1, 2, inf]
     m = Metacommunity(animal_communities, similarity=animal_similarity_matrix())
-    df1 = m.to_dataframe(viewpoint=viewpoints, measures=measures)
+    df1 = m.to_dataframe(viewpoint=viewpoints, measures=measures).set_index(
+        ["community", "viewpoint"]
+    )
     m = Metacommunity(
         animal_communities,
         similarity=feature_similarity,
         X=animal_features,
         chunk_size=4,
     )
-    df2 = m.to_dataframe(viewpoint=viewpoints, measures=measures)
-    assert df1.equals(df2)
+    df2 = m.to_dataframe(viewpoint=viewpoints, measures=measures).set_index(
+        ["community", "viewpoint"]
+    )
+    assert allclose(df1.to_numpy(), df2.to_numpy())
+    m = Metacommunity(
+        animal_communities,
+        similarity=feature_similarity,
+        X=animal_features,
+        chunk_size=4,
+        symmetric=True,
+    )
+    df3 = m.to_dataframe(viewpoint=viewpoints, measures=measures).set_index(
+        ["community", "viewpoint"]
+    )
+    assert allclose(df1.to_numpy(), df3.to_numpy())

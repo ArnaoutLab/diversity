@@ -26,7 +26,7 @@ make_similarity
 """
 from abc import ABC, abstractmethod
 from typing import Callable, Union
-from numpy import ndarray, empty, concatenate, float64
+from numpy import ndarray, empty, concatenate, float64, vstack, zeros
 from pandas import DataFrame, read_csv
 from scipy.sparse import spmatrix, issparse
 import ray
@@ -209,10 +209,76 @@ class SimilarityFromFunction(Similarity):
         return concatenate(weighted_similarity_chunks)
 
 
+def weighted_similarity_chunk_symmetric(
+    similarity: Callable,
+    X: Union[ndarray, DataFrame],
+    relative_abundance: ndarray,
+    chunk_size: int,
+    chunk_index: int,
+) -> ndarray:
+    def enum_helper(X, start_index=0):
+        if type(X) == DataFrame:
+            return X.iloc[start_index:].itertuples()
+        return X[start_index:]
+
+    chunk = X[chunk_index : chunk_index + chunk_size]
+    similarities_chunk = zeros(shape=(chunk.shape[0], X.shape[0]))
+    for i, row_i in enumerate(enum_helper(chunk)):
+        for j, row_j in enumerate(enum_helper(X, chunk_index + i + 1)):
+            similarities_chunk[i, i + j + chunk_index + 1] = similarity(row_i, row_j)
+    rows_result = similarities_chunk @ relative_abundance
+    rows_after_count = max(0, relative_abundance.shape[0] - (chunk_index + chunk_size))
+    rows_result = vstack(
+        (
+            zeros(shape=(chunk_index, relative_abundance.shape[1])),
+            rows_result,
+            zeros(
+                shape=(
+                    rows_after_count,
+                    relative_abundance.shape[1],
+                )
+            ),
+        )
+    )
+    similarities_chunk = similarities_chunk.T
+    relative_abundance = relative_abundance[chunk_index : chunk_index + chunk_size]
+    cols_result = similarities_chunk @ relative_abundance
+    return rows_result + cols_result
+
+
+class SimilarityFromSymmetricFunction(SimilarityFromFunction):
+    """Implements Similarity by calculating similarities with a callable
+    function for one triangle of the similarity matrix, and re-using those
+    values for the other triangle.
+    """
+
+    def weighted_similarities(
+        self, relative_abundance: Union[ndarray, spmatrix]
+    ) -> ndarray:
+        weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_symmetric)
+        X_ref = ray.put(self.X)
+        abundance_ref = ray.put(relative_abundance)
+        futures = []
+        for chunk_index in range(0, self.X.shape[0], self.chunk_size):
+            chunk_future = weighted_similarity_chunk.remote(
+                similarity=self.similarity,
+                X=X_ref,
+                relative_abundance=abundance_ref,
+                chunk_size=self.chunk_size,
+                chunk_index=chunk_index,
+            )
+            futures.append(chunk_future)
+        result = relative_abundance
+        for addend in ray.get(futures):
+            result = result + addend
+        return result
+
+
 def make_similarity(
     similarity: Union[DataFrame, ndarray, str, Callable],
     X: Union[ndarray, DataFrame] = None,
     chunk_size: int = 100,
+    symmetric: bool = False,
 ) -> Similarity:
     """Initializes a concrete subclass of Similarity.
 
@@ -244,7 +310,14 @@ def make_similarity(
     elif isinstance(similarity, str):
         return SimilarityFromFile(similarity=similarity, chunk_size=chunk_size)
     elif isinstance(similarity, Callable):
-        return SimilarityFromFunction(similarity=similarity, X=X, chunk_size=chunk_size)
+        if symmetric:
+            return SimilarityFromSymmetricFunction(
+                similarity=similarity, X=X, chunk_size=chunk_size
+            )
+        else:
+            return SimilarityFromFunction(
+                similarity=similarity, X=X, chunk_size=chunk_size
+            )
     elif issparse(similarity):
         return SimilarityFromArray(similarity=similarity)
     else:

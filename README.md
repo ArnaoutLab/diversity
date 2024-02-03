@@ -379,7 +379,7 @@ X = np.array([
 def similarity_function(species_i, species_j):
   return 1 / (1 + np.linalg.norm(species_i - species_j))
 
-metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, chunk_size=100)
+metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, symmetric=True)
 ```
 
 If there are features of various types, and it would be convenient to address features by name, features can be supplied in a DataFrame. (Note that, because of the use of named tuples to represent species in the similarity function, it is helpful if the column names are valid Python identifiers.)
@@ -421,10 +421,18 @@ def feature_similarity(animal_i, animal_j):
         result *= 0.5
     return result
 
-metacommunity = Metacommunity(counts, similarity=feature_similarity, X=X, chunk_size=100)
+metacommunity = Metacommunity(counts, similarity=feature_similarity, X=X, symmetric=True)
 ```
 
 Each `chunk_size` rows of the similarity matrix are processed as a separate job, and `greylock` uses the [Ray framework](https://pypi.org/project/ray/) to parallelize these jobs. Thanks to this parallelization, up to an N-fold speedup is possible (where N is the number of CPUs).
+
+Set the `symmetric` argument to `True` when the following (typical) conditions hold:
+
+* The similarity matrix is symmetric (i.e. similarity[i, j] == similarity[j, i] for all i and j).
+* The similarity of each species with itself is 1.0.
+* The number of subcommunities is much smaller than the number of species.
+
+If `symmetric=True` then the similarity function will only be called for pairs of rows `species[i], species[j]` where i < j, and the similarity of $species_i$ to $species_j$ will be re-used for the similarity of $species_j$ to $species_i$. Thus, a nearly 2-fold speed-up is possible, if the similarity function is computationally expensive. (For a discussion of nonsymmetric similarity, see [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1).)
 
 # Command-line usage
 The `greylock` package can also be used from the command line as a module (via `python -m`). To illustrate using `greylock` this way, we re-use again the example with counts_2b_1 and S_2b, now with counts_2b_1 also saved as a csv file (note again `index=False`):
