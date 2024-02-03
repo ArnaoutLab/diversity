@@ -15,7 +15,7 @@ from greylock.similarity import (
     SimilarityFromFunction,
     SimilarityFromSymmetricFunction,
     make_similarity,
-    get_weighted_similarity_chunk_f,
+    weighted_similarity_chunk_nonsymmetric,
     weighted_similarity_chunk_symmetric,
 )
 from greylock import Metacommunity
@@ -298,15 +298,12 @@ def test_weighted_similarities_from_function(
 
 
 def test_weighted_similarity_chunk(similarity_function):
-    weighted_similarity_chunk = get_weighted_similarity_chunk_f()
-    chunk = ray.get(
-        weighted_similarity_chunk.remote(
-            similarity=similarity_function,
-            X=X_3by2,
-            relative_abundance=relative_abundance_3by2,
-            chunk_size=3,
-            chunk_index=0,
-        )
+    chunk = weighted_similarity_chunk_nonsymmetric(
+        similarity=similarity_function,
+        X=X_3by2,
+        relative_abundance=relative_abundance_3by2,
+        chunk_size=3,
+        chunk_index=0,
     )
     assert allclose(chunk, weighted_similarities_3by2_3)
 

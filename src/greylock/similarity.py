@@ -129,34 +129,24 @@ class SimilarityFromFile(Similarity):
         return weighted_similarities
 
 
-def get_weighted_similarity_chunk_f():
-    """
-    Create the remote function only when needed.
-    This gives the unit test framework a chance to
-    replace ray with a mock before using 'remote'.
-    """
+def weighted_similarity_chunk_nonsymmetric(
+    similarity: Callable,
+    X: Union[ndarray, DataFrame],
+    relative_abundance: ndarray,
+    chunk_size: int,
+    chunk_index: int,
+) -> ndarray:
+    def enum_helper(X):
+        if type(X) == DataFrame:
+            return X.itertuples()
+        return X
 
-    @ray.remote
-    def weighted_similarity_chunk(
-        similarity: Callable,
-        X: Union[ndarray, DataFrame],
-        relative_abundance: ndarray,
-        chunk_size: int,
-        chunk_index: int,
-    ) -> ndarray:
-        def enum_helper(X):
-            if type(X) == DataFrame:
-                return X.itertuples()
-            return X
-
-        chunk = X[chunk_index : chunk_index + chunk_size]
-        similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
-        for i, row_i in enumerate(enum_helper(chunk)):
-            for j, row_j in enumerate(enum_helper(X)):
-                similarities_chunk[i, j] = similarity(row_i, row_j)
-        return similarities_chunk @ relative_abundance
-
-    return weighted_similarity_chunk
+    chunk = X[chunk_index : chunk_index + chunk_size]
+    similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
+    for i, row_i in enumerate(enum_helper(chunk)):
+        for j, row_j in enumerate(enum_helper(X)):
+            similarities_chunk[i, j] = similarity(row_i, row_j)
+    return similarities_chunk @ relative_abundance
 
 
 class SimilarityFromFunction(Similarity):
@@ -194,7 +184,7 @@ class SimilarityFromFunction(Similarity):
     def weighted_similarities(
         self, relative_abundance: Union[ndarray, spmatrix]
     ) -> ndarray:
-        weighted_similarity_chunk = get_weighted_similarity_chunk_f()
+        weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_nonsymmetric)
         X_ref = ray.put(self.X)
         abundance_ref = ray.put(relative_abundance)
         futures = []
