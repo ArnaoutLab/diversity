@@ -168,6 +168,7 @@ class SimilarityFromFunction(Similarity):
         similarity: Callable,
         X: Union[ndarray, DataFrame],
         chunk_size: int = 100,
+        max_inflight_tasks: int = 64,
     ) -> None:
         """
         similarity:
@@ -188,6 +189,7 @@ class SimilarityFromFunction(Similarity):
         super().__init__(similarity=similarity)
         self.X = X
         self.chunk_size = chunk_size
+        self.max_inflight_tasks = max_inflight_tasks
 
     def weighted_similarities(
         self, relative_abundance: Union[ndarray, spmatrix]
@@ -259,7 +261,13 @@ class SimilarityFromSymmetricFunction(SimilarityFromFunction):
         X_ref = ray.put(self.X)
         abundance_ref = ray.put(relative_abundance)
         futures = []
+        result = relative_abundance
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
+            if len(futures) >= self.max_inflight_tasks:
+                (ready_refs, futures) = ray.wait(futures)
+                for addend in ray.get(ready_refs):
+                    result = result + addend
+
             chunk_future = weighted_similarity_chunk.remote(
                 similarity=self.similarity,
                 X=X_ref,
@@ -268,7 +276,6 @@ class SimilarityFromSymmetricFunction(SimilarityFromFunction):
                 chunk_index=chunk_index,
             )
             futures.append(chunk_future)
-        result = relative_abundance
         for addend in ray.get(futures):
             result = result + addend
         return result
@@ -279,6 +286,7 @@ def make_similarity(
     X: Union[ndarray, DataFrame] = None,
     chunk_size: int = 100,
     symmetric: bool = False,
+    max_inflight_tasks: int = 64,
 ) -> Similarity:
     """Initializes a concrete subclass of Similarity.
 
@@ -312,11 +320,17 @@ def make_similarity(
     elif isinstance(similarity, Callable):
         if symmetric:
             return SimilarityFromSymmetricFunction(
-                similarity=similarity, X=X, chunk_size=chunk_size
+                similarity=similarity,
+                X=X,
+                chunk_size=chunk_size,
+                max_inflight_tasks=max_inflight_tasks,
             )
         else:
             return SimilarityFromFunction(
-                similarity=similarity, X=X, chunk_size=chunk_size
+                similarity=similarity,
+                X=X,
+                chunk_size=chunk_size,
+                max_inflight_tasks=max_inflight_tasks,
             )
     elif issparse(similarity):
         return SimilarityFromArray(similarity=similarity)

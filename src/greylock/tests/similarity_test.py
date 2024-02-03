@@ -25,6 +25,7 @@ def ray_fix(monkeypatch):
     monkeypatch.setattr(ray, "put", mockray.put)
     monkeypatch.setattr(ray, "get", mockray.get)
     monkeypatch.setattr(ray, "remote", mockray.remote)
+    monkeypatch.setattr(ray, "wait", mockray.wait)
 
 
 @fixture(autouse=True)
@@ -423,8 +424,12 @@ def test_weighted_similarity_chunk_symmetric(chunk_index, expected):
 def test_symmetric_similarity():
     expected = array([[1.4, 0.8], [1.6, 5.0], [1.4, 8.8], [0.8, 10.4]])
     obj = SimilarityFromSymmetricFunction(
-        similarity=another_similarity_func, X=symmetric_example_X, chunk_size=2
+        similarity=another_similarity_func,
+        X=symmetric_example_X,
+        chunk_size=2,
+        max_inflight_tasks=2,
     )
+    assert obj.max_inflight_tasks == 2
     result = obj.weighted_similarities(symmetric_example_abundance)
     assert allclose(result, expected)
 
@@ -620,6 +625,8 @@ def test_feature_similarity():
         similarity=feature_similarity,
         X=animal_features,
         chunk_size=4,
+        symmetric=False,
+        max_inflight_tasks=2,
     )
     df2 = m.to_dataframe(viewpoint=viewpoints, measures=measures).set_index(
         ["community", "viewpoint"]
@@ -631,6 +638,7 @@ def test_feature_similarity():
         X=animal_features,
         chunk_size=4,
         symmetric=True,
+        max_inflight_tasks=2,
     )
     df3 = m.to_dataframe(viewpoint=viewpoints, measures=measures).set_index(
         ["community", "viewpoint"]
