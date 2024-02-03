@@ -227,13 +227,14 @@ def weighted_similarity_chunk_symmetric(
         for j, row_j in enumerate(enum_helper(X, chunk_index + i + 1)):
             similarities_chunk[i, i + j + chunk_index + 1] = similarity(row_i, row_j)
     rows_result = similarities_chunk @ relative_abundance
+    rows_after_count = max(0, relative_abundance.shape[0] - (chunk_index + chunk_size))
     rows_result = vstack(
         (
             zeros(shape=(chunk_index, relative_abundance.shape[1])),
             rows_result,
             zeros(
                 shape=(
-                    relative_abundance.shape[0] - (chunk_index + chunk_size),
+                    rows_after_count,
                     relative_abundance.shape[1],
                 )
             ),
