@@ -146,7 +146,10 @@ def weighted_similarity_chunk_nonsymmetric(
     for i, row_i in enumerate(enum_helper(chunk)):
         for j, row_j in enumerate(enum_helper(X)):
             similarities_chunk[i, j] = similarity(row_i, row_j)
-    return similarities_chunk @ relative_abundance
+    # When this is a remote task, the chunks may be returned out of
+    # order. Indicate what chunk this was for, so we can sort the
+    # resulting chunks correctly:
+    return chunk_index, similarities_chunk @ relative_abundance
 
 
 class SimilarityFromFunction(Similarity):
@@ -188,7 +191,11 @@ class SimilarityFromFunction(Similarity):
         X_ref = ray.put(self.X)
         abundance_ref = ray.put(relative_abundance)
         futures = []
+        results = []
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
+            if len(futures) >= self.max_inflight_tasks:
+                ready_refs, futures = ray.wait(futures)
+                results += ray.get(ready_refs)
             chunk_future = weighted_similarity_chunk.remote(
                 similarity=self.similarity,
                 X=X_ref,
@@ -197,7 +204,9 @@ class SimilarityFromFunction(Similarity):
                 chunk_index=chunk_index,
             )
             futures.append(chunk_future)
-        weighted_similarity_chunks = ray.get(futures)
+        results += ray.get(futures)
+        results.sort()  # This sorts by chunk index (1st in tuple)
+        weighted_similarity_chunks = [r[1] for r in results]
         return concatenate(weighted_similarity_chunks)
 
 

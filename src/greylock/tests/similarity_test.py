@@ -298,13 +298,14 @@ def test_weighted_similarities_from_function(
 
 
 def test_weighted_similarity_chunk(similarity_function):
-    chunk = weighted_similarity_chunk_nonsymmetric(
+    chunk_index, chunk = weighted_similarity_chunk_nonsymmetric(
         similarity=similarity_function,
         X=X_3by2,
         relative_abundance=relative_abundance_3by2,
         chunk_size=3,
         chunk_index=0,
     )
+    assert chunk_index == 0
     assert allclose(chunk, weighted_similarities_3by2_3)
 
 
