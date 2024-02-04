@@ -41,12 +41,16 @@ def wait(tokens):
     futures = tokens[:ready_index] + tokens[(ready_index + 1) :]
     return (ready_refs, futures)
 
+def get_one(token):
+    result = results_store[token]
+    del results_store[token]
+    return result
 
 def get(tokens):
-    results = []
     if not hasattr(tokens, "__iter__"):
-        tokens = [tokens]
+        return get_one(tokens)
+    results = []
     for token in tokens:
-        results.append(results_store[token])
-        del results_store[token]
+        results.append(get_one(token))
     return results
+
