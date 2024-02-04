@@ -4,6 +4,7 @@ Testing the testing infrastructure!
 
 from greylock.tests.mockray import put, remote, wait, get
 
+
 def test_mock():
     @remote
     def interesting(n):
@@ -28,4 +29,3 @@ def test_mock():
     results.sort()
     for n, result in enumerate(results):
         assert result[1] == n
-
