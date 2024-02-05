@@ -129,34 +129,27 @@ class SimilarityFromFile(Similarity):
         return weighted_similarities
 
 
-def get_weighted_similarity_chunk_f():
-    """
-    Create the remote function only when needed.
-    This gives the unit test framework a chance to
-    replace ray with a mock before using 'remote'.
-    """
+def weighted_similarity_chunk_nonsymmetric(
+    similarity: Callable,
+    X: Union[ndarray, DataFrame],
+    relative_abundance: ndarray,
+    chunk_size: int,
+    chunk_index: int,
+) -> ndarray:
+    def enum_helper(X):
+        if type(X) == DataFrame:
+            return X.itertuples()
+        return X
 
-    @ray.remote
-    def weighted_similarity_chunk(
-        similarity: Callable,
-        X: Union[ndarray, DataFrame],
-        relative_abundance: ndarray,
-        chunk_size: int,
-        chunk_index: int,
-    ) -> ndarray:
-        def enum_helper(X):
-            if type(X) == DataFrame:
-                return X.itertuples()
-            return X
-
-        chunk = X[chunk_index : chunk_index + chunk_size]
-        similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
-        for i, row_i in enumerate(enum_helper(chunk)):
-            for j, row_j in enumerate(enum_helper(X)):
-                similarities_chunk[i, j] = similarity(row_i, row_j)
-        return similarities_chunk @ relative_abundance
-
-    return weighted_similarity_chunk
+    chunk = X[chunk_index : chunk_index + chunk_size]
+    similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
+    for i, row_i in enumerate(enum_helper(chunk)):
+        for j, row_j in enumerate(enum_helper(X)):
+            similarities_chunk[i, j] = similarity(row_i, row_j)
+    # When this is a remote task, the chunks may be returned out of
+    # order. Indicate what chunk this was for, so we can sort the
+    # resulting chunks correctly:
+    return chunk_index, similarities_chunk @ relative_abundance
 
 
 class SimilarityFromFunction(Similarity):
@@ -168,6 +161,7 @@ class SimilarityFromFunction(Similarity):
         similarity: Callable,
         X: Union[ndarray, DataFrame],
         chunk_size: int = 100,
+        max_inflight_tasks: int = 64,
     ) -> None:
         """
         similarity:
@@ -188,15 +182,20 @@ class SimilarityFromFunction(Similarity):
         super().__init__(similarity=similarity)
         self.X = X
         self.chunk_size = chunk_size
+        self.max_inflight_tasks = max_inflight_tasks
 
     def weighted_similarities(
         self, relative_abundance: Union[ndarray, spmatrix]
     ) -> ndarray:
-        weighted_similarity_chunk = get_weighted_similarity_chunk_f()
+        weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_nonsymmetric)
         X_ref = ray.put(self.X)
         abundance_ref = ray.put(relative_abundance)
         futures = []
+        results = []
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
+            if len(futures) >= self.max_inflight_tasks:
+                ready_refs, futures = ray.wait(futures)
+                results += ray.get(ready_refs)
             chunk_future = weighted_similarity_chunk.remote(
                 similarity=self.similarity,
                 X=X_ref,
@@ -205,7 +204,9 @@ class SimilarityFromFunction(Similarity):
                 chunk_index=chunk_index,
             )
             futures.append(chunk_future)
-        weighted_similarity_chunks = ray.get(futures)
+        results += ray.get(futures)
+        results.sort()  # This sorts by chunk index (1st in tuple)
+        weighted_similarity_chunks = [r[1] for r in results]
         return concatenate(weighted_similarity_chunks)
 
 
@@ -259,7 +260,13 @@ class SimilarityFromSymmetricFunction(SimilarityFromFunction):
         X_ref = ray.put(self.X)
         abundance_ref = ray.put(relative_abundance)
         futures = []
+        result = relative_abundance
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
+            if len(futures) >= self.max_inflight_tasks:
+                (ready_refs, futures) = ray.wait(futures)
+                for addend in ray.get(ready_refs):
+                    result = result + addend
+
             chunk_future = weighted_similarity_chunk.remote(
                 similarity=self.similarity,
                 X=X_ref,
@@ -268,7 +275,6 @@ class SimilarityFromSymmetricFunction(SimilarityFromFunction):
                 chunk_index=chunk_index,
             )
             futures.append(chunk_future)
-        result = relative_abundance
         for addend in ray.get(futures):
             result = result + addend
         return result
@@ -279,6 +285,7 @@ def make_similarity(
     X: Union[ndarray, DataFrame] = None,
     chunk_size: int = 100,
     symmetric: bool = False,
+    max_inflight_tasks: int = 64,
 ) -> Similarity:
     """Initializes a concrete subclass of Similarity.
 
@@ -312,11 +319,17 @@ def make_similarity(
     elif isinstance(similarity, Callable):
         if symmetric:
             return SimilarityFromSymmetricFunction(
-                similarity=similarity, X=X, chunk_size=chunk_size
+                similarity=similarity,
+                X=X,
+                chunk_size=chunk_size,
+                max_inflight_tasks=max_inflight_tasks,
             )
         else:
             return SimilarityFromFunction(
-                similarity=similarity, X=X, chunk_size=chunk_size
+                similarity=similarity,
+                X=X,
+                chunk_size=chunk_size,
+                max_inflight_tasks=max_inflight_tasks,
             )
     elif issparse(similarity):
         return SimilarityFromArray(similarity=similarity)

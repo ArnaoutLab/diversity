@@ -15,7 +15,7 @@ from greylock.similarity import (
     SimilarityFromFunction,
     SimilarityFromSymmetricFunction,
     make_similarity,
-    get_weighted_similarity_chunk_f,
+    weighted_similarity_chunk_nonsymmetric,
     weighted_similarity_chunk_symmetric,
 )
 from greylock import Metacommunity
@@ -25,6 +25,7 @@ def ray_fix(monkeypatch):
     monkeypatch.setattr(ray, "put", mockray.put)
     monkeypatch.setattr(ray, "get", mockray.get)
     monkeypatch.setattr(ray, "remote", mockray.remote)
+    monkeypatch.setattr(ray, "wait", mockray.wait)
 
 
 @fixture(autouse=True)
@@ -297,16 +298,14 @@ def test_weighted_similarities_from_function(
 
 
 def test_weighted_similarity_chunk(similarity_function):
-    weighted_similarity_chunk = get_weighted_similarity_chunk_f()
-    chunk = ray.get(
-        weighted_similarity_chunk.remote(
-            similarity=similarity_function,
-            X=X_3by2,
-            relative_abundance=relative_abundance_3by2,
-            chunk_size=3,
-            chunk_index=0,
-        )
+    chunk_index, chunk = weighted_similarity_chunk_nonsymmetric(
+        similarity=similarity_function,
+        X=X_3by2,
+        relative_abundance=relative_abundance_3by2,
+        chunk_size=3,
+        chunk_index=0,
     )
+    assert chunk_index == 0
     assert allclose(chunk, weighted_similarities_3by2_3)
 
 
@@ -423,8 +422,12 @@ def test_weighted_similarity_chunk_symmetric(chunk_index, expected):
 def test_symmetric_similarity():
     expected = array([[1.4, 0.8], [1.6, 5.0], [1.4, 8.8], [0.8, 10.4]])
     obj = SimilarityFromSymmetricFunction(
-        similarity=another_similarity_func, X=symmetric_example_X, chunk_size=2
+        similarity=another_similarity_func,
+        X=symmetric_example_X,
+        chunk_size=2,
+        max_inflight_tasks=2,
     )
+    assert obj.max_inflight_tasks == 2
     result = obj.weighted_similarities(symmetric_example_abundance)
     assert allclose(result, expected)
 
@@ -620,6 +623,8 @@ def test_feature_similarity():
         similarity=feature_similarity,
         X=animal_features,
         chunk_size=4,
+        symmetric=False,
+        max_inflight_tasks=2,
     )
     df2 = m.to_dataframe(viewpoint=viewpoints, measures=measures).set_index(
         ["community", "viewpoint"]
@@ -631,6 +636,7 @@ def test_feature_similarity():
         X=animal_features,
         chunk_size=4,
         symmetric=True,
+        max_inflight_tasks=2,
     )
     df3 = m.to_dataframe(viewpoint=viewpoints, measures=measures).set_index(
         ["community", "viewpoint"]
