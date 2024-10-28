@@ -10,6 +10,7 @@ Functions
 configure_arguments
     Creates argument parser for .
 """
+
 from argparse import Action, ArgumentParser
 from sys import stdout
 from warnings import warn

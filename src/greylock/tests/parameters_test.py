@@ -1,4 +1,5 @@
 """Tests for greylock.parameters."""
+
 from pytest import mark, warns
 
 from greylock.parameters import configure_arguments

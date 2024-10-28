@@ -14,8 +14,8 @@ from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray
 from greylock.exceptions import InvalidArgumentError
 
 from greylock.abundance import make_abundance
-from greylock.similarity import make_similarity
-from greylock.components import make_components
+from greylock.similarity import Similarity, SimilarityFromArray, SimilarityIdentity
+from greylock.components import Components
 from greylock.utilities import power_mean
 
 
@@ -44,11 +44,7 @@ class Metacommunity:
     def __init__(
         self,
         counts: Union[DataFrame, ndarray],
-        similarity: Union[DataFrame, ndarray, str, Callable, None] = None,
-        X: Optional[ndarray] = None,
-        chunk_size: Optional[int] = 100,
-        symmetric: Optional[bool] = False,
-        max_inflight_tasks: Optional[int] = 64,
+        similarity: Union[ndarray, Similarity, None] = None,
     ) -> None:
         """
         Parameters
@@ -58,29 +54,23 @@ class Metacommunity:
             species, containing the count of each species in the
             corresponding subcommunities.
         similarity:
-            For similarity-sensitive diversity measures. Use DataFrame
-            or ndarray if the similarity matrix fits in memory. Use a
-            numpy memmap or a filepath if the similarity matrix fits on
-            the hard drive disk. Use a Callable function if the
-            similarity matrix does not fit on the disk.
-        X:
-            An array, where each pair of rows will be passed to
-            'similarity' if it is Callable.
-        chunk_size:
-            The number of file lines to process at a time when the
-            similarity matrix is read from a file. Larger chunk sizes
-            are faster, but take more memory.
+            For small datasets this can be the similarity matrix as
+            an n-by-n numpy.ndarray.
+            For larger datasets, various subclasses of Similarity
+            provide the similarity matrix in various memory- and compute-
+            efficient way.
+            If None is given here, the diversity measures calculated will
+            be frequency-sensitive only, not similarity-sensitive.
         """
         self.counts = counts
         self.abundance = make_abundance(counts=counts)
-        self.similarity = make_similarity(
-            similarity=similarity,
-            X=X,
-            chunk_size=chunk_size,
-            symmetric=symmetric,
-            max_inflight_tasks=max_inflight_tasks,
-        )
-        self.components = make_components(
+        if similarity is None:
+            self.similarity = SimilarityIdentity()
+        elif isinstance(similarity, ndarray):
+            self.similarity = SimilarityFromArray(similarity=similarity)
+        else:
+            self.similarity = similarity
+        self.components = Components(
             abundance=self.abundance, similarity=self.similarity
         )
 

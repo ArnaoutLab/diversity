@@ -13,9 +13,10 @@ from greylock.exceptions import InvalidArgumentError
 
 from greylock.log import LOGGER
 from greylock.abundance import Abundance
-from greylock.similarity import Similarity
+from greylock.similarity import Similarity, SimilarityIdentity, SimilarityFromArray
 from greylock import Metacommunity
 from greylock.tests.similarity_test import similarity_dataframe_3by3
+from greylock.tests.similarity_test import similarity_array_3by3_1
 
 MEASURES = (
     "alpha",
@@ -226,7 +227,7 @@ class SimilarityMetacommunity3by2:
     description = "similarity-sensitive metacommunity; 3 species, 2 subcommunities"
     viewpoint: float = 2.0
     counts: DataFrame = field(default_factory=lambda: counts_3by2)
-    similarity: DataFrame = field(default_factory=lambda: similarity_dataframe_3by3)
+    similarity: ndarray = field(default_factory=lambda: array(similarity_array_3by3_1))
     metacommunity_similarity: ndarray = field(
         default_factory=lambda: array([[0.76], [0.62], [0.22]])
     )
@@ -297,7 +298,15 @@ metacommunity_data = (
 
 @mark.parametrize(
     "data, expected",
-    zip(metacommunity_data, (type(None), type(None), Similarity, Similarity)),
+    zip(
+        metacommunity_data,
+        (
+            SimilarityIdentity,
+            SimilarityIdentity,
+            SimilarityFromArray,
+            SimilarityFromArray,
+        ),
+    ),
 )
 def test_metacommunity(data, expected):
     metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)

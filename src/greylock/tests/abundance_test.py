@@ -1,4 +1,5 @@
 """Tests for diversity.abundance."""
+
 from dataclasses import dataclass, field
 from numpy import allclose, array, ndarray
 from pandas import DataFrame

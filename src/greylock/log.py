@@ -7,6 +7,7 @@ LOG_HANDLER: logging.StreamHandler
 LOGGER: logging.Logger
     Multiprocessing-safe logger.
 """
+
 from logging import (
     Formatter,
     StreamHandler,
