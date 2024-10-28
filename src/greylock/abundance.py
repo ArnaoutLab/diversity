@@ -19,8 +19,7 @@ from typing import Iterable, Union
 
 from numpy import arange, ndarray, concatenate
 from pandas import DataFrame, RangeIndex
-from scipy.sparse import spmatrix, diags, issparse, hstack, csc_array
-
+from scipy.sparse import issparse
 
 class Abundance:
     """Calculates metacommuntiy and subcommunity relative abundance
@@ -196,36 +195,7 @@ class AbundanceFromDataFrame(Abundance):
         return counts / counts.sum()
 
 
-class AbundanceFromSparseArray(Abundance):
-    """Calculates metacommuntiy and subcommunity relative abundance
-    components from a pandas.DataFrame containing species counts
-    """
-
-    def unify_abundance_array(self):
-        self.unified_abundance_array = hstack(
-            (
-                self.metacommunity_abundance,
-                self.subcommunity_abundance,
-                self.normalized_subcommunity_abundance,
-            )
-        )
-        # Convert to a type that supports slicing:
-        self.unified_abundance_array = csc_array(self.unified_abundance_array)
-
-    def make_metacommunity_abundance(self) -> ndarray:
-        sparse_type = type(self.subcommunity_abundance)
-        return sparse_type(self.subcommunity_abundance.sum(axis=1)[:, None])
-
-    def make_normalized_subcommunity_abundance(self) -> ndarray:
-        self.subcommunity_normalizing_constants = (
-            self.make_subcommunity_normalizing_constants()
-        )
-        return self.subcommunity_abundance @ diags(
-            1 / self.subcommunity_normalizing_constants
-        )
-
-
-def make_abundance(counts: Union[DataFrame, spmatrix, ndarray]) -> Abundance:
+def make_abundance(counts: Union[DataFrame, ndarray]) -> Abundance:
     """Initializes a concrete subclass of Abundance.
 
     Parameters
@@ -242,12 +212,12 @@ def make_abundance(counts: Union[DataFrame, spmatrix, ndarray]) -> Abundance:
         return AbundanceFromDataFrame(counts=counts)
     elif hasattr(counts, "shape"):
         if issparse(counts):
-            return AbundanceFromSparseArray(counts=counts)
+            raise TypeError("sparse abundance matrix not yet implemented")
         else:
             return Abundance(counts=counts)
     else:
         raise NotImplementedError(
             f"Type {type(counts)} is not supported for argument "
-            "'counts'. Valid types include pandas.DataFrame, "
-            "numpy.ndarray, or scipy.sparse.spmatrix"
+            "'counts'. Valid types include pandas.DataFrame or"
+            "numpy.ndarray"
         )
