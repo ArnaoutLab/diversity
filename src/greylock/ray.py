@@ -101,7 +101,7 @@ class SimilarityFromSymmetricRayFunction(SimilarityFromSymmetricFunction):
                     result = result + addend
 
             chunk_future = weighted_similarity_chunk.remote(
-                similarity=self.similarity,
+                similarity=self.func,
                 X=X_ref,
                 relative_abundance=abundance_ref,
                 chunk_size=self.chunk_size,

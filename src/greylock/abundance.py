@@ -21,6 +21,7 @@ from numpy import arange, ndarray, concatenate
 from pandas import DataFrame, RangeIndex
 from scipy.sparse import issparse
 
+
 class Abundance:
     """Calculates metacommuntiy and subcommunity relative abundance
     components from a numpy.ndarray containing species counts

@@ -216,12 +216,12 @@ class SimilarityFromFunction(Similarity):
 
 
 class SimilarityFromSymmetricFunction(SimilarityFromFunction):
-    def weighted_abundance(self, abundance: Union[ndarray, spmatrix]) -> ndarray:
+    def weighted_abundances(self, abundance: Union[ndarray, spmatrix]) -> ndarray:
         result = abundance.copy()
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
             chunk = weighted_similarity_chunk_symmetric(
                 similarity=self.func,
-                X=X,
+                X=self.X,
                 relative_abundance=abundance,
                 chunk_size=self.chunk_size,
                 chunk_index=chunk_index,

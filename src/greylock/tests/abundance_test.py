@@ -4,12 +4,22 @@ from dataclasses import dataclass, field
 from numpy import allclose, array, ndarray
 from pandas import DataFrame
 from pytest import fixture, mark, raises
+from scipy.sparse import coo_array
 
 from greylock.abundance import (
     Abundance,
     AbundanceFromDataFrame,
     make_abundance,
 )
+
+
+def test_sparse():
+    sparse_abundance = coo_array(
+        (array([4, 5, 7, 9]), (array([0, 3, 1, 0]), array([0, 3, 1, 2]))),
+        shape=(4, 4),
+    )
+    with raises(TypeError):
+        make_abundance(sparse_abundance)
 
 
 def counts_array_3by2():
@@ -244,5 +254,3 @@ class TestAbundance:
             abundance.normalized_subcommunity_abundance,
             test_case.normalized_subcommunity_abundance,
         )
-
-
