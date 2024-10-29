@@ -212,9 +212,9 @@ S_2a[7][8:9] = (                                          0.88) # dodo
 
 S_2a = np.maximum( S_2a, S_2a.transpose() )
 ```
-We may optionally convert this to a DataFrame:
+We may optionally convert this to a DataFrame for inspection:
 ```python
-S_2a = pd.DataFrame({labels_2a[i]: S_2a[i] for i in range(no_species_2a)}, index=labels_2a)
+S_2a_df = pd.DataFrame({labels_2a[i]: S_2a[i] for i in range(no_species_2a)}, index=labels_2a)
 ```
 
 which corresponds to the following table:
@@ -239,11 +239,20 @@ counts_2a = pd.DataFrame({"Community 2a": [1, 1, 1, 1, 1, 1, 1, 1, 1]}, index=la
 ```
 
 To compute the similarity-sensitive diversity indices, we now pass the similarity matrix to the similarity argument of the metacommunity object.
-(Note that `S_2a` may be in the forme of either the numpy array or the DataFrame):
+In this example we pass the similarity matrix in the form of a numpy array:
 
 ```python
 metacommunity_2a = Metacommunity(counts_2a, similarity=S_2a)
 ```
+
+(If we wanted to use the similarity matrix in DataFrame format, we use a custom Similarity subclass.
+
+```python
+from greylock.similarity import SimilarityFromDataFrame
+metacommunity_2a = Metacommunity(counts_2a, similarity=SimilarityFromDataFrame(S_2a_df))
+```
+
+Note that even though the code looks a little different, the calculation will be exactly the same.)
 
 We can find $D_0^Z$ similarly to the above:
 
@@ -271,7 +280,7 @@ S_2b[7][8:9] = (                                          0.85) # llama
 
 S_2b = np.maximum( S_2b, S_2b.transpose() )
 # optional, convert to DataFrame for inspection:
-S_2b = pd.DataFrame({labels_2b[i]: S_2b[i] for i in range(no_species_2b)}, index=labels_2b)
+S_2b_df = pd.DataFrame({labels_2b[i]: S_2b[i] for i in range(no_species_2b)}, index=labels_2b)
 ```
 
 which corresponds to the following table:
