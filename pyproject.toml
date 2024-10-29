@@ -8,7 +8,7 @@ authors = [
     { name = "Elliot Hill", email = "elliot.douglas.hill@gmail.com" },
     { name = "Jasper Braun", email = "jasperbraun90@gmail.com" },
 ]
-version = "0.0.1"
+version = "1.0.0"
 description = "A Python package for measuring the composition of complex datasets"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -17,12 +17,13 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = ["numpy>=1.24.0", "pandas>=1.5.2", "ray>=2.2.0", "scipy>=1.10.0"]
+dependencies = ["numpy>=1.24.0", "pandas>=1.5.2", "scipy>=1.10.0"]
 
 [project.optional-dependencies]
 tests = ["pytest>=6.2.5", "pytest-cov>=3.0.0"]
 lint = ["black>=22.3.0"]
 ci = ["tox>=3.24.5", "tox-gh-actions>=2.9.1"]
+ray = ["ray>=2.2.0"]
 
 [project.urls]
 "Homepage" = "https://github.com/ArnaoutLab/diversity"
