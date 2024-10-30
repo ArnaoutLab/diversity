@@ -398,7 +398,7 @@ X = np.array([
 def similarity_function(species_i, species_j):
   return 1 / (1 + np.linalg.norm(species_i - species_j))
 
-metacommunity = Metacommunity(counts,
+metacommunity = Metacommunity(np.array([[1, 1], [1, 0], [0, 1]]),
                               similarity=SimilarityFromFunction(similarity_function,
                                                                X=X, chunk_size=10))
 ```
