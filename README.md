@@ -445,7 +445,7 @@ def feature_similarity(animal_i, animal_j):
         result *= 0.5
     return result
 
-metacommunity = Metacommunity(counts,
+metacommunity = Metacommunity(np.array([[1, 1], [1, 0], [0, 1]]),
                               similarity=SimilarityFromFunction(feature_similarity, X=X))
 ```
 
