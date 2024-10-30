@@ -31,7 +31,10 @@ The package is available on GitHub at https://github.com/ArnaoutLab/diversity. I
 
 from the command-line interface. The test suite runs successfully on Macintosh, Windows, and Unix systems. The unit tests (including a coverage report) can be run after installation by
 
-`pytest --pyargs greylock --cov greylock`
+```
+pip install 'greylock[tests]'
+pytest --pyargs greylock --cov greylock
+```
 
 ## How to cite this work
 
@@ -472,7 +475,7 @@ as it is not required for small datasets, and
 the installation of `ray` into your environment may entail some conflicting dependency issues. Thus, before trying to use `ray`, be sure to install the extra:
 
 ```
-pip install greylock[ray]
+pip install 'greylock[ray]'
 ```
 
 To actually use Ray, replace the use of `SimilarityFromFunction` and `SimilarityFromSymmetricFunction` with `SimilarityFromRayFunction` and `SimilarityFromSymmetricRayFunction` respectively.
