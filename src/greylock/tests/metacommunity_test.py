@@ -1,11 +1,7 @@
 """Tests for diversity.metacommunity."""
 
 from dataclasses import dataclass, field
-from numpy import (
-    allclose,
-    array,
-    ndarray,
-)
+from numpy import allclose, array, ndarray, identity, inf
 from pandas import DataFrame, concat
 from pandas.testing import assert_frame_equal
 from pytest import mark, raises
@@ -383,3 +379,63 @@ def test_select_measures(data):
         assert col in expected_columns
     for col in expected_columns:
         assert col in df
+
+
+def test_effective_counts():
+    """
+    Test that:
+    * passing None, an instance of SimilarityIdentity, or an identity matrix gives the same results
+    * normalized_alpha for each subcommunity is appropriate for effective species count for each viewpoint:
+      - raw species count at q = 0
+      - 1/(proportion of largest species) at q = infinity
+      - intermediate values of q yield intermediate values
+    * giving the species some similiarity changes all the effective species counts
+    """
+    counts = DataFrame(
+        {"A": [1, 2, 3, 4, 5], "B": [10, 5, 5, 0, 0]},
+        index=["apple", "orange", "banana", "pear", "blueberry"],
+    )
+    viewpoints = [0, 1, 2, 3, 4, 99, inf]
+    first_df = None
+    for sim in [None, SimilarityIdentity(), identity(5)]:
+        m = Metacommunity(counts, sim)
+        df = m.to_dataframe(
+            measures=["alpha", "normalized_alpha"], viewpoint=viewpoints
+        )
+        df.set_index(["community", "viewpoint"], inplace=True)
+        if first_df is None:
+            first_df = df
+        else:
+            for col in first_df:
+                for ind in first_df.index:
+                    assert df.loc[ind][col] == first_df.loc[ind][col]
+        assert df.loc[("A", 0)]["normalized_alpha"] == 5.0
+        assert df.loc[("A", inf)]["normalized_alpha"] == 3.0
+        assert df.loc[("B", 0)]["normalized_alpha"] == 3.0
+        assert df.loc[("B", inf)]["normalized_alpha"] == 2.0
+        for community in ["A", "B"]:
+            for i in range(1, len(viewpoints)):
+                assert (
+                    df.loc[(community, viewpoints[i - 1])]["normalized_alpha"]
+                    >= df.loc[(community, viewpoints[i])]["normalized_alpha"]
+                )
+    sim = identity(5)
+    for i, j, val in [
+        (1, 0, 0.5),
+        (1, 2, 0.4),
+        (0, 2, 0.4),
+        (3, 4, 0.1),
+    ]:
+        sim[i, j] = sim[j, i] = val
+    m = Metacommunity(counts, sim)
+    df = m.to_dataframe(viewpoint=viewpoints)
+    df.set_index(["community", "viewpoint"], inplace=True)
+    for col in first_df:
+        for ind in first_df.index:
+            assert df.loc[ind][col] < first_df.loc[ind][col]
+    for community in ["A", "B"]:
+        for i in range(1, len(viewpoints)):
+            assert (
+                df.loc[(community, viewpoints[i - 1])]["normalized_alpha"]
+                >= df.loc[(community, viewpoints[i])]["normalized_alpha"]
+            )
