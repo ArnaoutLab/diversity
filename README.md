@@ -372,7 +372,7 @@ Rather, one may instantiate `SimilarityFromFile`, whose constructor is given the
 
 To illustrate passing a csv file, we re-use the counts_2b_1 and S_2b from above and save the latter as .csv files (note `index=False`, since the csv files should *not* contain row labels):
 ```python
-S_2b.to_csv("S_2b.csv", index=False)
+S_2b_df.to_csv("S_2b.csv", index=False)
 ```
 then we can build a metacommunity as follows
 ```python
