@@ -461,7 +461,7 @@ Use the `SimilarityFromSymmetricFunction` class to get the same results in half 
 ```python
 from greylock.similarity import SimilarityFromSymmetricFunction
 
-metacommunity = Metacommunity(counts,
+metacommunity = Metacommunity(np.array([[1, 1], [1, 0], [0, 1]]),
                               similarity=SimilarityFromSymmetricFunction(feature_similarity, X=X))
 ```
 
