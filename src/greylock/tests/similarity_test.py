@@ -1,7 +1,8 @@
 """Tests for diversity.similarity"""
 
 from collections import defaultdict
-from numpy import allclose, ndarray, array, dtype, memmap, inf, float32, zeros
+from numpy import allclose, ndarray, array, dtype, memmap, inf, float32, zeros, identity, maximum
+from numpy.linalg import norm
 from pandas import DataFrame
 import scipy.sparse
 from pytest import fixture, raises, mark
@@ -598,3 +599,31 @@ def test_feature_similarity():
         ["community", "viewpoint"]
     )
     assert allclose(df1.to_numpy(), df3.to_numpy())
+
+
+def test_nonsymmetric():
+    """
+    SimilarityFromFunction will yield, if the function is not
+    actually symmetric, a matrix that is not a reflection of itself
+    across the diagonal.
+    """
+    def nonsym_similarity_function(species_i, species_j):
+        diff = maximum((species_i - species_j), 0)
+        return 1 / (1 + norm(diff) / 100)
+    X = array([
+        [54, 200, 45, 123],
+        [55, 67, 44, 99],
+        [25, 145, 56, 12],
+        [154, 98, 55, 98]
+        ])
+    counts = identity(4)
+    sim = SimilarityFromFunction(nonsym_similarity_function, X)
+    matrix = zeros(shape=(4, 4))
+    for i in range(4):
+        for j in range(4):
+            matrix[i, j] = nonsym_similarity_function(X[i], X[j])
+    result = sim.weighted_abundances(counts)
+    assert allclose(result, matrix)
+    for i in range(4):
+        for j in range(i+1,4):
+            assert result[i, j] != result[j, i]
