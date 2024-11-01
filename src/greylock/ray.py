@@ -66,9 +66,6 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
         weighted_similarity_chunks = [r[1] for r in results]
         return concatenate(weighted_similarity_chunks)
 
-    def is_expensive(self):
-        return True
-
 
 class SimilarityFromSymmetricRayFunction(SimilarityFromSymmetricFunction):
     """Implements Similarity by calculating similarities with a callable

@@ -1,7 +1,19 @@
 """Tests for diversity.similarity"""
 
 from collections import defaultdict
-from numpy import allclose, ndarray, array, dtype, memmap, inf, float32, zeros, identity, maximum
+from numpy import (
+    allclose,
+    ndarray,
+    array,
+    dtype,
+    memmap,
+    inf,
+    float32,
+    zeros,
+    identity,
+    maximum,
+    exp,
+)
 from numpy.linalg import norm
 from pandas import DataFrame
 import scipy.sparse
@@ -9,6 +21,7 @@ from pytest import fixture, raises, mark
 
 from greylock.log import LOGGER
 from greylock.similarity import (
+    SimilarityIdentity,
     SimilarityFromArray,
     SimilarityFromDataFrame,
     SimilarityFromFile,
@@ -23,6 +36,10 @@ from greylock import Metacommunity
 @fixture
 def similarity_function():
     return lambda a, b: 1 / sum(a * b)
+
+
+def similarity_from_distance(a, b):
+    return exp(-1 * norm(a - b))
 
 
 similarity_array_3by3_1 = array(
@@ -607,15 +624,14 @@ def test_nonsymmetric():
     actually symmetric, a matrix that is not a reflection of itself
     across the diagonal.
     """
+
     def nonsym_similarity_function(species_i, species_j):
         diff = maximum((species_i - species_j), 0)
         return 1 / (1 + norm(diff) / 100)
-    X = array([
-        [54, 200, 45, 123],
-        [55, 67, 44, 99],
-        [25, 145, 56, 12],
-        [154, 98, 55, 98]
-        ])
+
+    X = array(
+        [[54, 200, 45, 123], [55, 67, 44, 99], [25, 145, 56, 12], [154, 98, 55, 98]]
+    )
     counts = identity(4)
     sim = SimilarityFromFunction(nonsym_similarity_function, X)
     matrix = zeros(shape=(4, 4))
@@ -625,5 +641,65 @@ def test_nonsymmetric():
     result = sim.weighted_abundances(counts)
     assert allclose(result, matrix)
     for i in range(4):
-        for j in range(i+1,4):
+        for j in range(i + 1, 4):
             assert result[i, j] != result[j, i]
+
+
+@fixture
+def callcounter():
+    return defaultdict(int)
+
+
+@mark.parametrize(
+    "sim, key, expected_count",
+    [
+        [SimilarityIdentity(), "identity", 3],
+        ["array", "array", 3],
+        ["df", "df", 3],
+        ["file", "file", 1],
+        [
+            SimilarityFromFunction(
+                similarity_from_distance, X=array([[1, 2], [2, 1], [3, 0]])
+            ),
+            "func",
+            1,
+        ],
+        [
+            SimilarityFromSymmetricFunction(
+                similarity_from_distance, X=array([[1, 2], [2, 1], [3, 0]])
+            ),
+            "sfunc",
+            1,
+        ],
+    ],
+)
+def test_compuation_count(
+    sim, key, expected_count, callcounter, make_similarity_from_file
+):
+    """
+    Test that we unify the abundance array and call weighted_abundances only once
+    for the subclasses of Similarity that are expensive to run, but don't bother
+    with that for trivial subclasses.
+    """
+
+    def count_decorator(f, counter, key):
+        def wrapper(*args, **kwds):
+            counter[key] += 1
+            return f(*args, **kwds)
+
+        return wrapper
+
+    abundances = array([[1, 2], [2, 5], [9, 3]])
+    if sim == "file":
+        sim = make_similarity_from_file()
+    elif sim == "array":
+        sim = SimilarityFromArray(similarity_array_3by3_1)
+    elif sim == "df":
+        sim = SimilarityFromDataFrame(similarity_dataframe_3by3)
+
+    sim.weighted_abundances = count_decorator(sim.weighted_abundances, callcounter, key)
+    m = Metacommunity(abundances, sim)
+    m.metacommunity_diversity(viewpoint=1, measure="alpha")
+    m.to_dataframe(viewpoint=0)
+
+    assert callcounter[key] == expected_count
