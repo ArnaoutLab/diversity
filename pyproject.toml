@@ -6,6 +6,8 @@ build-backend = "hatchling.build"
 name = "greylock"
 authors = [
     { name = "Elliot Hill", email = "elliot.douglas.hill@gmail.com" },
+    { name = "Alex Morgan", email = "amorgan2@bidmc.harvard.edu" },
+    { name = "Phuc Nguyen", email = "pnguye10@bidmc.harvard.edu" },
     { name = "Jasper Braun", email = "jasperbraun90@gmail.com" },
 ]
 version = "1.0.0"
