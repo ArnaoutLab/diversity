@@ -1,11 +1,8 @@
 """Tests for diversity.metacommunity."""
 
 from dataclasses import dataclass, field
-from numpy import (
-    allclose,
-    array,
-    ndarray,
-)
+from numpy import allclose, array, ndarray, identity, zeros, inf, maximum
+from numpy.linalg import norm
 from pandas import DataFrame, concat
 from pandas.testing import assert_frame_equal
 from pytest import mark, raises
@@ -13,9 +10,16 @@ from greylock.exceptions import InvalidArgumentError
 
 from greylock.log import LOGGER
 from greylock.abundance import Abundance
-from greylock.similarity import Similarity
+from greylock.similarity import (
+    Similarity,
+    SimilarityIdentity,
+    SimilarityFromArray,
+    SimilarityFromSymmetricFunction,
+    SimilarityFromFunction,
+)
 from greylock import Metacommunity
 from greylock.tests.similarity_test import similarity_dataframe_3by3
+from greylock.tests.similarity_test import similarity_array_3by3_1
 
 MEASURES = (
     "alpha",
@@ -226,7 +230,7 @@ class SimilarityMetacommunity3by2:
     description = "similarity-sensitive metacommunity; 3 species, 2 subcommunities"
     viewpoint: float = 2.0
     counts: DataFrame = field(default_factory=lambda: counts_3by2)
-    similarity: DataFrame = field(default_factory=lambda: similarity_dataframe_3by3)
+    similarity: ndarray = field(default_factory=lambda: array(similarity_array_3by3_1))
     metacommunity_similarity: ndarray = field(
         default_factory=lambda: array([[0.76], [0.62], [0.22]])
     )
@@ -297,7 +301,15 @@ metacommunity_data = (
 
 @mark.parametrize(
     "data, expected",
-    zip(metacommunity_data, (type(None), type(None), Similarity, Similarity)),
+    zip(
+        metacommunity_data,
+        (
+            SimilarityIdentity,
+            SimilarityIdentity,
+            SimilarityFromArray,
+            SimilarityFromArray,
+        ),
+    ),
 )
 def test_metacommunity(data, expected):
     metacommunity = Metacommunity(counts=data.counts, similarity=data.similarity)
@@ -374,3 +386,229 @@ def test_select_measures(data):
         assert col in expected_columns
     for col in expected_columns:
         assert col in df
+
+
+def test_effective_counts():
+    """
+    Test that:
+    * passing None, an instance of SimilarityIdentity, or an identity matrix gives the same results
+    * normalized_alpha for each subcommunity is appropriate for effective species count for each viewpoint:
+      - raw species count at q = 0
+      - 1/(proportion of largest species) at q = infinity
+      - intermediate values of q yield intermediate values
+    * giving the species some similiarity changes all the effective species counts
+    """
+    counts = DataFrame(
+        {"A": [1, 2, 3, 4, 5], "B": [10, 5, 5, 0, 0]},
+        index=["apple", "orange", "banana", "pear", "blueberry"],
+    )
+    viewpoints = [0, 1, 2, 3, 4, 99, inf]
+    first_df = None
+    for sim in [None, SimilarityIdentity(), identity(5)]:
+        m = Metacommunity(counts, sim)
+        df = m.to_dataframe(
+            measures=["alpha", "normalized_alpha"], viewpoint=viewpoints
+        )
+        df.set_index(["community", "viewpoint"], inplace=True)
+        if first_df is None:
+            first_df = df
+        else:
+            for col in first_df:
+                for ind in first_df.index:
+                    assert df.loc[ind][col] == first_df.loc[ind][col]
+        assert df.loc[("A", 0)]["normalized_alpha"] == 5.0
+        assert df.loc[("A", inf)]["normalized_alpha"] == 3.0
+        assert df.loc[("B", 0)]["normalized_alpha"] == 3.0
+        assert df.loc[("B", inf)]["normalized_alpha"] == 2.0
+        for community in ["A", "B"]:
+            for i in range(1, len(viewpoints)):
+                assert (
+                    df.loc[(community, viewpoints[i - 1])]["normalized_alpha"]
+                    >= df.loc[(community, viewpoints[i])]["normalized_alpha"]
+                )
+    sim = identity(5)
+    for i, j, val in [
+        (1, 0, 0.5),
+        (1, 2, 0.4),
+        (0, 2, 0.4),
+        (3, 4, 0.1),
+    ]:
+        sim[i, j] = sim[j, i] = val
+    m = Metacommunity(counts, sim)
+    df = m.to_dataframe(viewpoint=viewpoints)
+    df.set_index(["community", "viewpoint"], inplace=True)
+    for col in first_df:
+        for ind in first_df.index:
+            assert df.loc[ind][col] < first_df.loc[ind][col]
+    for community in ["A", "B"]:
+        for i in range(1, len(viewpoints)):
+            assert (
+                df.loc[(community, viewpoints[i - 1])]["normalized_alpha"]
+                >= df.loc[(community, viewpoints[i])]["normalized_alpha"]
+            )
+
+
+def test_property1():
+    """
+    Test elementary property 1 from L&C:
+    Symmetry. Diversity is unchanged by the order in which the species happen to be listed.
+    """
+    X = DataFrame(
+        {
+            "red": [255, 245, 245, 213, 44],
+            "green": [0, 108, 236, 227, 13],
+            "blue": [0, 66, 66, 120, 92],
+            "core": [100, 0, 0, 100, 0],
+            "round": [90, 95, 20, 50, 90],
+        },
+        index=["apple", "orange", "banana", "pear", "blueberry"],
+    )
+    communities = DataFrame(
+        {"bowl": [3, 1, 5, 1, 0], "fridge": [1, 4, 0, 1, 20]},
+        index=["apple", "orange", "banana", "pear", "blueberry"],
+    )
+
+    def similarity_function(species_i, species_j):
+        return 1 / (1 + norm(species_i - species_j) / 100)
+
+    num_species = communities.shape[0]
+    viewpoints = [0, 1, 2, 4, 88, inf]
+    measures = [
+        "alpha",
+        "rho",
+        "beta",
+        "gamma",
+        "normalized_alpha",
+        "normalized_rho",
+        "normalized_beta",
+        "rho_hat",
+    ]
+
+    def get_result():
+        metacommunity = Metacommunity(
+            communities,
+            similarity=SimilarityFromSymmetricFunction(
+                similarity_function, X=X.to_numpy()
+            ),
+        )
+        return metacommunity.to_dataframe(
+            viewpoint=viewpoints, measures=measures
+        ).set_index(["community", "viewpoint"])
+
+    df1 = get_result()
+    X = X.sort_index()
+    communities = communities.sort_index()
+    df2 = get_result()
+    assert allclose(df1.to_numpy(), df2.to_numpy())
+
+
+def test_property2():
+    """
+    Test elementary property 2 from L&C:
+    Absent species. Diversity is unchanged by adding a new species of abundance 0
+    """
+    labels_2b = (
+        "ladybug",
+        "bee",
+        "butterfly",
+        "lobster",
+        "fish",
+        "turtle",
+        "parrot",
+        "llama",
+        "orangutan",
+    )
+    no_species_2b = len(labels_2b)
+    S_2b = identity(n=no_species_2b)
+    # fmt: off
+    S_2b[0][1:9] = (0.60, 0.55, 0.45, 0.25, 0.22, 0.23, 0.18, 0.16)  # ladybug
+    S_2b[1][2:9] = (      0.60, 0.48, 0.22, 0.23, 0.21, 0.16, 0.14)  # bee
+    S_2b[2][3:9] = (            0.42, 0.27, 0.20, 0.22, 0.17, 0.15)  # bu’fly
+    S_2b[3][4:9] = (                  0.28, 0.26, 0.26, 0.20, 0.18)  # lobster
+    S_2b[4][5:9] = (                        0.75, 0.70, 0.66, 0.63)  # fish
+    S_2b[5][6:9] = (                              0.85, 0.70, 0.70)  # turtle
+    S_2b[6][7:9] = (                                    0.75, 0.72)  # parrot
+    S_2b[7][8:9] = (                                          0.85)  # llama
+    pass                                                             # orangutan
+    # fmt: on
+
+    S_2b = maximum(S_2b, S_2b.transpose())
+    counts = DataFrame({"Community 2b": [1, 1, 1, 1, 1, 1, 1, 1, 0]}, index=labels_2b)
+    viewpoints = [0, 1, 2, 3, 4, 5, inf]
+    metacommunity = Metacommunity(counts, similarity=S_2b)
+    df1 = metacommunity.to_dataframe(viewpoint=viewpoints).set_index(
+        ["community", "viewpoint"]
+    )
+    counts = counts[counts["Community 2b"] > 0]
+    S_2b = S_2b[:-1, :-1]
+    metacommunity = Metacommunity(counts, similarity=S_2b)
+    df2 = metacommunity.to_dataframe(viewpoint=viewpoints).set_index(
+        ["community", "viewpoint"]
+    )
+    assert allclose(df1.to_numpy(), df2.to_numpy())
+
+
+def test_property3():
+    """
+    Test elementary property 3 from L&C:
+    Identical species. If two species are identical, then merging them into one leaves the diversity unchanged.
+    """
+    labels = ["zucchini", "pumpkin", "eggplant", "aubergine"]
+    no_species = len(labels)
+    sim = identity(no_species)
+    # fmt: off
+    sim[0][1:4] = (0.5, 0.3, 0.3)
+    sim[1][2:4] = (     0.3, 0.3)
+    sim[2][3:4] = (          1.0)
+    # fmt: on
+    sim = maximum(sim, sim.T)
+    counts = DataFrame(
+        {"A": [3, 2, 4, 0], "B": [0, 4, 0, 5], "C": [1, 1, 1, 1]}, index=labels
+    )
+    viewpoints = [0, 1, 2, 3, 4, 5, 90, inf]
+    measures = [
+        "alpha",
+        "rho",
+        "beta",
+        "gamma",
+        "normalized_alpha",
+        "normalized_rho",
+        "normalized_beta",
+        "rho_hat",
+    ]
+    metacommunity = Metacommunity(counts, sim)
+    df1 = metacommunity.to_dataframe(viewpoint=viewpoints, measures=measures).set_index(
+        ["community", "viewpoint"]
+    )
+    labels = labels[:-1]
+    sim = sim[:-1, :-1]
+    counts = DataFrame({"A": [3, 2, 4], "B": [0, 4, 5], "C": [1, 1, 2]}, index=labels)
+    metacommunity = Metacommunity(counts, sim)
+    df2 = metacommunity.to_dataframe(viewpoint=viewpoints, measures=measures).set_index(
+        ["community", "viewpoint"]
+    )
+    assert allclose(df1.to_numpy(), df2.to_numpy(), equal_nan=True)
+
+
+def test_figure_1():
+    """
+    Test that we get the results described in L&C pp. 482-483 (figure 1)
+    """
+    before_counts = array([[1], [3], [6]])
+    before_sim = None
+    naive_counts = array([[1], [3], [3], [3]])
+    naive_sim = None
+    nonnaive_counts = naive_counts
+    nonnaive_sim = array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0.9], [0, 0, 0.9, 1]])
+    before = Metacommunity(before_counts, before_sim)
+    naive = Metacommunity(naive_counts, naive_sim)
+    nonnaive = Metacommunity(nonnaive_counts, nonnaive_sim)
+    for q in [0, 1, 2, 3, 4, 5, inf]:
+        before_alpha = before.metacommunity_diversity(viewpoint=q, measure="alpha")
+        naive_alpha = naive.metacommunity_diversity(viewpoint=q, measure="alpha")
+        nonnaive_alpha = nonnaive.metacommunity_diversity(viewpoint=q, measure="alpha")
+        assert (naive_alpha - before_alpha) >= 1.0
+        assert (naive_alpha - nonnaive_alpha) > 0.9
+        assert naive_alpha <= 4.0
+        assert before_alpha <= 3.0
+        assert (nonnaive_alpha - before_alpha) < 0.2

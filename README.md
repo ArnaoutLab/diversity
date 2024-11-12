@@ -31,7 +31,10 @@ The package is available on GitHub at https://github.com/ArnaoutLab/diversity. I
 
 from the command-line interface. The test suite runs successfully on Macintosh, Windows, and Unix systems. The unit tests (including a coverage report) can be run after installation by
 
-`pytest --pyargs greylock --cov greylock`
+```
+pip install 'greylock[tests]'
+pytest --pyargs greylock --cov greylock
+```
 
 ## How to cite this work
 
@@ -212,9 +215,9 @@ S_2a[7][8:9] = (                                          0.88) # dodo
 
 S_2a = np.maximum( S_2a, S_2a.transpose() )
 ```
-We may optionally convert this to a DataFrame:
+We may optionally convert this to a DataFrame for inspection:
 ```python
-S_2a = pd.DataFrame({labels_2a[i]: S_2a[i] for i in range(no_species_2a)}, index=labels_2a)
+S_2a_df = pd.DataFrame({labels_2a[i]: S_2a[i] for i in range(no_species_2a)}, index=labels_2a)
 ```
 
 which corresponds to the following table:
@@ -239,11 +242,20 @@ counts_2a = pd.DataFrame({"Community 2a": [1, 1, 1, 1, 1, 1, 1, 1, 1]}, index=la
 ```
 
 To compute the similarity-sensitive diversity indices, we now pass the similarity matrix to the similarity argument of the metacommunity object.
-(Note that `S_2a` may be in the forme of either the numpy array or the DataFrame):
+In this example we pass the similarity matrix in the form of a numpy array:
 
 ```python
 metacommunity_2a = Metacommunity(counts_2a, similarity=S_2a)
 ```
+
+(If we wanted to use the similarity matrix in DataFrame format, we use a custom Similarity subclass.
+
+```python
+from greylock.similarity import SimilarityFromDataFrame
+metacommunity_2a = Metacommunity(counts_2a, similarity=SimilarityFromDataFrame(S_2a_df))
+```
+
+Note that even though the code looks a little different, the calculation will be exactly the same.)
 
 We can find $D_0^Z$ similarly to the above:
 
@@ -271,7 +283,7 @@ S_2b[7][8:9] = (                                          0.85) # llama
 
 S_2b = np.maximum( S_2b, S_2b.transpose() )
 # optional, convert to DataFrame for inspection:
-S_2b = pd.DataFrame({labels_2b[i]: S_2b[i] for i in range(no_species_2b)}, index=labels_2b)
+S_2b_df = pd.DataFrame({labels_2b[i]: S_2b[i] for i in range(no_species_2b)}, index=labels_2b)
 ```
 
 which corresponds to the following table:
@@ -355,21 +367,28 @@ simillarity matrix is of complexity $O(n^2)$ (where $n$ is the number of species
 
 Any large similarity matrix that is created in Python as a `numpy.ndarray` benefits from being memory-mapped, as NumPy can then use the data without requiring it all to be in memory. See the NumPy [memmap documentation](https://numpy.org/doc/stable/reference/generated/numpy.memmap.html) for guidance. Because `memmap` is a subclass of `ndarray`, using this type of file storage for the similarity matrix requires no modification to your use of the Metacommunity API. This conversion, and the resulting storage of the data on disk, has the advantage that if you revise the downstream analysis, or perform additional analyses, re-calculation of the similarity matrix may be skipped.
 
-The strategy of calculate-once, use-many-times afforded by storage of the similarity matrix to a file allows you to do the work of calculating the similarity matrix in an entirely separate process. You may choose to calculate the similarity matrix in a more performant language, such as C++, and/or inspect the matrix in Excel. In these cases, it is  convenient to store the similarity matrix in a non-Python-specific format, such as a .csv or .tsv file. The entire csv/tsv file need not be read into memory before invoking the `Metacommunity` constructor; when this constructor is given the path of a cvs or tsv file, it will use the file's contents in a memory-efficient way, reading in chunks as they are used. 
+The strategy of calculate-once, use-many-times afforded by storage of the similarity matrix to a file allows you to do the work of calculating the similarity matrix in an entirely separate process. You may choose to calculate the similarity matrix in a more performant language, such as C++, and/or inspect the matrix in Excel. In these cases, it is  convenient to store the similarity matrix in a non-Python-specific format, such as a .csv or .tsv file. The entire csv/tsv file need not be read into memory before invoking the `Metacommunity` constructor.
+Rather, one may instantiate `SimilarityFromFile`, whose constructor is given the path of a cvs or tsv file. The `SimilarityFromFile` object will use the file's contents in a memory-efficient way, reading in chunks as they are used. 
 
 To illustrate passing a csv file, we re-use the counts_2b_1 and S_2b from above and save the latter as .csv files (note `index=False`, since the csv files should *not* contain row labels):
 ```python
-S_2b.to_csv("S_2b.csv", index=False)
+S_2b_df.to_csv("S_2b.csv", index=False)
 ```
 then we can build a metacommunity as follows
 ```python
-metacommunity_2b_1 = Metacommunity(counts_2b_1, similarity='S_2b.csv', chunk_size=5)
+from greylock.similarity import SimilarityFromFile
+metacommunity_2b_1 = Metacommunity(counts_2b_1,
+                                   similarity=SimilarityFromFile('S_2b.csv', chunk_size=5))
 ```
-The optional `chunk_size` argument specifies how many rows of the similarity matrix are read from the file at a time.
+The optional `chunk_size` argument to `SimilarityFromFile`'s constructor specifies how many rows of the similarity matrix are read from the file at a time.
 
-Alternatively, to avoid a large footprint on either RAM or disk, the similarity matrix can be constructed and processed in chunks by passing a similarity function to `similarity` and an array or `DataFrame` of features to `X`. Each row of X represents the feature values of a species. For example, given numeric features all of the same type:
+Alternatively, to avoid a large footprint on either RAM or disk, the similarity matrix can be constructed and processed on the fly. 
+A `SimilarityFromFunction` object generates a similarity matrix from a similarity function, and an array or `DataFrame` of features to `X`. Each row of X represents the feature values of a species. 
+For example, given numeric features all of the same type:
 
-```
+```python
+from greylock.similarity import SimilarityFromFunction
+
 X = np.array([
   [1, 2], 
   [3, 4], 
@@ -379,8 +398,13 @@ X = np.array([
 def similarity_function(species_i, species_j):
   return 1 / (1 + np.linalg.norm(species_i - species_j))
 
-metacommunity = Metacommunity(counts, similarity=similarity_function, X=X, symmetric=True)
+metacommunity = Metacommunity(np.array([[1, 1], [1, 0], [0, 1]]),
+                              similarity=SimilarityFromFunction(similarity_function,
+                                                               X=X, chunk_size=10))
 ```
+
+(The optional `chunk_size` parameter specifies how many rows of the similarity matrix to generate at once; larger values should be faster, as long as the chunks are not too large
+compared to available RAM.)
 
 If there are features of various types, and it would be convenient to address features by name, features can be supplied in a DataFrame. (Note that, because of the use of named tuples to represent species in the similarity function, it is helpful if the column names are valid Python identifiers.)
 
@@ -421,18 +445,42 @@ def feature_similarity(animal_i, animal_j):
         result *= 0.5
     return result
 
-metacommunity = Metacommunity(counts, similarity=feature_similarity, X=X, symmetric=True)
+metacommunity = Metacommunity(np.array([[1, 1], [1, 0], [0, 1]]),
+                              similarity=SimilarityFromFunction(feature_similarity, X=X))
 ```
 
-Each `chunk_size` rows of the similarity matrix are processed as a separate job, and `greylock` uses the [Ray framework](https://pypi.org/project/ray/) to parallelize these jobs. Thanks to this parallelization, up to an N-fold speedup is possible (where N is the number of CPUs).
-
-Set the `symmetric` argument to `True` when the following (typical) conditions hold:
+A two-fold speed-up is possible when the following (typical) conditions hold:
 
 * The similarity matrix is symmetric (i.e. similarity[i, j] == similarity[j, i] for all i and j).
 * The similarity of each species with itself is 1.0.
 * The number of subcommunities is much smaller than the number of species.
 
-If `symmetric=True` then the similarity function will only be called for pairs of rows `species[i], species[j]` where i < j, and the similarity of $species_i$ to $species_j$ will be re-used for the similarity of $species_j$ to $species_i$. Thus, a nearly 2-fold speed-up is possible, if the similarity function is computationally expensive. (For a discussion of nonsymmetric similarity, see [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1).)
+In this case, we don't really need to call the simularity function twice for each pair to calcuate both  similarity[i, j] and similarity[j, i]. 
+Use the `SimilarityFromSymmetricFunction` class to get the same results in half the time:
+
+```python
+from greylock.similarity import SimilarityFromSymmetricFunction
+
+metacommunity = Metacommunity(np.array([[1, 1], [1, 0], [0, 1]]),
+                              similarity=SimilarityFromSymmetricFunction(feature_similarity, X=X))
+```
+
+The similarity function will only be called for pairs of rows `species[i], species[j]` where i < j, and the similarity of $species_i$ to $species_j$ will be re-used for the similarity of $species_j$ to $species_i$. Thus, a nearly 2-fold speed-up is possible, if the similarity function is computationally expensive. (For a discussion of _nonsymmetric_ similarity, see [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1).)
+
+## Parallelization using the ray package
+
+For very large datasets, the computation of the similarity matrix can be completed in a fraction of the time by parallelizing over many cores or even over a Kubernetes cluster.
+Support for parallelizing this computation using the [`ray` package](https://pypi.org/project/ray/) is built into `greylock`. However, this is an optional dependency, 
+as it is not required for small datasets, and 
+the installation of `ray` into your environment may entail some conflicting dependency issues. Thus, before trying to use `ray`, be sure to install the extra:
+
+```
+pip install 'greylock[ray]'
+```
+
+To actually use Ray, replace the use of `SimilarityFromFunction` and `SimilarityFromSymmetricFunction` with `SimilarityFromRayFunction` and `SimilarityFromSymmetricRayFunction` respectively.
+Each `chunk_size` rows of the similarity matrix are processed as a separate job. Thanks to this parallelization, up to an N-fold speedup is possible 
+(where N is the number of cores or nodes).
 
 # Command-line usage
 The `greylock` package can also be used from the command line as a module (via `python -m`). To illustrate using `greylock` this way, we re-use again the example with counts_2b_1 and S_2b, now with counts_2b_1 also saved as a csv file (note again `index=False`):

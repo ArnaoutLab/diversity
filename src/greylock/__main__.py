@@ -5,6 +5,7 @@ Functions
 main
     Calculates diversities according to command-line specifications.
 """
+
 from sys import argv
 from platform import python_version
 from logging import captureWarnings, getLogger
@@ -14,6 +15,7 @@ from pandas import read_csv
 
 from greylock.log import LOG_HANDLER, LOGGER
 from greylock import Metacommunity
+from greylock.similarity import SimilarityFromFile
 from greylock.parameters import configure_arguments
 
 # Ensure warnings are handled properly.
@@ -37,10 +39,10 @@ def main(args):
 
     counts = read_csv(args.input_filepath, sep=None, engine="python", dtype=int64)
     LOGGER.debug(f"data: {counts}")
+    similarity = SimilarityFromFile(args.similarity, args.chunk_size)
     metacommunity = Metacommunity(
         counts=counts,
-        similarity=args.similarity,
-        chunk_size=args.chunk_size,
+        similarity=similarity,
     )
     community_views = metacommunity.to_dataframe(viewpoint=args.viewpoint)
     community_views.to_csv(

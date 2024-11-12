@@ -13,12 +13,13 @@ Functions
 make_abundance
     Chooses and creates instance of concrete Abundance implementation.
 """
+
 from functools import cached_property
 from typing import Iterable, Union
 
 from numpy import arange, ndarray, concatenate
 from pandas import DataFrame, RangeIndex
-from scipy.sparse import spmatrix, diags, issparse, hstack, csc_array
+from scipy.sparse import issparse
 
 
 class Abundance:
@@ -43,7 +44,7 @@ class Abundance:
         self.normalized_subcommunity_abundance = (
             self.make_normalized_subcommunity_abundance()
         )
-        self.unify_abundance_array()
+        self.unified_abundance_array = None
 
     def unify_abundance_array(self):
         """Creates one matrix containing all the abundance matrices:
@@ -53,7 +54,11 @@ class Abundance:
         one copy of the data will exist after garbage collection.)
 
         This allows for a major computational improvement in efficiency:
-        see components.SimilaritySensitiveComponents.
+        The similarity matrix only has to be generated and used
+        once (in the case where a pre-computed similarity matrix is not
+        in RAM). That is, we make only one call to
+        similarity.weighted_abundances(), in cases where generation of the
+        similarity matrix is expensive.
         """
         self.unified_abundance_array = concatenate(
             (
@@ -63,13 +68,46 @@ class Abundance:
             ),
             axis=1,
         )
-        self.metacommunity_abundance = self.unified_abundance_array[:, [0]]
-        self.subcommunity_abundance = self.unified_abundance_array[
-            :, 1 : (1 + self.num_subcommunities)
-        ]
-        self.normalized_subcommunity_abundance = self.unified_abundance_array[
-            :, (1 + self.num_subcommunities) :
-        ]
+
+    def get_unified_abundance_array(self):
+        if self.unified_abundance_array is None:
+            self.unify_abundance_array()
+            self.metacommunity_abundance = self.unified_abundance_array[:, [0]]
+            self.subcommunity_abundance = self.unified_abundance_array[
+                :, 1 : (1 + self.num_subcommunities)
+            ]
+            self.normalized_subcommunity_abundance = self.unified_abundance_array[
+                :, (1 + self.num_subcommunities) :
+            ]
+        return self.unified_abundance_array
+
+    def premultiply_by(self, similarity):
+        if similarity.is_expensive():
+            all_ordinariness = similarity.weighted_abundances(
+                self.get_unified_abundance_array()
+            )
+            metacommunity_ordinariness = all_ordinariness[:, [0]]
+            subcommunity_ordinariness = all_ordinariness[
+                :, 1 : (1 + self.num_subcommunities)
+            ]
+            normalized_subcommunity_ordinariness = all_ordinariness[
+                :, (1 + self.num_subcommunities) :
+            ]
+        else:
+            metacommunity_ordinariness = similarity.weighted_abundances(
+                self.metacommunity_abundance
+            )
+            subcommunity_ordinariness = similarity.weighted_abundances(
+                self.subcommunity_abundance
+            )
+            normalized_subcommunity_ordinariness = similarity.weighted_abundances(
+                self.normalized_subcommunity_abundance
+            )
+        return (
+            metacommunity_ordinariness,
+            subcommunity_ordinariness,
+            normalized_subcommunity_ordinariness,
+        )
 
     def get_subcommunity_names(self, counts: ndarray) -> Iterable:
         """Creates or accesses subcommunity column names then returns
@@ -158,43 +196,7 @@ class AbundanceFromDataFrame(Abundance):
         return counts / counts.sum()
 
 
-class AbundanceFromSparseArray(Abundance):
-    """Calculates metacommuntiy and subcommunity relative abundance
-    components from a pandas.DataFrame containing species counts
-    """
-
-    def unify_abundance_array(self):
-        self.unified_abundance_array = hstack(
-            (
-                self.metacommunity_abundance,
-                self.subcommunity_abundance,
-                self.normalized_subcommunity_abundance,
-            )
-        )
-        # Convert to a type that supports slicing:
-        self.unified_abundance_array = csc_array(self.unified_abundance_array)
-        self.metacommunity_abundance = self.unified_abundance_array[:, [0]]
-        self.subcommunity_abundance = self.unified_abundance_array[
-            :, 1 : (1 + self.num_subcommunities)
-        ]
-        self.normalized_subcommunity_abundance = self.unified_abundance_array[
-            :, (1 + self.num_subcommunities) :
-        ]
-
-    def make_metacommunity_abundance(self) -> ndarray:
-        sparse_type = type(self.subcommunity_abundance)
-        return sparse_type(self.subcommunity_abundance.sum(axis=1)[:, None])
-
-    def make_normalized_subcommunity_abundance(self) -> ndarray:
-        self.subcommunity_normalizing_constants = (
-            self.make_subcommunity_normalizing_constants()
-        )
-        return self.subcommunity_abundance @ diags(
-            1 / self.subcommunity_normalizing_constants
-        )
-
-
-def make_abundance(counts: Union[DataFrame, spmatrix, ndarray]) -> Abundance:
+def make_abundance(counts: Union[DataFrame, ndarray]) -> Abundance:
     """Initializes a concrete subclass of Abundance.
 
     Parameters
@@ -211,12 +213,12 @@ def make_abundance(counts: Union[DataFrame, spmatrix, ndarray]) -> Abundance:
         return AbundanceFromDataFrame(counts=counts)
     elif hasattr(counts, "shape"):
         if issparse(counts):
-            return AbundanceFromSparseArray(counts=counts)
+            raise TypeError("sparse abundance matrix not yet implemented")
         else:
             return Abundance(counts=counts)
     else:
         raise NotImplementedError(
             f"Type {type(counts)} is not supported for argument "
-            "'counts'. Valid types include pandas.DataFrame, "
-            "numpy.ndarray, or scipy.sparse.spmatrix"
+            "'counts'. Valid types include pandas.DataFrame or"
+            "numpy.ndarray"
         )

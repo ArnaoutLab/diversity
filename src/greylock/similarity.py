@@ -24,34 +24,20 @@ make_similarity
     Chooses and creates instances of concrete Similarity 
     implementations.
 """
+
 from abc import ABC, abstractmethod
 from typing import Callable, Union
+from pathlib import Path
 from numpy import ndarray, empty, concatenate, float64, vstack, zeros
 from pandas import DataFrame, read_csv
 from scipy.sparse import spmatrix, issparse
-import ray
 
 
 class Similarity(ABC):
     """Interface for classes computing weighted similarities."""
 
-    def __init__(self, similarity: Union[DataFrame, ndarray, str, Callable]) -> None:
-        """
-        Parameters
-        ----------
-        abundance:
-            Contains the relative abundances for the metacommunity and
-            its subcomunities.
-        similarity:
-            A pairwise similarity matrix of shape (n_species, n_species)
-            where each value is the similarity between a pair of
-            species. Species must be in the same order as in the counts
-            argument of the Metacommunity class.
-        """
-        self.similarity = similarity
-
     @abstractmethod
-    def weighted_similarities(
+    def weighted_abundances(
         self, relative_abundances: Union[ndarray, spmatrix]
     ) -> ndarray:
         """Calculates weighted sums of similarities to each species.
@@ -66,12 +52,23 @@ class Similarity(ABC):
         """
         pass
 
+    def is_expensive(self):
+        return False
+
+
+class SimilarityIdentity(Similarity):
+    def weighted_abundances(self, relative_abundance):
+        return relative_abundance
+
 
 class SimilarityFromDataFrame(Similarity):
     """Implements Similarity using similarities stored in pandas
     dataframe."""
 
-    def weighted_similarities(
+    def __init__(self, similarity: DataFrame):
+        self.similarity = similarity
+
+    def weighted_abundances(
         self, relative_abundance: Union[ndarray, spmatrix]
     ) -> ndarray:
         return self.similarity.to_numpy() @ relative_abundance
@@ -81,7 +78,10 @@ class SimilarityFromArray(Similarity):
     """Implements Similarity using similarities stored in a numpy
     ndarray."""
 
-    def weighted_similarities(
+    def __init__(self, similarity: Union[ndarray, spmatrix]):
+        self.similarity = similarity
+
+    def weighted_abundances(
         self, relative_abundance: Union[ndarray, spmatrix]
     ) -> ndarray:
         return self.similarity @ relative_abundance
@@ -95,7 +95,9 @@ class SimilarityFromFile(Similarity):
     memory load.
     """
 
-    def __init__(self, similarity: str, chunk_size: int = 100) -> None:
+    def __init__(
+        self, similarity_file_path: Union[str, Path], chunk_size: int = 100
+    ) -> None:
         """
         Parameters
         ----------
@@ -106,15 +108,15 @@ class SimilarityFromFile(Similarity):
         chunk_size:
             Number of rows to read from similarity matrix at a time.
         """
-        super().__init__(similarity=similarity)
+        self.path = Path(similarity_file_path)
         self.chunk_size = chunk_size
 
-    def weighted_similarities(
+    def weighted_abundances(
         self, relative_abundance: Union[ndarray, spmatrix]
     ) -> ndarray:
-        weighted_similarities = empty(relative_abundance.shape, dtype=float64)
+        weighted_abundances = empty(relative_abundance.shape, dtype=float64)
         with read_csv(
-            self.similarity,
+            self.path,
             chunksize=self.chunk_size,
             sep=None,
             engine="python",
@@ -122,11 +124,14 @@ class SimilarityFromFile(Similarity):
         ) as similarity_matrix_chunks:
             i = 0
             for chunk in similarity_matrix_chunks:
-                weighted_similarities[i : i + self.chunk_size, :] = (
+                weighted_abundances[i : i + self.chunk_size, :] = (
                     chunk.to_numpy() @ relative_abundance
                 )
                 i += self.chunk_size
-        return weighted_similarities
+        return weighted_abundances
+
+    def is_expensive(self):
+        return True
 
 
 def weighted_similarity_chunk_nonsymmetric(
@@ -150,64 +155,6 @@ def weighted_similarity_chunk_nonsymmetric(
     # order. Indicate what chunk this was for, so we can sort the
     # resulting chunks correctly:
     return chunk_index, similarities_chunk @ relative_abundance
-
-
-class SimilarityFromFunction(Similarity):
-    """Implements Similarity by calculating similarities with a callable
-    function."""
-
-    def __init__(
-        self,
-        similarity: Callable,
-        X: Union[ndarray, DataFrame],
-        chunk_size: int = 100,
-        max_inflight_tasks: int = 64,
-    ) -> None:
-        """
-        similarity:
-            A Callable that calculates similarity between a pair of
-            species. Must take two rows from X and return a numeric
-            similarity value.
-            If X is a 2D array, the rows will be 1D arrays.
-            If X is a DataFrame, the rows will be named tuples.
-        X:
-            An array or DataFrame where each row contains the feature values
-            for a given species.
-        chunk_size:
-            Determines how many rows of the similarity matrix each will
-            be processes at a time. In general, choosing a larger
-            chunk_size will make the calculation faster, but will also
-            require more memory.
-        """
-        super().__init__(similarity=similarity)
-        self.X = X
-        self.chunk_size = chunk_size
-        self.max_inflight_tasks = max_inflight_tasks
-
-    def weighted_similarities(
-        self, relative_abundance: Union[ndarray, spmatrix]
-    ) -> ndarray:
-        weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_nonsymmetric)
-        X_ref = ray.put(self.X)
-        abundance_ref = ray.put(relative_abundance)
-        futures = []
-        results = []
-        for chunk_index in range(0, self.X.shape[0], self.chunk_size):
-            if len(futures) >= self.max_inflight_tasks:
-                ready_refs, futures = ray.wait(futures)
-                results += ray.get(ready_refs)
-            chunk_future = weighted_similarity_chunk.remote(
-                similarity=self.similarity,
-                X=X_ref,
-                relative_abundance=abundance_ref,
-                chunk_size=self.chunk_size,
-                chunk_index=chunk_index,
-            )
-            futures.append(chunk_future)
-        results += ray.get(futures)
-        results.sort()  # This sorts by chunk index (1st in tuple)
-        weighted_similarity_chunks = [r[1] for r in results]
-        return concatenate(weighted_similarity_chunks)
 
 
 def weighted_similarity_chunk_symmetric(
@@ -247,95 +194,37 @@ def weighted_similarity_chunk_symmetric(
     return rows_result + cols_result
 
 
-class SimilarityFromSymmetricFunction(SimilarityFromFunction):
-    """Implements Similarity by calculating similarities with a callable
-    function for one triangle of the similarity matrix, and re-using those
-    values for the other triangle.
-    """
+class SimilarityFromFunction(Similarity):
+    def __init__(
+        self, func: Callable, X: Union[ndarray, DataFrame], chunk_size: int = 100
+    ):
+        self.func = func
+        self.X = X
+        self.chunk_size = chunk_size
 
-    def weighted_similarities(
-        self, relative_abundance: Union[ndarray, spmatrix]
-    ) -> ndarray:
-        weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_symmetric)
-        X_ref = ray.put(self.X)
-        abundance_ref = ray.put(relative_abundance)
-        futures = []
-        result = relative_abundance
+    def is_expensive(self):
+        return True
+
+    def weighted_abundances(self, relative_abundance: Union[ndarray, spmatrix]):
+        weighted_similarity_chunks = []
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
-            if len(futures) >= self.max_inflight_tasks:
-                (ready_refs, futures) = ray.wait(futures)
-                for addend in ray.get(ready_refs):
-                    result = result + addend
+            _, result = weighted_similarity_chunk_nonsymmetric(
+                self.func, self.X, relative_abundance, self.chunk_size, chunk_index
+            )
+            weighted_similarity_chunks.append(result)
+        return concatenate(weighted_similarity_chunks)
 
-            chunk_future = weighted_similarity_chunk.remote(
-                similarity=self.similarity,
-                X=X_ref,
-                relative_abundance=abundance_ref,
+
+class SimilarityFromSymmetricFunction(SimilarityFromFunction):
+    def weighted_abundances(self, abundance: Union[ndarray, spmatrix]) -> ndarray:
+        result = abundance.copy()
+        for chunk_index in range(0, self.X.shape[0], self.chunk_size):
+            chunk = weighted_similarity_chunk_symmetric(
+                similarity=self.func,
+                X=self.X,
+                relative_abundance=abundance,
                 chunk_size=self.chunk_size,
                 chunk_index=chunk_index,
             )
-            futures.append(chunk_future)
-        for addend in ray.get(futures):
-            result = result + addend
+            result = result + chunk
         return result
-
-
-def make_similarity(
-    similarity: Union[DataFrame, ndarray, str, Callable],
-    X: Union[ndarray, DataFrame] = None,
-    chunk_size: int = 100,
-    symmetric: bool = False,
-    max_inflight_tasks: int = 64,
-) -> Similarity:
-    """Initializes a concrete subclass of Similarity.
-
-    Parameters
-    ----------
-    similarity:
-        If pandas.DataFrame, see
-        diversity.similarity.SimilarityFromDataFrame. If numpy.ndarray,
-        see diversity.similarity.SimilarityFromArray. If str, see
-        diversity.similarity.SimilarityFromFile. If Callable, see
-        diversity.similarity.SimilarityFromFunction
-    X:
-        A 2-d array where each row is a species
-        This can also be a DataFrame whose column names are valid identifiers.
-    chunk_size:
-        See diversity.similarity.SimilarityFromFile. Only relevant
-        if a str is passed as argument for similarity.
-
-    Returns
-    -------
-    An instance of a concrete subclass of Similarity.
-    """
-    if similarity is None:
-        return None
-    elif isinstance(similarity, DataFrame):
-        return SimilarityFromDataFrame(similarity=similarity)
-    elif isinstance(similarity, ndarray):
-        return SimilarityFromArray(similarity=similarity)
-    elif isinstance(similarity, str):
-        return SimilarityFromFile(similarity=similarity, chunk_size=chunk_size)
-    elif isinstance(similarity, Callable):
-        if symmetric:
-            return SimilarityFromSymmetricFunction(
-                similarity=similarity,
-                X=X,
-                chunk_size=chunk_size,
-                max_inflight_tasks=max_inflight_tasks,
-            )
-        else:
-            return SimilarityFromFunction(
-                similarity=similarity,
-                X=X,
-                chunk_size=chunk_size,
-                max_inflight_tasks=max_inflight_tasks,
-            )
-    elif issparse(similarity):
-        return SimilarityFromArray(similarity=similarity)
-    else:
-        raise NotImplementedError(
-            f"Type {type(similarity)} is not supported for argument "
-            "'similarity'. Valid types include pandas.DataFrame, "
-            "numpy.ndarray, numpy.memmap, str, or typing.Callable"
-        )
