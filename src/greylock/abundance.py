@@ -19,7 +19,7 @@ from typing import Iterable, Union
 
 from numpy import arange, ndarray, concatenate
 from pandas import DataFrame, RangeIndex
-from scipy.sparse import issparse
+from scipy.sparse import issparse # type: ignore[import]
 
 
 class Abundance:
@@ -46,7 +46,7 @@ class Abundance:
         )
         self.unified_abundance_array = None
 
-    def unify_abundance_array(self):
+    def unify_abundance_array(self) -> None:
         """Creates one matrix containing all the abundance matrices:
         metacommunity, subcommunity, and normalized subcommunity.
         These matrices are still available as views on the unified
@@ -188,7 +188,7 @@ class AbundanceFromDataFrame(Abundance):
     components from a pandas.DataFrame containing species counts
     """
 
-    def get_subcommunity_names(self, counts: DataFrame) -> RangeIndex:
+    def get_subcommunity_names(self, counts: DataFrame) -> Iterable:
         return counts.columns
 
     def make_subcommunity_abundance(self, counts: DataFrame) -> ndarray:
