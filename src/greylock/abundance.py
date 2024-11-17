@@ -27,7 +27,7 @@ class Abundance:
     components from a numpy.ndarray containing species counts
     """
 
-    def __init__(self, counts: ndarray) -> None:
+    def __init__(self, counts: ndarray, subcommunity_names: Iterable[Union[str,int]]) -> None:
         """
         Parameters
         ----------
@@ -36,7 +36,7 @@ class Abundance:
             species, containing the count of each species in the
             corresponding subcommunities.
         """
-        self.subcommunities_names = self.get_subcommunity_names(counts=counts)
+        self.subcommunities_names = subcommunity_names
         self.num_subcommunities = counts.shape[1]
 
         self.subcommunity_abundance = self.make_subcommunity_abundance(counts=counts)
@@ -109,24 +109,6 @@ class Abundance:
             normalized_subcommunity_ordinariness,
         )
 
-    def get_subcommunity_names(self, counts: ndarray) -> Iterable:
-        """Creates or accesses subcommunity column names then returns
-        them
-
-        Parameters
-        ----------
-        counts
-            2-d array with one column per subcommunity, one row per
-            species, containing the count of each species in the
-            corresponding subcommunities.
-
-        Returns
-        -------
-        The names of the subcommunities in the order they appear in the
-        counts matrix
-        """
-        return arange(counts.shape[1])
-
     def make_subcommunity_abundance(self, counts: ndarray) -> ndarray:
         """Calculates the relative abundances in subcommunities.
 
@@ -182,19 +164,27 @@ class Abundance:
         )
         return self.subcommunity_abundance / self.subcommunity_normalizing_constants
 
+class AbundanceFromArray(Abundance):
+
+    def __init__(self, counts: ndarray) -> None:
+        """
+        Parameters
+        ----------
+        counts
+            2-d array with one column per subcommunity, one row per
+            species, containing the count of each species in the
+            corresponding subcommunities.
+        """
+        super().__init__(counts, arange(counts.shape[1]))
 
 class AbundanceFromDataFrame(Abundance):
     """Calculates metacommuntiy and subcommunity relative abundance
     components from a pandas.DataFrame containing species counts
     """
 
-    def get_subcommunity_names(self, counts: DataFrame) -> Iterable:
-        return counts.columns
-
-    def make_subcommunity_abundance(self, counts: DataFrame) -> ndarray:
-        counts = counts.to_numpy()
-        return counts / counts.sum()
-
+    def __init__(self, counts: DataFrame) -> None:
+        super().__init__(counts.to_numpy(), counts.columns)
+        
 
 def make_abundance(counts: Union[DataFrame, ndarray]) -> Abundance:
     """Initializes a concrete subclass of Abundance.
@@ -215,7 +205,7 @@ def make_abundance(counts: Union[DataFrame, ndarray]) -> Abundance:
         if issparse(counts):
             raise TypeError("sparse abundance matrix not yet implemented")
         else:
-            return Abundance(counts=counts)
+            return AbundanceFromArray(counts=counts)
     else:
         raise NotImplementedError(
             f"Type {type(counts)} is not supported for argument "
