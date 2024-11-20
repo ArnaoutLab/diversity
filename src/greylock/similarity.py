@@ -26,7 +26,7 @@ make_similarity
 """
 
 from abc import ABC, abstractmethod
-from typing import Callable, Union
+from typing import Callable, Union, Tuple
 from pathlib import Path
 from numpy import ndarray, empty, concatenate, float64, vstack, zeros
 from pandas import DataFrame, read_csv
@@ -140,7 +140,7 @@ def weighted_similarity_chunk_nonsymmetric(
     relative_abundance: ndarray,
     chunk_size: int,
     chunk_index: int,
-) -> tuple[int, ndarray]:
+) -> Tuple[int, ndarray]:
     def enum_helper(X):
         if type(X) == DataFrame:
             return X.itertuples()
