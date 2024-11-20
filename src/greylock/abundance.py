@@ -19,7 +19,7 @@ from typing import Iterable, Union
 
 from numpy import arange, ndarray, concatenate
 from pandas import DataFrame, RangeIndex
-from scipy.sparse import issparse # type: ignore[import]
+from scipy.sparse import issparse  # type: ignore[import]
 
 
 class Abundance:
@@ -27,7 +27,9 @@ class Abundance:
     components from a numpy.ndarray containing species counts
     """
 
-    def __init__(self, counts: ndarray, subcommunity_names: Iterable[Union[str,int]]) -> None:
+    def __init__(
+        self, counts: ndarray, subcommunity_names: Iterable[Union[str, int]]
+    ) -> None:
         """
         Parameters
         ----------
@@ -164,6 +166,7 @@ class Abundance:
         )
         return self.subcommunity_abundance / self.subcommunity_normalizing_constants
 
+
 class AbundanceFromArray(Abundance):
 
     def __init__(self, counts: ndarray) -> None:
@@ -177,6 +180,7 @@ class AbundanceFromArray(Abundance):
         """
         super().__init__(counts, arange(counts.shape[1]))
 
+
 class AbundanceFromDataFrame(Abundance):
     """Calculates metacommuntiy and subcommunity relative abundance
     components from a pandas.DataFrame containing species counts
@@ -184,7 +188,7 @@ class AbundanceFromDataFrame(Abundance):
 
     def __init__(self, counts: DataFrame) -> None:
         super().__init__(counts.to_numpy(), counts.columns)
-        
+
 
 def make_abundance(counts: Union[DataFrame, ndarray]) -> Abundance:
     """Initializes a concrete subclass of Abundance.

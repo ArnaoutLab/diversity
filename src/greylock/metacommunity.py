@@ -10,7 +10,7 @@ Metacommunity
 from typing import Callable, Iterable, Optional, Union
 
 from pandas import DataFrame, Index, Series, concat
-from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray
+from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray
 from greylock.exceptions import InvalidArgumentError
 
 from greylock.abundance import make_abundance
@@ -224,7 +224,7 @@ class Metacommunity:
         diversity measures for a given viewpoint
         """
         dataframes = []
-        for q in atleast_1d(viewpoint):
+        for q in atleast_1d(array(viewpoint)):
             dataframes.append(
                 self.metacommunity_to_dataframe(viewpoint=q, measures=measures)
             )

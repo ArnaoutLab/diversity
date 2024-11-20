@@ -30,7 +30,7 @@ from typing import Callable, Union
 from pathlib import Path
 from numpy import ndarray, empty, concatenate, float64, vstack, zeros
 from pandas import DataFrame, read_csv
-from scipy.sparse import spmatrix, issparse # type: ignore[import]
+from scipy.sparse import spmatrix, issparse  # type: ignore[import]
 
 
 class Similarity(ABC):
@@ -140,7 +140,7 @@ def weighted_similarity_chunk_nonsymmetric(
     relative_abundance: ndarray,
     chunk_size: int,
     chunk_index: int,
-) -> tuple [int, ndarray]:
+) -> tuple[int, ndarray]:
     def enum_helper(X):
         if type(X) == DataFrame:
             return X.itertuples()
