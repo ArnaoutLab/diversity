@@ -9,8 +9,8 @@ Metacommunity
 
 from typing import Callable, Iterable, Optional, Union
 
-from pandas import DataFrame, Index, concat
-from numpy import atleast_1d, broadcast_to, divide, zeros, ndarray
+from pandas import DataFrame, Index, Series, concat
+from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray
 from greylock.exceptions import InvalidArgumentError
 
 from greylock.abundance import make_abundance
@@ -20,6 +20,7 @@ from greylock.utilities import power_mean
 
 
 class Metacommunity:
+    similarity: Similarity
     """Creates diversity components and calculates diversity measures.
 
     A community consists of a set of species, each of which may appear
@@ -175,7 +176,7 @@ class Metacommunity:
             }
         )
         df.insert(0, "viewpoint", viewpoint)
-        df.insert(0, "community", self.abundance.subcommunities_names)
+        df.insert(0, "community", Series(self.abundance.subcommunities_names))
         return df
 
     def metacommunity_to_dataframe(self, viewpoint: float, measures=MEASURES):
@@ -223,7 +224,7 @@ class Metacommunity:
         diversity measures for a given viewpoint
         """
         dataframes = []
-        for q in atleast_1d(viewpoint):
+        for q in atleast_1d(array(viewpoint)):
             dataframes.append(
                 self.metacommunity_to_dataframe(viewpoint=q, measures=measures)
             )

@@ -1,8 +1,10 @@
-from typing import Callable, Union
+from typing import List, Any, Callable, Union
 from numpy import ndarray, empty, concatenate, float64, vstack, zeros
 from pandas import DataFrame
-from scipy.sparse import spmatrix
-import ray
+
+# avoid mypy error: see https://github.com/jorenham/scipy-stubs/issues/100
+from scipy.sparse import spmatrix  # type: ignore
+import ray  # type: ignore
 from greylock.similarity import (
     SimilarityFromFunction,
     SimilarityFromSymmetricFunction,
@@ -47,7 +49,7 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
         weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_nonsymmetric)
         X_ref = ray.put(self.X)
         abundance_ref = ray.put(relative_abundance)
-        futures = []
+        futures: List[Union[ray._raylet.ObjectRef, ray._raylet.ObjectRefGenerator]] = []
         results = []
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
             if len(futures) >= self.max_inflight_tasks:
@@ -89,7 +91,7 @@ class SimilarityFromSymmetricRayFunction(SimilarityFromSymmetricFunction):
         weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_symmetric)
         X_ref = ray.put(self.X)
         abundance_ref = ray.put(relative_abundance)
-        futures = []
+        futures: List[Union[ray._raylet.ObjectRef, ray._raylet.ObjectRefGenerator]] = []
         result = relative_abundance
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
             if len(futures) >= self.max_inflight_tasks:
