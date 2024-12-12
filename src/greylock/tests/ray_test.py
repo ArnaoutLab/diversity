@@ -9,7 +9,9 @@ from numpy import (
     inf,
     float32,
     zeros,
+    dot
 )
+from numpy.linalg import vector_norm
 import ray
 from greylock.similarity import (
     SimilarityFromArray,
@@ -194,10 +196,21 @@ X_large = array(
 
 
 def similarity_function(a, b):
-    a = a / sqrt(sum(a * a))
-    b = b / sqrt(sum(b * b))
-    return sum(a * b)
+    a = a / vector_norm(a)
+    b = b / vector_norm(b)
+    return dot(a, b)
 
+@mark.parametrize(
+    "x, y, expected",
+    [
+        (array([1, 2, 3]), array([1, 2, 3]), 1.0),
+        (array([0, 1, 0]), array([2, 0, 0]), 0.0),
+        (array([0, 1, 1]), array([0, 1, 0]), 1/sqrt(2)),
+        (array([0, 1, 1]), array([1, 1, 0]), 1/2)
+    ],
+)
+def test_similarity_function(x, y, expected):
+    assert allclose(similarity_function(x, y), expected)
 
 @mark.parametrize(
     "relative_abundance, X, chunk_size",

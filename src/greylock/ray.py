@@ -58,6 +58,7 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
             chunk_future = weighted_similarity_chunk.remote(
                 similarity=self.func,
                 X=X_ref,
+                Y=None,
                 relative_abundance=abundance_ref,
                 chunk_size=self.chunk_size,
                 chunk_index=chunk_index,

@@ -85,7 +85,7 @@ class Abundance:
 
     def premultiply_by(self, similarity):
         if similarity.is_expensive():
-            all_ordinariness = similarity.weighted_abundances(
+            all_ordinariness = similarity.self_similar_weighted_abundances(
                 self.get_unified_abundance_array()
             )
             metacommunity_ordinariness = all_ordinariness[:, [0]]
@@ -96,13 +96,13 @@ class Abundance:
                 :, (1 + self.num_subcommunities) :
             ]
         else:
-            metacommunity_ordinariness = similarity.weighted_abundances(
+            metacommunity_ordinariness = similarity.self_similar_weighted_abundances(
                 self.metacommunity_abundance
             )
-            subcommunity_ordinariness = similarity.weighted_abundances(
+            subcommunity_ordinariness = similarity.self_similar_weighted_abundances(
                 self.subcommunity_abundance
             )
-            normalized_subcommunity_ordinariness = similarity.weighted_abundances(
+            normalized_subcommunity_ordinariness = similarity.self_similar_weighted_abundances(
                 self.normalized_subcommunity_abundance
             )
         return (

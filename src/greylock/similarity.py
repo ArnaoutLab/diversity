@@ -53,6 +53,11 @@ class Similarity(ABC):
         """
         pass
 
+    def self_similar_weighted_abundances(
+        self, relative_abundances: Union[ndarray, spmatrix]
+    ) -> ndarray:
+        return self.weighted_abundances(relative_abundances)
+
     def is_expensive(self):
         return False
 
@@ -138,6 +143,7 @@ class SimilarityFromFile(Similarity):
 def weighted_similarity_chunk_nonsymmetric(
     similarity: Callable,
     X: Union[ndarray, DataFrame],
+    Y: Union[ndarray, DataFrame, None],
     relative_abundance: ndarray,
     chunk_size: int,
     chunk_index: int,
@@ -147,10 +153,12 @@ def weighted_similarity_chunk_nonsymmetric(
             return X.itertuples()
         return X
 
+    if Y is None:
+        Y = X
     chunk = X[chunk_index : chunk_index + chunk_size]
-    similarities_chunk = empty(shape=(chunk.shape[0], X.shape[0]))
+    similarities_chunk = empty(shape=(chunk.shape[0], Y.shape[0]))
     for i, row_i in enumerate(enum_helper(chunk)):
-        for j, row_j in enumerate(enum_helper(X)):
+        for j, row_j in enumerate(enum_helper(Y)):
             similarities_chunk[i, j] = similarity(row_i, row_j)
     # When this is a remote task, the chunks may be returned out of
     # order. Indicate what chunk this was for, so we can sort the
@@ -195,7 +203,24 @@ def weighted_similarity_chunk_symmetric(
     return rows_result + cols_result
 
 
-class SimilarityFromFunction(Similarity):
+class SimilarityFromSymmetricFunction(Similarity):
+    """
+    Calculate a similarity matrix on the fly, given feature vectors for each
+    species and a function to calculate similarity from feature vectors.
+
+    This assumes that
+    a) the similarity between any species and itself is 1.0.
+    b) similarity is symmetric: that is, Z[i,j] == Z[j,i]] always by definition.
+
+    Note that condition (b) need not be true and all the Leinster & Cobbald math
+    is still valid (see L&C paper). If these conditions do not hold, use the
+    next class: SimilarityFromFunction. But if you can use this class, you get the
+    obvious speed-up.
+
+    N.B. that these calculations can be parallelized; see ray.py for
+    parallelization using the Ray package.
+    """
+
     def __init__(
         self, func: Callable, X: Union[ndarray, DataFrame], chunk_size: int = 100
     ):
@@ -218,17 +243,6 @@ class SimilarityFromFunction(Similarity):
     def is_expensive(self):
         return True
 
-    def weighted_abundances(self, relative_abundance: Union[ndarray, spmatrix]):
-        weighted_similarity_chunks = []
-        for chunk_index in range(0, self.X.shape[0], self.chunk_size):
-            _, result = weighted_similarity_chunk_nonsymmetric(
-                self.func, self.X, relative_abundance, self.chunk_size, chunk_index
-            )
-            weighted_similarity_chunks.append(result)
-        return concatenate(weighted_similarity_chunks)
-
-
-class SimilarityFromSymmetricFunction(SimilarityFromFunction):
     def weighted_abundances(self, abundance: Union[ndarray, spmatrix]) -> ndarray:
         result = abundance.copy()
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
@@ -241,3 +255,50 @@ class SimilarityFromSymmetricFunction(SimilarityFromFunction):
             )
             result = result + chunk
         return result
+
+
+class SimilarityFromFunction(SimilarityFromSymmetricFunction):
+    def weighted_abundances(self, relative_abundance: Union[ndarray, spmatrix]):
+        weighted_similarity_chunks = []
+        for chunk_index in range(0, self.X.shape[0], self.chunk_size):
+            _, result = weighted_similarity_chunk_nonsymmetric(
+                self.func, self.X, None, relative_abundance, self.chunk_size, chunk_index
+            )
+            weighted_similarity_chunks.append(result)
+        return concatenate(weighted_similarity_chunks)
+
+class IntersetSimilarityFromFunction(SimilarityFromFunction):
+    def __init__(
+            self, func: Callable, X: Union[ndarray, DataFrame], Y: Union[ndarray, DataFrame], chunk_size: int = 100
+    ):
+        """
+        Parameters
+        ----------
+        func:
+            A Callable that calculates similarity between a pair of species.
+            Must take a row from X and a row from Yas input as its arguments, and return
+            a numeric similarity value between 0.0 and 1.0.
+        X:
+          Each row contains the features values for a given species in set A.
+        Y:
+          Each row contains the features values for a given species in set B.
+        chunk_size:
+            Number of rows in similarity matrix to calculate at a time.
+        """
+        self.func = func
+        self.X = X
+        self.Y = Y
+        self.chunk_size = chunk_size
+
+    def weighted_abundances(self, relative_abundance: Union[ndarray, spmatrix]):
+        weighted_similarity_chunks = []
+        for chunk_index in range(0, self.X.shape[0], self.chunk_size):
+            _, result = weighted_similarity_chunk_nonsymmetric(
+                self.func, self.X, self.Y, relative_abundance, self.chunk_size, chunk_index
+            )
+            weighted_similarity_chunks.append(result)
+        return concatenate(weighted_similarity_chunks)
+
+    def self_similar_weighted_abundances(self, relative_abundance: Union[ndarray, spmatrix]):
+        raise InvalidArgumentError("Inappropriate similarity class for diversity functions")
+

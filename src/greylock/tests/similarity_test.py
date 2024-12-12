@@ -27,6 +27,7 @@ from greylock.similarity import (
     SimilarityFromFile,
     SimilarityFromFunction,
     SimilarityFromSymmetricFunction,
+    IntersetSimilarityFromFunction,
     weighted_similarity_chunk_nonsymmetric,
     weighted_similarity_chunk_symmetric,
 )
@@ -272,6 +273,7 @@ def test_weighted_similarity_chunk(similarity_function):
     chunk_index, chunk = weighted_similarity_chunk_nonsymmetric(
         similarity=similarity_function,
         X=X_3by2,
+        Y=None,
         relative_abundance=relative_abundance_3by2,
         chunk_size=3,
         chunk_index=0,
