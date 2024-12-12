@@ -101,7 +101,7 @@ class SimilarityFromFile(Similarity):
         """
         Parameters
         ----------
-        similarity:
+        similarity_file_path:
             Path to a file containing a pairwise similarity matrix of
             shape (n_species, n_species). The file should have a header
             that denotes the unique species names.
@@ -198,6 +198,18 @@ class SimilarityFromFunction(Similarity):
     def __init__(
         self, func: Callable, X: Union[ndarray, DataFrame], chunk_size: int = 100
     ):
+        """
+        Parameters
+        ----------
+        func:
+            A Callable that calculates similarity between a pair of species.
+            Must take two rows from X as input as its arguments, and return
+            a numeric similarity value between 0.0 and 1.0.
+        X:
+          Each row contains the features values for a given species.
+        chunk_size:
+            Number of rows in similarity matrix to calculate at a time.
+        """
         self.func = func
         self.X = X
         self.chunk_size = chunk_size
