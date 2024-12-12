@@ -20,9 +20,10 @@ SimilarityFromFunction:
 
 Functions
 ---------
-make_similarity
-    Chooses and creates instances of concrete Similarity 
-    implementations.
+weighted_similarity_chunk_nonsymmetric
+     Utility funciton for calculation of chunks of a similarity matrix
+weighted_similarity_chunk_symmetric
+     Utility funciton for calculation of chunks of a symmetric similarity matrix 
 """
 
 from abc import ABC, abstractmethod
