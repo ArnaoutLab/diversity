@@ -102,8 +102,10 @@ class Abundance:
             subcommunity_ordinariness = similarity.self_similar_weighted_abundances(
                 self.subcommunity_abundance
             )
-            normalized_subcommunity_ordinariness = similarity.self_similar_weighted_abundances(
-                self.normalized_subcommunity_abundance
+            normalized_subcommunity_ordinariness = (
+                similarity.self_similar_weighted_abundances(
+                    self.normalized_subcommunity_abundance
+                )
             )
         return (
             metacommunity_ordinariness,

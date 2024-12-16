@@ -32,6 +32,7 @@ from pathlib import Path
 from numpy import ndarray, empty, concatenate, float64, vstack, zeros
 from pandas import DataFrame, read_csv
 from scipy.sparse import spmatrix, issparse  # type: ignore[import]
+from greylock.exceptions import InvalidArgumentError
 
 
 class Similarity(ABC):
@@ -262,21 +263,34 @@ class SimilarityFromFunction(SimilarityFromSymmetricFunction):
         weighted_similarity_chunks = []
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
             _, result = weighted_similarity_chunk_nonsymmetric(
-                self.func, self.X, None, relative_abundance, self.chunk_size, chunk_index
+                self.func,
+                self.X,
+                self.get_Y(),
+                relative_abundance,
+                self.chunk_size,
+                chunk_index,
             )
             weighted_similarity_chunks.append(result)
         return concatenate(weighted_similarity_chunks)
 
+    def get_Y(self):
+        return None
+
+
 class IntersetSimilarityFromFunction(SimilarityFromFunction):
     def __init__(
-            self, func: Callable, X: Union[ndarray, DataFrame], Y: Union[ndarray, DataFrame], chunk_size: int = 100
+        self,
+        func: Callable,
+        X: Union[ndarray, DataFrame],
+        Y: Union[ndarray, DataFrame],
+        chunk_size: int = 100,
     ):
         """
         Parameters
         ----------
         func:
             A Callable that calculates similarity between a pair of species.
-            Must take a row from X and a row from Yas input as its arguments, and return
+            Must take a row from X and a row from Y as input as its arguments, and return
             a numeric similarity value between 0.0 and 1.0.
         X:
           Each row contains the features values for a given species in set A.
@@ -285,20 +299,15 @@ class IntersetSimilarityFromFunction(SimilarityFromFunction):
         chunk_size:
             Number of rows in similarity matrix to calculate at a time.
         """
-        self.func = func
-        self.X = X
+        super().__init__(func, X, chunk_size)
         self.Y = Y
-        self.chunk_size = chunk_size
 
-    def weighted_abundances(self, relative_abundance: Union[ndarray, spmatrix]):
-        weighted_similarity_chunks = []
-        for chunk_index in range(0, self.X.shape[0], self.chunk_size):
-            _, result = weighted_similarity_chunk_nonsymmetric(
-                self.func, self.X, self.Y, relative_abundance, self.chunk_size, chunk_index
-            )
-            weighted_similarity_chunks.append(result)
-        return concatenate(weighted_similarity_chunks)
+    def get_Y(self):
+        return self.Y
 
-    def self_similar_weighted_abundances(self, relative_abundance: Union[ndarray, spmatrix]):
-        raise InvalidArgumentError("Inappropriate similarity class for diversity functions")
-
+    def self_similar_weighted_abundances(
+        self, relative_abundance: Union[ndarray, spmatrix]
+    ):
+        raise InvalidArgumentError(
+            "Inappropriate similarity class for diversity measures"
+        )

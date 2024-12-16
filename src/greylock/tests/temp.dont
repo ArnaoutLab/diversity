@@ -1,0 +1,19 @@
+from greylock.similarity import IntersetSimilarityFromFunction
+from greylock.tests.similarity_test import similarity_from_distance
+from numpy import array, allclose
+
+def test_interset_similarity():
+    X = array([[1, 0, 0]])
+    Y = array([[1, 0, 0], [0, 1, 0], [0, 1, 1]])
+    abundance = array([[1.0, 0.8, 0.0],
+                       [0.0, 0.1, 0.5],
+                       [0.0, 0.1, 0.5]])
+    sim = IntersetSimilarityFromFunction(
+        similarity_from_distance,
+        X, Y)
+    result = sim.weighted_abundances(abundance)
+    print(result)
+
+    
+
+test_interset_similarity()
