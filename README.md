@@ -482,6 +482,24 @@ To actually use Ray, replace the use of `SimilarityFromFunction` and `Similarity
 Each `chunk_size` rows of the similarity matrix are processed as a separate job. Thanks to this parallelization, up to an N-fold speedup is possible 
 (where N is the number of cores or nodes).
 
+## Inter-Set Similarity Matrix Calculations
+
+In addition to intra-set similarity matrices (i.e., a matrix in which $Z_(i,j)$ is the similarity between $X_i$ and $X_j$ for one set $X$ of species), `greylock` can also
+calculate inter-set similarity matrices (i.e., a matrix in which $Z_(i,j)$ is the similarity between $X_i$ and $Y_j$ for two distinct sets of species $X$ and $Y$).
+This is _not_ used to calculate effective numbers of species but is useful for identifying _specific_ commonalities between communities, or between a community and a specific
+set of species of interest.
+
+For example, in immunomics, specific antibodies or T-cell receptors which bind to a pathogen of interest may be identified through lab work. Then the question becomes, do we see
+evidence of antibodies or T-cell receptors in another individual's blood with similar binding capacities? Searching for genetic sequences that would produce the exact same
+peptides is likely to be fruitless and misleading. These sequences are produced via random processes over the course of an individual's life rather than being precisely encoded by
+germline DNA, so the chance of two individuals randomly generating the same sequence is low. Furthermore, different genetic sequences can encode for peptides with simiar shapes.
+Thus, the novel sequences need to be evaluated for similarity to the known sequences.
+For example, see [Braun et al. 2023](https://www.biorxiv.org/content/10.1101/2023.09.08.556703v1) for an example of applying this approach.
+
+While searching for known sequences in a novel sample would be typically a $O(n)$ operation (where $n$ is the number of known sequences sought) using hash tables, comparing $m$
+novel sequences to the $n$ known sequences would be $O(n,m)$. This may be computationally challenging in terms of both compute time and storage. Fortunately, the same computational
+machinary that supports weighting frequences using a similarity matrix calculated on the fly to support diversity calculations can be re-used for this application.
+
 # Command-line usage
 The `greylock` package can also be used from the command line as a module (via `python -m`). To illustrate using `greylock` this way, we re-use again the example with counts_2b_1 and S_2b, now with counts_2b_1 also saved as a csv file (note again `index=False`):
 ```python

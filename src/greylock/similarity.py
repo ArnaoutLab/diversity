@@ -68,19 +68,6 @@ class SimilarityIdentity(Similarity):
         return relative_abundance
 
 
-class SimilarityFromDataFrame(Similarity):
-    """Implements Similarity using similarities stored in pandas
-    dataframe."""
-
-    def __init__(self, similarity: DataFrame):
-        self.similarity = similarity
-
-    def weighted_abundances(
-        self, relative_abundance: Union[ndarray, spmatrix]
-    ) -> ndarray:
-        return self.similarity.to_numpy() @ relative_abundance
-
-
 class SimilarityFromArray(Similarity):
     """Implements Similarity using similarities stored in a numpy
     ndarray."""
@@ -92,6 +79,27 @@ class SimilarityFromArray(Similarity):
         self, relative_abundance: Union[ndarray, spmatrix]
     ) -> ndarray:
         return self.similarity @ relative_abundance
+
+    def self_similar_weighted_abundances(
+        self, relative_abundances: Union[ndarray, spmatrix]
+    ) -> ndarray:
+        if self.similarity.shape[0] == self.similarity.shape[1]:
+            return self.weighted_abundances(relative_abundances)
+        else:
+            raise InvalidArgumentError("Similarity matrix must be square")
+
+
+class SimilarityFromDataFrame(SimilarityFromArray):
+    """Implements Similarity using similarities stored in pandas
+    dataframe."""
+
+    def __init__(self, similarity: DataFrame):
+        self.similarity = similarity
+
+    def weighted_abundances(
+        self, relative_abundance: Union[ndarray, spmatrix]
+    ) -> ndarray:
+        return self.similarity.to_numpy() @ relative_abundance
 
 
 class SimilarityFromFile(Similarity):
