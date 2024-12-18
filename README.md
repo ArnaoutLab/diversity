@@ -500,6 +500,48 @@ While searching for known sequences in a novel sample would be typically a $O(n)
 novel sequences to the $n$ known sequences would be $O(n,m)$. This may be computationally challenging in terms of both compute time and storage. Fortunately, the same computational
 machinary that supports weighting frequences using a similarity matrix calculated on the fly to support diversity calculations can be re-used for this application.
 
+For example, let's suppose that we want to probe a community of bees, butterflies, and lobsters for the prevalance of _species similar to_ ladybugs and fish. Re-using
+some of the same similarity values as above:
+
+```python
+similarity = S_2b_df.loc[['ladybug', 'fish'], ['bee', 'butterfly', 'lobster']]   
+```
+
+This gives us a non-square similarity matrix:
+```
+          bee  butterfly  lobster
+ladybug  0.60       0.55     0.45
+fish     0.22       0.27     0.28
+```
+
+We represent the community composition as a column vector:
+```
+counts = array([[5000],
+       [2000],
+       [3000]])
+```
+Calculating the relative abundance of species similar to ladybugs and fish in our community is straightforward given these small hard-coded data:
+```
+>>> similarity @ (counts/counts.sum())
+             0
+ladybug  0.545
+fish     0.248
+```
+In a more realistic case, with several subcommunities (for example, samples from several patients) and tens of thousands of different species (for example, immune repertoire sequences),
+rather than loading the entire similarity matrix into memory at once,
+
+```
+from greylock.abundance import make_abundance
+from greylock.ray import IntersetSimilarityFromRayFunction
+abundance = make_abundance(df)
+similarity = IntersetSimilarityFromRayFunction(
+  similarity_function,
+  query_species,
+  community_species)
+relative_abundances = similarity @ abundance
+```
+
+
 # Command-line usage
 The `greylock` package can also be used from the command line as a module (via `python -m`). To illustrate using `greylock` this way, we re-use again the example with counts_2b_1 and S_2b, now with counts_2b_1 also saved as a csv file (note again `index=False`):
 ```python

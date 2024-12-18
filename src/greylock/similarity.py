@@ -62,6 +62,9 @@ class Similarity(ABC):
     def is_expensive(self):
         return False
 
+    def __matmul__(self, abundance):
+        return abundance.premultiply_by(self)
+
 
 class SimilarityIdentity(Similarity):
     def weighted_abundances(self, relative_abundance):
@@ -147,6 +150,31 @@ class SimilarityFromFile(Similarity):
 
     def is_expensive(self):
         return True
+
+
+class IntersetSimilarityFromFile(SimilarityFromFile):
+    def weighted_abundances(
+        self, relative_abundance: Union[ndarray, spmatrix]
+    ) -> ndarray:
+        with read_csv(
+            self.path,
+            chunksize=self.chunk_size,
+            sep=None,
+            engine="python",
+            dtype=float64,
+        ) as similarity_matrix_chunks:
+            weighted_abundance_chunks = [
+                chunk.to_numpy() @ relative_abundance
+                for chunk in similarity_matrix_chunks
+            ]
+        return concatenate(weighted_abundance_chunks)
+
+    def self_similar_weighted_abundances(
+        self, relative_abundance: Union[ndarray, spmatrix]
+    ):
+        raise InvalidArgumentError(
+            "Inappropriate similarity class for diversity measures"
+        )
 
 
 def weighted_similarity_chunk_nonsymmetric(

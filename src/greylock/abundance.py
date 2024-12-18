@@ -174,9 +174,7 @@ class AbundanceForDiversity(Abundance):
         return self.subcommunity_abundance.sum(axis=1, keepdims=True)
 
 
-def make_abundance(
-    counts: Union[DataFrame, ndarray], specificClass=AbundanceForDiversity
-) -> Abundance:
+def make_abundance(counts: Union[DataFrame, ndarray], for_diversity=True) -> Abundance:
     """Initializes a concrete subclass of Abundance.
 
     Parameters
@@ -189,15 +187,19 @@ def make_abundance(
     -------
     An instance of a concrete subclass of Abundance.
     """
+    if for_diversity:
+        specific_class = AbundanceForDiversity
+    else:
+        specific_class = Abundance
     if isinstance(counts, DataFrame):
-        return specificClass(
+        return specific_class(
             counts=counts.to_numpy(), subcommunity_names=counts.columns
         )
     elif hasattr(counts, "shape"):
         if issparse(counts):
             raise TypeError("sparse abundance matrix not yet implemented")
         else:
-            return specificClass(
+            return specific_class(
                 counts=counts, subcommunity_names=arange(counts.shape[1])
             )
     else:
