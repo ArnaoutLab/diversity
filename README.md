@@ -16,6 +16,7 @@
   - [alpha diversities](#alpha-diversities)
   - [beta diversities](#beta-diversities)
 - [Advanced usage](#advanced-usage)
+- [Ordinariness calculations](#ordinariness-calculations)
 - [Command-line usage](#command-line-usage)
 - [Applications](#applications)
 - [Alternatives](#alternatives)
@@ -482,7 +483,7 @@ To actually use Ray, replace the use of `SimilarityFromFunction` and `Similarity
 Each `chunk_size` rows of the similarity matrix are processed as a separate job. Thanks to this parallelization, up to an N-fold speedup is possible 
 (where N is the number of cores or nodes).
 
-## Inter-Set Similarity Matrix Calculations
+## Ordinariness calculations
 
 In addition to intra-set similarity matrices (i.e., a matrix in which similarity[i, j] is the similarity between $X_i$ and $X_j$ for one set $X$ of species), `greylock` can also
 calculate inter-set similarity matrices (i.e., a matrix in which similarity[i, j] is the similarity between $X_i$ and $Y_j$ for two distinct sets of species $X$ and $Y$).
