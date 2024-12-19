@@ -485,24 +485,34 @@ Each `chunk_size` rows of the similarity matrix are processed as a separate job.
 
 ## Ordinariness calculations
 
-In addition to intra-set similarity matrices (i.e., a matrix in which similarity[i, j] is the similarity between $X_i$ and $X_j$ for one set $X$ of species), `greylock` can also
-calculate inter-set similarity matrices (i.e., a matrix in which similarity[i, j] is the similarity between $X_i$ and $Y_j$ for two distinct sets of species $X$ and $Y$).
-This is _not_ used to calculate effective numbers of species but is useful for identifying _specific_ commonalities between communities, or between a community and a specific
-set of species of interest.
+In this diversity framework, diversity is essentially a weighted sum of the “ordinariness” of the species in the community. If a species _i_ is very similar to other species in the 
+community, the relative abundance of species similar to species _i_, a.k.a. the ordinariness of species _i_, is high; also, if species _i_ or species to which it is similar are very 
+abundant, its ordinariness is also high. Ordinariness is calculated by matrix multipication of the similarity matrix, $Z$, with the normalized frequency vector of the community $p$;
+the ordinariness of species _i_ is $Zp_i$ (see Leinster and Cobbold 2012, p479). Note that for diversity calculations, this $Z$ is an intra-set similarity matrices&mdash;i.e., a matrix in which similarity[i, j] is the similarity between $X_i$ and $X_j$ for one set $X$ of species.
 
-For example, in immunomics, specific antibodies or T-cell receptors which bind to a pathogen of interest may be identified through lab work. Then the question becomes, do we see
-evidence of antibodies or T-cell receptors in another individual's blood with similar binding capacities? Searching for genetic sequences that would produce the exact same
+In addition to asking about the diversity of the community, it is also often valuable to ask about the ordinariness of a given species in the community. It is similarly often valuable
+to ask about the ordinariness in a community of a species that is *not* in that community. These are questions such as: “Although species _j_ isn’t may not be in the community itself, 
+there may be many members of species similar to _j_ in the community. What’s the ordinariness of _j_ in the community?” 
+
+As a practical example, in immunomics, specific antibodies or T-cell receptors which bind to a pathogen of interest may be identified through lab work. Then the question becomes, 
+do we see evidence of antibodies or T-cell receptors in another individual's blood with similar binding capacities? Searching for genetic sequences that would produce the exact same
 peptides is likely to be fruitless and misleading. These sequences are produced via random processes over the course of an individual's life rather than being precisely encoded by
 germline DNA, so the chance of two individuals randomly generating the same sequence is low. Furthermore, different genetic sequences can encode for peptides with simiar shapes.
-Thus, the novel sequences need to be evaluated for similarity to the known sequences.
-For example, see [Braun et al. 2023](https://www.biorxiv.org/content/10.1101/2023.09.08.556703v1) for an example of applying this approach.
+Thus, the novel sequences need to be evaluated for similarity (rather than identity) to the known sequences.
+See [Braun et al. 2023](https://www.biorxiv.org/content/10.1101/2023.09.08.556703v1) for an example of applying this approach. Amino acid sequences of the CDR3 domains of 
+B-cell and T-cell receptors from cells known to bind to SARS-CoV-2, the virus that causes COVID-19, were downloaded from various public databasese such as CoVAbDab, PDB, and VDJDB.
+These known sequences were the query sequences.
+CDR3 domains of B-cell and T-cell receptors in the blood of patients with various levels of exposure to COVID-19 (not exposed, vaccinated, or infected) were sequenced, and the 
+ordinariness of each of the query sequences was calculated for each patient's community of sequenced CDR3 sequences, using a similarity function based on Levenstein (edit) distance.
+These ordinariness values were evaluated with regards to their usefulness as features in a machine learning model trained to classify COVID-19 exposure level. The research question is,
+are immunoglobulins or T-cell receptors relevant to a disease state found in one patient's blood found to be representitive of  immunoglobulins or T-cell receptors in another patient
+with the same disease? Effective characterization of adaptive immune cells may have tremendous diagnostic potential.
 
-While searching for known sequences in a novel sample would be typically a $O(n)$ operation (where $n$ is the number of known sequences sought) using hash tables, comparing $m$
-novel sequences to the $n$ known sequences would be $O(n,m)$. This may be computationally challenging in terms of both compute time and storage. Fortunately, the same computational
-machinary that supports weighting frequences using a similarity matrix calculated on the fly to support diversity calculations can be re-used for this application.
+To answer such questions, the ordinariness values for each query species are again $Zp_i$, but $Z$ in this case is the inter-set similarity matrix, in which similarity[i, j] is the
+similarity between $X_i$ and $Y_j$ for two distinct sets of species $X$ and $Y$.
 
-For example, let's suppose that we want to probe a community of bees, butterflies, and lobsters for the prevalance of _species similar to_ ladybugs and fish. Re-using
-some of the same similarity values as above:
+For example, let's suppose that we want to probe a community of bees, butterflies, and lobsters for the prevalance of _species similar to_ ladybugs and fish. We can re-use
+some of the same similarity values as above in a matrix with rows being the query species and columns being the community species:
 
 ```python
 similarity = S_2b_df.loc[['ladybug', 'fish'], ['bee', 'butterfly', 'lobster']]   
@@ -515,7 +525,7 @@ ladybug  0.60       0.55     0.45
 fish     0.22       0.27     0.28
 ```
 
-We represent the community composition as a column vector:
+We again represent community compositions as a column vectors:
 ```
 counts = array([[5000],
        [2000],
@@ -528,8 +538,11 @@ Calculating the relative abundance of species _similar to_ ladybugs and fish in 
 ladybug  0.545
 fish     0.248
 ```
-In a more realistic case, with several subcommunities (for example, samples from several patients) and tens of thousands of different species (for example, immune repertoire sequences),
-rather than loading the entire similarity matrix into memory at once,
+In a more realistic case, with several subcommunities (for example, samples from several patients) and tens of thousands of different species 
+(for example, immune repertoire sequences), it may be too computationally intensive to load the entire similarity matrix into memory at once.
+`greylock` allows on-the-fly generation and application of the similarity matrix from a similarity function and feature vectors, which may be 
+paralellized using Ray. For diversity calculations, we did this using the `SimilarityFromRayFunction` class; for the query vs. community calcuations,
+we need to use the `IntersetSimilarityFromRayFunction` class instead, like so:
 
 ```
 from greylock.abundance import make_abundance
