@@ -16,17 +16,17 @@
   - [alpha diversities](#alpha-diversities)
   - [beta diversities](#beta-diversities)
 - [Advanced usage](#advanced-usage)
-- [Ordinariness calculations](#ordinariness-calculations)
+- [Calculating "ordinariness"](#calculating-ordinariness)
 - [Command-line usage](#command-line-usage)
 - [Applications](#applications)
 - [Alternatives](#alternatives)
 
 # About
 
-`greylock` calculates effective numbers in an extended version of the Hill framework, with extensions due to Leinster and Cobbold and Reeve et al. “Extending” a hill makes a mountain. At 3,489 feet (1,063 meters), Mount Greylock is Massachusetts’ tallest mountain. It is named for Gray Lock (c. 1670–1750),  a historical figure of the Abnaki, an indigenous people of New England.
+`greylock` calculates effective numbers in an extended version of the Hill framework, with extensions due to Leinster and Cobbold and Reeve et al. (the "LCR framework"). “Extending” a hill makes a mountain; Mount Greylock is Massachusetts’ tallest. It is named for Gray Lock (c. 1670–1750),  a historical figure of the Abnaki, an indigenous people of the New England region of eastern North America.
 
 ## Availability and installation
-The package is available on GitHub at https://github.com/ArnaoutLab/diversity. It can be installed by running
+`greylock` is available on GitHub at https://github.com/ArnaoutLab/diversity. It can be installed by running
 
 `pip install greylock`
 
@@ -61,11 +61,11 @@ Some diversity indices compare the diversities of the subcommunities with respec
 
 ## Similarity-sensitive diversity
 
-In addition to being sensitive to frequency, it often makes sense to account for similarity in a diversity measure. For example, a community of two different types of rodents may be considered less diverse than a community where one of the rodent species was replaced by the same number of individuals of a bird species. [Reeve et al.](https://arxiv.org/abs/1404.6520) and [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1) present a general mathematically rigorous way of incorporating similarity measures into Hill's framework. The result is a family of similarity-sensitive diversity indices parameterized by the same viewpoint parameter as well as the similarity function used for the species in the meta- or subcommunities of interest. These similarity-sensitive diversity measures account for both the pairwise similarity between all species and their frequencies.
+In addition to being sensitive to frequency, it often makes sense to account for similarity in a diversity measure. For example, a community of two different types of rodents may be considered less diverse than a community where one of the rodent species was replaced by the same number of individuals of a bird species. [Leinster and Cobbold](https://doi.org/10.1890/10-2402.1) and [Reeve et al.](https://arxiv.org/abs/1404.6520) present a general mathematically rigorous way of incorporating similarity measures into Hill's framework, resulting in what we refer to as the LCR framework or simply LCR. LCR describes a family of similarity-sensitive diversity indices parameterized by the same viewpoint parameter as well as the similarity function used for the species in the meta- or subcommunities of interest. These similarity-sensitive diversity measures account for both the pairwise similarity between all species and their frequencies.
 
 ## Rescaled diversity indices
 
-In addition to the diversity measures introduced by Reeve et al, we also included two new rescaled measures $\hat{\rho}$ and $\hat{\beta}$, as well as their metacommunity counterparts. The motivation for introducing these measures is that $\rho$ can become very large if the number of subcommunities is large. Similarly, $\beta$ can become very small in this case. The rescaled versions are designed so that they remain of order unity even when there are lots of subcommunities.
+In addition to the diversity measures introduced by [Reeve et al.](https://arxiv.org/abs/1404.6520), we also included two new rescaled measures $\hat{\rho}$ and $\hat{\beta}$, as well as their metacommunity counterparts. The motivation for introducing these measures is that $\rho$ can become very large if the number of subcommunities is large. Similarly, $\beta$ can become very small in this case. The rescaled versions are designed so that they remain of order unity even when there are lots of subcommunities.
 
 ## One package to rule them all
 
@@ -483,35 +483,15 @@ To actually use Ray, replace the use of `SimilarityFromFunction` and `Similarity
 Each `chunk_size` rows of the similarity matrix are processed as a separate job. Thanks to this parallelization, up to an N-fold speedup is possible 
 (where N is the number of cores or nodes).
 
-## Ordinariness calculations
+## Calculating ordinariness
 
-In this diversity framework, diversity is essentially a weighted sum of the “ordinariness” of the species in the community. If a species _i_ is very similar to other species in the 
-community, the relative abundance of species similar to species _i_, a.k.a. the ordinariness of species _i_, is high; also, if species _i_ or species to which it is similar are very 
-abundant, its ordinariness is also high. Ordinariness is calculated by matrix multipication of the similarity matrix, $Z$, with the normalized frequency vector of the community $p$;
-the ordinariness of species _i_ is $Zp_i$ (see Leinster and Cobbold 2012, p479). Note that for diversity calculations, this $Z$ is an intra-set similarity matrices&mdash;i.e., a matrix in which similarity[i, j] is the similarity between $X_i$ and $X_j$ for one set $X$ of species.
+In LCR, diversity is essentially a power mean of the “ordinariness” of each species in the community ([Leinster and Cobbold](https://doi.org/10.1890/10-2402.1), p.479, right column). The ordinariness of species _i_ is the total abundance of all the species in the community that are similar to _i_, weighted by their similarity and their abundance. (This includes _i_, which is of course 100% similar to itself.) If the community contains many species that are similar to _i_ and/or if those species are very abundant, the ordinariness of species _i_ will be high: species _i_ will be considered unexceptional relative to these many/abundant similar species, and in that sense will be considered quite "ordinary" for the community.
 
-In addition to asking about the diversity of the community, it is also often valuable to ask about the ordinariness of a given species in the community. It is similarly often valuable
-to ask about the ordinariness in a community of a species that is *not* in that community. These are questions such as: “Although species _j_ isn’t may not be in the community itself, 
-there may be many members of species similar to _j_ in the community. What’s the ordinariness of _j_ in the community?” 
+There are situations in which one is interested in the ordinariness of a species _j_ that is *not* in the community: i.e. how similar the species in the community are to this outside member, weighted by their relative abundances and their similarity to _j_. (See [Braun et al. 2023](https://www.biorxiv.org/content/10.1101/2023.09.08.556703v1) for an example, in which the investigators start with an antibody _j_ and wish to calculate its ordinariness in "communities" of antibodies termed repertoires. In this context, the ordinariness is the "binding capacity" of that repertoire for molecules that antibody _j_ is best at binding.)
 
-As a practical example, in immunomics, specific antibodies or T-cell receptors which bind to a pathogen of interest may be identified through lab work. Then the question becomes, 
-do we see evidence of antibodies or T-cell receptors in another individual's blood with similar binding capacities? Searching for genetic sequences that would produce the exact same
-peptides is likely to be fruitless and misleading. These sequences are produced via random processes over the course of an individual's life rather than being precisely encoded by
-germline DNA, so the chance of two individuals randomly generating the same sequence is low. Furthermore, different genetic sequences can encode for peptides with simiar shapes.
-Thus, the novel sequences need to be evaluated for similarity (rather than identity) to the known sequences.
-See [Braun et al. 2023](https://www.biorxiv.org/content/10.1101/2023.09.08.556703v1) for an example of applying this approach. Amino acid sequences of the CDR3 domains of 
-B-cell and T-cell receptors from cells known to bind to SARS-CoV-2, the virus that causes COVID-19, were downloaded from various public databasese such as CoVAbDab, PDB, and VDJDB.
-These known sequences were the query sequences.
-CDR3 domains of B-cell and T-cell receptors in the blood of patients with various levels of exposure to COVID-19 (not exposed, vaccinated, or infected) were sequenced, and the 
-ordinariness of each of the query sequences was calculated for each patient's community of sequenced CDR3 sequences, using a similarity function based on Levenstein (edit) distance.
-These ordinariness values were evaluated with regards to their usefulness as features in a machine learning model trained to classify COVID-19 exposure level. The research question is,
-are immunoglobulins or T-cell receptors relevant to a disease state found in one patient's blood found to be representitive of  immunoglobulins or T-cell receptors in another patient
-with the same disease? Effective characterization of adaptive immune cells may have tremendous diagnostic potential.
+`greylock` can calculate ordinariness, whether the species of interest is present in the community (_i_ above) or not (_j_).
 
-To answer such questions, the ordinariness values for each query species are again $Zp_i$, but $Z$ in this case is the inter-set similarity matrix, in which similarity[i, j] is the
-similarity between $X_i$ and $Y_j$ for two distinct sets of species $X$ and $Y$.
-
-For example, let's suppose that we want to probe a community of bees, butterflies, and lobsters for the prevalance of _species similar to_ ladybugs and fish. We can re-use
+For example, let's suppose we want to probe a community of bees, butterflies, and lobsters for the prevalance of _species similar to_ ladybugs and fish. We can re-use
 some of the same similarity values as above in a matrix with rows being the query species and columns being the community species:
 
 ```python
