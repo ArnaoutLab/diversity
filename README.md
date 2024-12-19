@@ -484,8 +484,8 @@ Each `chunk_size` rows of the similarity matrix are processed as a separate job.
 
 ## Inter-Set Similarity Matrix Calculations
 
-In addition to intra-set similarity matrices (i.e., a matrix in which $Z_(i,j)$ is the similarity between $X_i$ and $X_j$ for one set $X$ of species), `greylock` can also
-calculate inter-set similarity matrices (i.e., a matrix in which $Z_(i,j)$ is the similarity between $X_i$ and $Y_j$ for two distinct sets of species $X$ and $Y$).
+In addition to intra-set similarity matrices (i.e., a matrix in which similarity[i, j] is the similarity between $X_i$ and $X_j$ for one set $X$ of species), `greylock` can also
+calculate inter-set similarity matrices (i.e., a matrix in which similarity[i, j] is the similarity between $X_i$ and $Y_j$ for two distinct sets of species $X$ and $Y$).
 This is _not_ used to calculate effective numbers of species but is useful for identifying _specific_ commonalities between communities, or between a community and a specific
 set of species of interest.
 
@@ -520,7 +520,7 @@ counts = array([[5000],
        [2000],
        [3000]])
 ```
-Calculating the relative abundance of species similar to ladybugs and fish in our community is straightforward given these small hard-coded data:
+Calculating the relative abundance of species _similar to_ ladybugs and fish in our community is straightforward given these small hard-coded data:
 ```
 >>> similarity @ (counts/counts.sum())
              0
