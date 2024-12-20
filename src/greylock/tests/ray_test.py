@@ -11,7 +11,7 @@ from numpy import (
     zeros,
     dot,
 )
-from numpy.linalg import vector_norm
+from numpy.linalg import norm
 import ray
 from greylock.similarity import (
     SimilarityFromArray,
@@ -202,8 +202,8 @@ X_large = array(
 
 
 def similarity_function(a, b):
-    a = a / vector_norm(a)
-    b = b / vector_norm(b)
+    a = a / norm(a)
+    b = b / norm(b)
     return dot(a, b)
 
 
