@@ -74,6 +74,7 @@ similarity_filecontent_3by3_tsv = (
 similarities_filecontents_3by3_csv = (
     "species_1,species_2,species_3\n" "1.0,0.5,0.1\n" "0.5,1.0,0.2\n" "0.1,0.2,1.0\n"
 )
+# fmt: off
 similarities_filecontents_32by3_csv = (
     "species_1,species_2,species_3\n"
     "1.0,0.5,0.1\n" "0.5,1.0,0.2\n" "0.1,0.2,1.0\n"
@@ -88,6 +89,7 @@ similarities_filecontents_32by3_csv = (
     "0.0,0.5,0.0\n" "0.5,0.0,0.2\n" "0.0,0.2,0.0\n"
     "0.0,0.5,0.0\n" "0.5,0.0,0.2\n" "0.0,0.2,0.0\n"
 )
+# fmt: on
 similarity_sparse_entries = {
     "shape": (3, 3),
     "row": array(
@@ -186,7 +188,7 @@ def make_similarity_from_file(tmp_path):
         filename="similarity_matrix.tsv",
         filecontent=similarity_filecontent_3by3_tsv,
         chunk_size=1,
-        similarity_class = SimilarityFromFile
+        similarity_class=SimilarityFromFile,
     ):
         filepath = tmp_path / filename
         with open(filepath, "w") as file:
@@ -224,14 +226,17 @@ def test_nonsquare_from_file(make_similarity_from_file):
     counts = array([[1], [1], [1]])
     with raises(InvalidArgumentError):
         Metacommunity(counts, sim).to_dataframe(viewpoint=0)
-    
+
+
 def test_interset_from_file(make_similarity_from_file):
     sim = make_similarity_from_file(
         filecontent=similarities_filecontents_32by3_csv,
         chunk_size=4,
-        similarity_class=IntersetSimilarityFromFile)
+        similarity_class=IntersetSimilarityFromFile,
+    )
     counts = array([[50], [25], [25]])
     abundance_object = make_abundance(counts, False)
+    # fmt: off
     expected = array([[0.65, 0.55, 0.35,
                       0.65, 0.55, 0.35,
                       0.65, 0.35,
@@ -243,10 +248,11 @@ def test_interset_from_file(make_similarity_from_file):
                       0.125, 0.3, 0.05,
                       0.125, 0.3, 0.05,
                        0.125, 0.3, 0.05]]).T
-    
+    # fmt: on
     result = sim @ abundance_object
     assert allclose(result, expected)
-    
+
+
 @mark.parametrize(
     "similarity, simclass, relative_abundance, expected",
     [
@@ -777,6 +783,7 @@ def test_interset_similarity(X, Y, abundance, expected):
     abundance_obj = make_abundance(abundance, False)
     result = sim @ abundance_obj
     assert allclose(result, expected)
+
 
 def test_square_similarity_requirement():
     sim = SimilarityFromArray(array([[1.0, 0.4, 0.6], [0.2, 1.0, 0.9]]))
