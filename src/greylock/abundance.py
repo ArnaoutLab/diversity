@@ -40,6 +40,7 @@ class Abundance:
         """
         self.subcommunities_names = subcommunity_names
         self.num_subcommunities = counts.shape[1]
+        self.min_count = 1/counts.sum()
 
         self.subcommunity_abundance = self.make_subcommunity_abundance(counts=counts)
         self.metacommunity_abundance = self.make_metacommunity_abundance()
