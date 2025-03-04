@@ -203,43 +203,6 @@ def weighted_similarity_chunk_nonsymmetric(
     return chunk_index, similarities_chunk @ relative_abundance
 
 
-def weighted_similarity_chunk_symmetric(
-    similarity: Callable,
-    X: Union[ndarray, DataFrame],
-    relative_abundance: ndarray,
-    chunk_size: int,
-    chunk_index: int,
-) -> ndarray:
-    def enum_helper(X, start_index=0):
-        if type(X) == DataFrame:
-            return X.iloc[start_index:].itertuples()
-        return X[start_index:]
-
-    chunk = X[chunk_index : chunk_index + chunk_size]
-    similarities_chunk = zeros(shape=(chunk.shape[0], X.shape[0]))
-    for i, row_i in enumerate(enum_helper(chunk)):
-        for j, row_j in enumerate(enum_helper(X, chunk_index + i + 1)):
-            similarities_chunk[i, i + j + chunk_index + 1] = similarity(row_i, row_j)
-    rows_result = similarities_chunk @ relative_abundance
-    rows_after_count = max(0, relative_abundance.shape[0] - (chunk_index + chunk_size))
-    rows_result = vstack(
-        (
-            zeros(shape=(chunk_index, relative_abundance.shape[1])),
-            rows_result,
-            zeros(
-                shape=(
-                    rows_after_count,
-                    relative_abundance.shape[1],
-                )
-            ),
-        )
-    )
-    similarities_chunk = similarities_chunk.T
-    relative_abundance = relative_abundance[chunk_index : chunk_index + chunk_size]
-    cols_result = similarities_chunk @ relative_abundance
-    return rows_result + cols_result
-
-
 class SimilarityFromSymmetricFunction(Similarity):
     """
     Calculate a similarity matrix on the fly, given feature vectors for each
@@ -292,6 +255,43 @@ class SimilarityFromSymmetricFunction(Similarity):
             )
             result = result + chunk
         return result
+
+
+def weighted_similarity_chunk_symmetric(
+    similarity: Callable,
+    X: Union[ndarray, DataFrame],
+    relative_abundance: ndarray,
+    chunk_size: int,
+    chunk_index: int,
+) -> ndarray:
+    def enum_helper(X, start_index=0):
+        if type(X) == DataFrame:
+            return X.iloc[start_index:].itertuples()
+        return X[start_index:]
+
+    chunk = X[chunk_index : chunk_index + chunk_size]
+    similarities_chunk = zeros(shape=(chunk.shape[0], X.shape[0]))
+    for i, row_i in enumerate(enum_helper(chunk)):
+        for j, row_j in enumerate(enum_helper(X, chunk_index + i + 1)):
+            similarities_chunk[i, i + j + chunk_index + 1] = similarity(row_i, row_j)
+    rows_result = similarities_chunk @ relative_abundance
+    rows_after_count = max(0, relative_abundance.shape[0] - (chunk_index + chunk_size))
+    rows_result = vstack(
+        (
+            zeros(shape=(chunk_index, relative_abundance.shape[1])),
+            rows_result,
+            zeros(
+                shape=(
+                    rows_after_count,
+                    relative_abundance.shape[1],
+                )
+            ),
+        )
+    )
+    similarities_chunk = similarities_chunk.T
+    relative_abundance = relative_abundance[chunk_index : chunk_index + chunk_size]
+    cols_result = similarities_chunk @ relative_abundance
+    return rows_result + cols_result
 
 
 class SimilarityFromFunction(SimilarityFromSymmetricFunction):
