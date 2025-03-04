@@ -116,7 +116,7 @@ class Metacommunity:
             order=1 - viewpoint,
             weights=self.abundance.normalized_subcommunity_abundance,
             items=community_ratio,
-            atol=self.abundance.min_count
+            atol=self.abundance.min_count,
         )
         if measure in {"beta", "normalized_beta"}:
             return 1 / diversity_measure
