@@ -16,7 +16,7 @@ from greylock.exceptions import InvalidArgumentError
 from greylock.abundance import make_abundance
 from greylock.similarity import Similarity, SimilarityFromArray, SimilarityIdentity
 from greylock.components import Components
-from greylock.utilities import power_mean
+from greylock.powermean import power_mean
 
 
 class Metacommunity:

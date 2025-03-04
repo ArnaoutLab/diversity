@@ -4,7 +4,7 @@ from numpy import allclose, array, inf
 from pytest import mark, raises
 
 from greylock.exceptions import InvalidArgumentError
-from greylock.utilities import power_mean
+from greylock.powermean import power_mean
 
 weights_3by3 = array(
     [
