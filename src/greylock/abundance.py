@@ -13,7 +13,7 @@ AbundanceForDiversity
 from functools import cached_property
 from typing import Iterable, Union
 
-from numpy import arange, ndarray, concatenate
+from numpy import arange, ndarray, concatenate, minimum
 from pandas import DataFrame, RangeIndex
 from scipy.sparse import issparse  # type: ignore[import]
 
@@ -32,6 +32,8 @@ class Abundance:
         """
         self.subcommunities_names = subcommunity_names
         self.num_subcommunities = counts.shape[1]
+        self.min_count = minimum(1/counts.sum(), 1e-9)
+        
         self.subcommunity_abundance = self.make_subcommunity_abundance(counts=counts)
         self.normalized_subcommunity_abundance = (
             self.make_normalized_subcommunity_abundance()
