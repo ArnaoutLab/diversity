@@ -2,8 +2,6 @@
 
 Functions
 ---------
-get_file_delimiter
-    Determines delimiter in datafile from file extension.
 power_mean
     Calculates weighted power means.
 """
