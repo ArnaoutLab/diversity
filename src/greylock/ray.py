@@ -48,8 +48,9 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
         return None
 
     def weighted_abundances(
-            self, relative_abundance: Union[ndarray, spmatrix],
-            similarities_out: Union[ndarray, None] = None
+        self,
+        relative_abundance: Union[ndarray, spmatrix],
+        similarities_out: Union[ndarray, None] = None,
     ) -> ndarray:
         weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_nonsymmetric)
         X_ref = ray.put(self.X)
@@ -75,7 +76,9 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
         weighted_similarity_chunks = [r[1] for r in results]
         if similarities_out is not None:
             for chunk_index, _, similarity_chunk in results:
-                similarities_out[chunk_index : chunk_index + similarity_chunk.shape[0], :] = similarity_chunk
+                similarities_out[
+                    chunk_index : chunk_index + similarity_chunk.shape[0], :
+                ] = similarity_chunk
         return concatenate(weighted_similarity_chunks)
 
 
@@ -119,8 +122,9 @@ class SimilarityFromSymmetricRayFunction(SimilarityFromSymmetricFunction):
         self.max_inflight_tasks = max_inflight_tasks
 
     def weighted_abundances(
-            self, relative_abundance: Union[ndarray, spmatrix],
-            similarities_out: Union[ndarray, None] = None            
+        self,
+        relative_abundance: Union[ndarray, spmatrix],
+        similarities_out: Union[ndarray, None] = None,
     ) -> ndarray:
         weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_symmetric)
         X_ref = ray.put(self.X)
@@ -129,13 +133,17 @@ class SimilarityFromSymmetricRayFunction(SimilarityFromSymmetricFunction):
         result = relative_abundance
         if similarities_out is not None:
             similarities_out.fill(0.0)
+
         def process_refs(refs):
             nonlocal result
             nonlocal similarities_out
             for similarities, addend, chunk_index in ray.get(refs):
                 result = result + addend
                 if similarities_out is not None:
-                    similarities_out[chunk_index : chunk_index+similarities.shape[0], :] = similarities
+                    similarities_out[
+                        chunk_index : chunk_index + similarities.shape[0], :
+                    ] = similarities
+
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
             if len(futures) >= self.max_inflight_tasks:
                 (ready_refs, futures) = ray.wait(futures)
