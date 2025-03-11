@@ -48,7 +48,8 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
         return None
 
     def weighted_abundances(
-        self, relative_abundance: Union[ndarray, spmatrix]
+            self, relative_abundance: Union[ndarray, spmatrix],
+            similarities_out: Union[ndarray, None] = None
     ) -> ndarray:
         weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_nonsymmetric)
         X_ref = ray.put(self.X)
@@ -72,6 +73,9 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
         results += ray.get(futures)
         results.sort()  # This sorts by chunk index (1st in tuple)
         weighted_similarity_chunks = [r[1] for r in results]
+        if similarities_out is not None:
+            for chunk_index, _, similarity_chunk in results:
+                similarities_out[chunk_index : chunk_index + similarity_chunk.shape[0], :] = similarity_chunk
         return concatenate(weighted_similarity_chunks)
 
 
@@ -115,18 +119,27 @@ class SimilarityFromSymmetricRayFunction(SimilarityFromSymmetricFunction):
         self.max_inflight_tasks = max_inflight_tasks
 
     def weighted_abundances(
-        self, relative_abundance: Union[ndarray, spmatrix]
+            self, relative_abundance: Union[ndarray, spmatrix],
+            similarities_out: Union[ndarray, None] = None            
     ) -> ndarray:
         weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_symmetric)
         X_ref = ray.put(self.X)
         abundance_ref = ray.put(relative_abundance)
         futures: List[Union[ray._raylet.ObjectRef, ray._raylet.ObjectRefGenerator]] = []
         result = relative_abundance
+        if similarities_out is not None:
+            similarities_out.fill(0.0)
+        def process_refs(refs):
+            nonlocal result
+            nonlocal similarities_out
+            for similarities, addend, chunk_index in ray.get(refs):
+                result = result + addend
+                if similarities_out is not None:
+                    similarities_out[chunk_index : chunk_index+similarities.shape[0], :] = similarities
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
             if len(futures) >= self.max_inflight_tasks:
                 (ready_refs, futures) = ray.wait(futures)
-                for addend in ray.get(ready_refs):
-                    result = result + addend
+                process_refs(ready_refs)
 
             chunk_future = weighted_similarity_chunk.remote(
                 similarity=self.func,
@@ -136,6 +149,9 @@ class SimilarityFromSymmetricRayFunction(SimilarityFromSymmetricFunction):
                 chunk_index=chunk_index,
             )
             futures.append(chunk_future)
-        for addend in ray.get(futures):
-            result = result + addend
+        process_refs(futures)
+        if similarities_out is not None:
+            similarities_out += similarities_out.T
+            for i in range(self.X.shape[0]):
+                similarities_out[i, i] = 1.0
         return result
