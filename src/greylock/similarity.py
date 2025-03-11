@@ -37,7 +37,7 @@ from greylock.exceptions import InvalidArgumentError
 
 
 class Similarity(ABC):
-    """Interface for classes computing weighted similarities."""
+    """Root superclass for classes computing weighted similarities."""
 
     @abstractmethod
     def weighted_abundances(
@@ -46,6 +46,17 @@ class Similarity(ABC):
         similarities_out: Union[ndarray, None] = None,
     ) -> ndarray:
         """Calculates weighted sums of similarities to each species.
+        Parameters
+        ________
+        relative_abundances:
+           2-d array of shape (n_species, n_communities), where rows
+           rows correspond to unique species, columns correspond to
+           communities, and each element is some type of count
+           (absolute or normalized).
+
+        similarities_out:
+           If not None, a numpy array into which the similarity matrix
+           will be written.
 
         Returns
         -------
