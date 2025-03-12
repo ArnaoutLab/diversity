@@ -1,11 +1,47 @@
 """Module for calculating weighted subcommunity and metacommunity
 similarities.
 
+At the heart of calculating diversity is the matrix multiplication
+    Z @ p
+where Z is the similarity matrix and p is a vector (for a single unified
+community) or matrix (for subcommunities of a metacommunity) representing
+abundances.
+( See the Leinster and Cobbold paper, equation (1).)
+The Similarity class is responsible for premultiplying abundances by a
+similarity matrix. If compute resources were infinite, this would just
+be a matrix mutliplication. However, the similarity matrix may be extremely
+large and/or expensive to calculate. Various subclasses of Similarity use
+various strategies for dealing with the generation and use of this
+similarity matrix in various ways. For example:
+1) Ignore similarity and do similarity-naive diversity calculations:
+  Equivalent to Z being I, and the multiplication is a no-op.
+  Implemented by SimilarityIdentity
+2) The computionally easy/naive case: Z can be practically be calculated
+  and kept in memory as a NumPy array: SimilarityFromArray
+3) The similarity matrix is calculated in a separate job and stored in a
+   file: SimilarityFromFile
+4) The similarity matrix is too large to pre-calculate, and needs to be
+   generated on the fly as the matrix multiplication is performed:
+   SimilarityFromFunction
+
+In some of these classes (SimilarityFromArray, SimilarityFromArray) the
+similarity matrix exists explicitly and in others (SimilarityIdentity,
+SimilarityFromFunction) it is implicit, or only exists piecemeal at a time.
+In any case, one can caputure the similarity matrix that would be used
+by passing similarites_out (a NumPy array of appropriate shape)
+to the weighted_abundances method. Of course, in some cases this may be
+silly (SimilarityIdentity) or unwise (SimilarityFromFunction with a large
+species count), but this functionality is implemented in all concrete
+Similarity classes to maintain consistency and correctness.
+
 Classes
 -------
 Similarity
     Abstract base class for relative abundance-weighted species
     similarities.
+SimilarityIdentity
+    No-op version (equivalent to Z = I) for calculating similarity-
+    insensitive diversity.
 SimilarityFromDataFrame
     Implements Similarity by storing similarities in a pandas DataFrame.
 SimilarityFromArray
@@ -16,7 +52,19 @@ SimilarityFromFile
     file.
 SimilarityFromFunction:
     Implements Similarity by calculating pairwise similarities with a
-    callable function.
+    callable function. See `ray.py` for a parallelized version of this.
+SimilarityFromSymmetricFunction
+    Optimized version of SimilarityFunction that skips unneeded calculations.
+    Only valid when Z[i,j] == Z[j,i] and Z[i,i] == 1.0 for all i, j.
+    See `ray.py` for a parallelized version of this.
+IntersetSimilarityFromFunction
+    Not relevant to diversity calculations.
+    Used to calcuate a similarity matrix in which the rows and columns
+    correspond to two separate sets of species, to probe a community for
+    similarity to some other set of species of interest.
+    Calculates pairwise similarities with a callable function.
+    See `ray.py` for a parallelized version of this.
+    
 
 Functions
 ---------
