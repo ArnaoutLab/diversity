@@ -58,10 +58,19 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
         abundance_ref = ray.put(relative_abundance)
         futures: List[Union[ray._raylet.ObjectRef, ray._raylet.ObjectRefGenerator]] = []
         results = []
+        def process_refs(refs):
+            nonlocal results
+            nonlocal similarities_out
+            for chunk_index, abundance_chunk, similarity_chunk in ray.get(refs):
+                results.append( (chunk_index, abundance_chunk) )
+                if similarities_out is not None:
+                    similarities_out[
+                        chunk_index : chunk_index + similarity_chunk.shape[0], :
+                    ] = similarity_chunk
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
             if len(futures) >= self.max_inflight_tasks:
                 ready_refs, futures = ray.wait(futures)
-                results += ray.get(ready_refs)
+                process_refs(ready_refs)
             chunk_future = weighted_similarity_chunk.remote(
                 similarity=self.func,
                 X=X_ref,
@@ -71,14 +80,9 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
                 chunk_index=chunk_index,
             )
             futures.append(chunk_future)
-        results += ray.get(futures)
+        process_refs(futures)
         results.sort()  # This sorts by chunk index (1st in tuple)
         weighted_similarity_chunks = [r[1] for r in results]
-        if similarities_out is not None:
-            for chunk_index, _, similarity_chunk in results:
-                similarities_out[
-                    chunk_index : chunk_index + similarity_chunk.shape[0], :
-                ] = similarity_chunk
         return concatenate(weighted_similarity_chunks)
 
 
