@@ -64,7 +64,7 @@ IntersetSimilarityFromFunction
     similarity to some other set of species of interest.
     Calculates pairwise similarities with a callable function.
     See `ray.py` for a parallelized version of this.
-    
+
 
 Functions
 ---------
@@ -279,6 +279,7 @@ def weighted_similarity_chunk_nonsymmetric(
         If the caller wants to capture the Z that was used, this will be chunk_size
         rows of Z.
     """
+
     def enum_helper(X):
         if type(X) == DataFrame:
             return X.itertuples()
@@ -414,7 +415,7 @@ def weighted_similarity_chunk_symmetric(
         return similarities_chunk, result, chunk_index
     else:
         return None, result, chunk_index
-        
+
 
 class SimilarityFromFunction(SimilarityFromSymmetricFunction):
     def weighted_abundances(
@@ -431,13 +432,13 @@ class SimilarityFromFunction(SimilarityFromSymmetricFunction):
                 relative_abundance,
                 self.chunk_size,
                 chunk_index,
-                (similarities_out is not None)
+                (similarities_out is not None),
             )
             weighted_similarity_chunks.append(result)
             if similarities_out is not None:
-                similarities_out[
-                    chunk_index : chunk_index + result.shape[0], :
-                ] = similarities
+                similarities_out[chunk_index : chunk_index + result.shape[0], :] = (
+                    similarities
+                )
         return concatenate(weighted_similarity_chunks)
 
     def get_Y(self):

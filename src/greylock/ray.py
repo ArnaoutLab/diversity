@@ -56,17 +56,19 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
         X_ref = ray.put(self.X)
         Y_ref = ray.put(self.get_Y())
         abundance_ref = ray.put(relative_abundance)
-        futures : List[Any] = []
+        futures: List[Any] = []
         results = []
+
         def process_refs(refs):
             nonlocal results
             nonlocal similarities_out
             for chunk_index, abundance_chunk, similarity_chunk in ray.get(refs):
-                results.append( (chunk_index, abundance_chunk) )
+                results.append((chunk_index, abundance_chunk))
                 if similarities_out is not None:
                     similarities_out[
                         chunk_index : chunk_index + similarity_chunk.shape[0], :
                     ] = similarity_chunk
+
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
             if len(futures) >= self.max_inflight_tasks:
                 ready_refs, futures = ray.wait(futures)
