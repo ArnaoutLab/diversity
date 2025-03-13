@@ -28,7 +28,7 @@ In some of these classes (SimilarityFromArray, SimilarityFromArray) the
 similarity matrix exists explicitly and in others (SimilarityIdentity,
 SimilarityFromFunction) it is implicit, or only exists piecemeal at a time.
 In any case, one can caputure the similarity matrix that would be used
-by passing similarites_out (a NumPy array of appropriate shape)
+by passing similarities_out (a NumPy array of appropriate shape)
 to the weighted_abundances method. Of course, in some cases this may be
 silly (SimilarityIdentity) or unwise (SimilarityFromFunction with a large
 species count), but this functionality is implemented in all concrete
@@ -245,7 +245,7 @@ class IntersetSimilarityFromFile(SimilarityFromFile):
                     similarities_out[
                         j * self.chunk_size : (j + 1) * self.chunk_size, :
                     ] = chunk_as_numpy
-                weighted_abundance_chunks.append(chunk.to_numpy() @ relative_abundance)
+                weighted_abundance_chunks.append(chunk_as_numpy @ relative_abundance)
         return concatenate(weighted_abundance_chunks)
 
     def self_similar_weighted_abundances(
