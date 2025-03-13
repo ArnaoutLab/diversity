@@ -266,12 +266,36 @@ def weighted_similarity_chunk_nonsymmetric(
     return_Z: bool = True,
 ) -> Tuple[int, ndarray, Union[ndarray, None]]:
     """
+    Calculates some rows of the matrix product of Z @ p,
+    where Z is not given explicitly but rather each entry
+    Z[i,j] is calculated by a function.
+
+    It need not be the case that Z[i,j] == Z[j,i], or even
+    that Z is square; in such symmetric cases consider using
+    weighted_similarity_chunk_symmetric.
+
+    Parameters
+    ----------
+    similarity : a callable which, given row i of X and row j of Y,
+      calculates Z[i,j].
+    X: a NumPy array or pandas DataFrame whose rows contain feature
+      values for a given species.
+    Y: If this is None, then Z[i,j] is the similarity between species
+      i and j of the same list of species.
+      If Y is given, then Y's rows contain feature values for a different
+      set of species than X's rows.
+    relative_abundance: a NumPy array with rows corresponding to species,
+      columns correspond to (sub-)communities; the p in Z @ p.
+    chunk_size: How many rows to calculate.
+    chunk_index: The starting row index of the chunk to be calculated.
+    return_Z: Whether to return the calculated rows of Z.
+    
     Returns
     ------
     A tuple of 3 items.
     (0) chunk_index - int
       When this is a remote task, the chunks may be returned out of
-      order. We return the chunk_index to ndicate what chunk this was for,
+      order. We return the chunk_index to indicate what chunk this was for,
       so that the caller can sort the resulting chunks correctly.
     (1) result - NumPy array
         This is chunk_size rows of the resulting weighted abundance array.
@@ -384,6 +408,40 @@ def weighted_similarity_chunk_symmetric(
     chunk_index: int,
     return_Z: bool = True,
 ) -> Tuple[Union[ndarray, None], ndarray, int]:
+    """
+    Calculates partial results of the matrix product of Z @ p,
+    where Z is not given explicitly but rather each entry
+    Z[i,j] is calculated by a function. Assumes that
+    Z[i,j] == Z[j,i] always.
+
+    Parameters
+    ----------
+    similarity : a callable which, given row i of X and row j of Y,
+      calculates Z[i,j].
+    X: a NumPy array or pandas DataFrame whose rows contain feature
+      values for a given species.
+    relative_abundance: a NumPy array with rows corresponding to species,
+      columns correspond to (sub-)communities; the p in Z @ p.
+    chunk_size: How many rows of Z to calculate.
+    chunk_index: The starting row index of the chunk of Z to be calculated
+      and used.
+    return_Z: Whether to return the calculated rows of Z.
+    
+    Returns
+    ------
+    A tuple of 3 items.
+    (0) similarities_chunk - NumPy array (optional)
+        If the caller wants to capture the Z that was used, this will be chunk_size
+        rows of a matrix such that the upper triangle contains values of Z.
+        (Lower triangle and diagonal values will be all zero.)
+    (1) result - NumPy array
+        This is a partial result of the resulting weighted abundance array.
+    (0) chunk_index - int
+      When this is a remote task, the chunks may be returned out of
+      order. We return the chunk_index to indicate what chunk this was for,
+      so that the caller can sort the resulting chunks correctly.
+    """
+
     def enum_helper(X, start_index=0):
         if type(X) == DataFrame:
             return X.iloc[start_index:].itertuples()
