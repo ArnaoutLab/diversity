@@ -189,13 +189,13 @@ def make_abundance(counts: Union[DataFrame, ndarray], for_diversity=True) -> Abu
     -------
     An instance of a concrete subclass of Abundance.
     """
-    if for_diversity:
-        specific_class = AbundanceForDiversity
-    else:
+    if not for_diversity:
         specific_class = Abundance
+    else:
+        specific_class = AbundanceForDiversity
     if isinstance(counts, DataFrame):
         return specific_class(
-            counts=counts.to_numpy(), subcommunity_names=counts.columns
+            counts=counts.to_numpy(), subcommunity_names=counts.columns.to_list()
         )
     elif hasattr(counts, "shape"):
         if issparse(counts):
