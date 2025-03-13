@@ -20,7 +20,7 @@ from numpy import (
 )
 from numpy.linalg import norm
 from pandas import DataFrame, read_csv
-import scipy.sparse
+import scipy.sparse  # type: ignore[import]
 from pytest import fixture, raises, mark
 
 from greylock.log import LOGGER

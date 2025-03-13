@@ -56,7 +56,7 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
         X_ref = ray.put(self.X)
         Y_ref = ray.put(self.get_Y())
         abundance_ref = ray.put(relative_abundance)
-        futures: List[Union[ray._raylet.ObjectRef, ray._raylet.ObjectRefGenerator]] = []
+        futures : List[Any] = []
         results = []
         def process_refs(refs):
             nonlocal results
@@ -134,7 +134,7 @@ class SimilarityFromSymmetricRayFunction(SimilarityFromSymmetricFunction):
         weighted_similarity_chunk = ray.remote(weighted_similarity_chunk_symmetric)
         X_ref = ray.put(self.X)
         abundance_ref = ray.put(relative_abundance)
-        futures: List[Union[ray._raylet.ObjectRef, ray._raylet.ObjectRefGenerator]] = []
+        futures: List[Any] = []
         result = relative_abundance
         if similarities_out is not None:
             similarities_out.fill(0.0)
