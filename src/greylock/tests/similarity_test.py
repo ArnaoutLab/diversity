@@ -231,9 +231,8 @@ def test_weighted_abundances(
         sep = ","
     expected_similarity_matrix = read_csv(similarity.path, sep=sep).to_numpy()
     similarities_out = empty_like(expected_similarity_matrix)
-    actual = similarity.weighted_abundances(
-        relative_abundance, similarities_out=similarities_out
-    )
+    similarity.similarities_out = similarities_out
+    actual = similarity.weighted_abundances(relative_abundance)
     assert allclose(expected_similarity_matrix, similarities_out)
     assert allclose(actual, expected)
 
@@ -270,9 +269,9 @@ def test_interset_from_file(make_similarity_from_file):
     assert allclose(result, expected)
     expected_similarity_matrix = read_csv(sim.path).to_numpy()
     similarities_out = empty_like(expected_similarity_matrix)
+    sim.similarities_out = similarities_out
     result = sim.weighted_abundances(
         abundance_object.normalized_subcommunity_abundance,
-        similarities_out=similarities_out,
     )
     assert allclose(result, expected)
     assert allclose(expected_similarity_matrix, similarities_out)
@@ -346,10 +345,13 @@ def test_weighted_abundances_from_function(
         ]
     )
     similarity = SimilarityFromFunction(
-        func=similarity_function, X=X, chunk_size=chunk_size
+        func=similarity_function,
+        X=X,
+        chunk_size=chunk_size,
+        similarities_out=similarities_out,
     )
     weighted_abundances = similarity.weighted_abundances(
-        relative_abundance=relative_abundance, similarities_out=similarities_out
+        relative_abundance=relative_abundance
     )
     assert allclose(weighted_abundances, expected)
     assert allclose(similarities_out, expected_similarities)
@@ -481,14 +483,15 @@ def test_weighted_similarity_chunk_symmetric(chunk_index, expected):
 
 
 def test_symmetric_similarity():
+    species_count = symmetric_example_X.shape[0]
+    similarities_out = empty((species_count, species_count))
     expected = array([[1.4, 0.8], [1.6, 5.0], [1.4, 8.8], [0.8, 10.4]])
     obj = SimilarityFromSymmetricFunction(
         func=another_similarity_func,
         X=symmetric_example_X,
         chunk_size=2,
+        similarities_out=similarities_out,
     )
-    species_count = symmetric_example_X.shape[0]
-    similarities_out = empty((species_count, species_count))
     expected_similarities = array(
         [
             [
@@ -499,7 +502,7 @@ def test_symmetric_similarity():
         ]
     )
     result = obj.weighted_abundances(
-        symmetric_example_abundance, similarities_out=similarities_out
+        symmetric_example_abundance,
     )
     assert allclose(result, expected)
     assert allclose(similarities_out, expected_similarities)
@@ -755,9 +758,9 @@ def callcounter():
 @mark.parametrize("n", [1, 3, 10, 37])
 def test_identity_similarity(n):
     abundance = rng.random((n, 8))
-    sim = SimilarityIdentity()
     similarities_out = empty(shape=(n, n))
-    result = sim.weighted_abundances(abundance, similarities_out=similarities_out)
+    sim = SimilarityIdentity(similarities_out=similarities_out)
+    result = sim.weighted_abundances(abundance)
     assert (result == abundance).all()
     assert (similarities_out == identity(n)).all()
 
@@ -765,9 +768,9 @@ def test_identity_similarity(n):
 @mark.parametrize("a", [similarity_array_3by3_1, similarity_array_3by3_2])
 def test_array_similarity(a):
     abundance = rng.random((a.shape[0], 10))
-    sim = SimilarityFromArray(a)
     similarities_out = empty_like(a)
-    sim.weighted_abundances(abundance, similarities_out=similarities_out)
+    sim = SimilarityFromArray(a, similarities_out=similarities_out)
+    sim.weighted_abundances(abundance)
     assert (similarities_out == a).all()
 
 
@@ -798,9 +801,9 @@ def test_dataframe_similarity():
         {labels_2a[i]: S_2a[i] for i in range(no_species_2a)}, index=labels_2a
     )
     abundance = rng.random((no_species_2a, 10))
-    sim = SimilarityFromDataFrame(S_2a_df)
     similarities_out = empty_like(S_2a)
-    sim.weighted_abundances(abundance, similarities_out=similarities_out)
+    sim = SimilarityFromDataFrame(S_2a_df, similarities_out=similarities_out)
+    sim.weighted_abundances(abundance)
     assert (similarities_out == S_2a).all()
 
 

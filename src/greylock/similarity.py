@@ -87,11 +87,21 @@ from greylock.exceptions import InvalidArgumentError
 class Similarity(ABC):
     """Root superclass for classes computing weighted similarities."""
 
+    def __init__(self, similarities_out: Union[ndarray, None] = None):
+        """
+        Parameters
+        ----------
+        similarities_out:
+           If not None, a numpy array into which the similarity matrix
+           will be written.
+
+        """
+        self.similarities_out = similarities_out
+
     @abstractmethod
     def weighted_abundances(
         self,
         relative_abundances: Union[ndarray, spmatrix],
-        similarities_out: Union[ndarray, None] = None,
     ) -> ndarray:
         """Calculates weighted sums of similarities to each species.
         Parameters
@@ -101,10 +111,6 @@ class Similarity(ABC):
            rows correspond to unique species, columns correspond to
            communities, and each element is some type of count
            (absolute or normalized).
-
-        similarities_out:
-           If not None, a numpy array into which the similarity matrix
-           will be written.
 
         Returns
         -------
@@ -129,14 +135,12 @@ class Similarity(ABC):
 
 
 class SimilarityIdentity(Similarity):
-    def weighted_abundances(
-        self, relative_abundance, similarities_out: Union[ndarray, None] = None
-    ):
-        if similarities_out is not None:
+    def weighted_abundances(self, relative_abundance):
+        if self.similarities_out is not None:
             # create the identity matrix in place
-            similarities_out.fill(0.0)
+            self.similarities_out.fill(0.0)
             for i in range(relative_abundance.shape[0]):
-                similarities_out[i, i] = 1.0
+                self.similarities_out[i, i] = 1.0
         return relative_abundance
 
 
@@ -144,16 +148,20 @@ class SimilarityFromArray(Similarity):
     """Implements Similarity using similarities stored in a numpy
     ndarray."""
 
-    def __init__(self, similarity: Union[ndarray, spmatrix]):
+    def __init__(
+        self,
+        similarity: Union[ndarray, spmatrix],
+        similarities_out: Union[ndarray, None] = None,
+    ):
+        super().__init__(similarities_out)
         self.similarity = similarity
 
     def weighted_abundances(
         self,
         relative_abundance: Union[ndarray, spmatrix],
-        similarities_out: Union[ndarray, None] = None,
     ) -> ndarray:
-        if similarities_out is not None:
-            similarities_out[:, :] = self.similarity
+        if self.similarities_out is not None:
+            self.similarities_out[:, :] = self.similarity
         return self.similarity @ relative_abundance
 
     def self_similar_weighted_abundances(
@@ -169,8 +177,10 @@ class SimilarityFromDataFrame(SimilarityFromArray):
     """Implements Similarity using similarities stored in pandas
     dataframe."""
 
-    def __init__(self, similarity: DataFrame):
-        self.similarity = similarity.to_numpy()
+    def __init__(
+        self, similarity: DataFrame, similarities_out: Union[ndarray, None] = None
+    ):
+        super().__init__(similarity.to_numpy(), similarities_out)
 
 
 class SimilarityFromFile(Similarity):
@@ -182,7 +192,10 @@ class SimilarityFromFile(Similarity):
     """
 
     def __init__(
-        self, similarity_file_path: Union[str, Path], chunk_size: int = 100
+        self,
+        similarity_file_path: Union[str, Path],
+        chunk_size: int = 100,
+        similarities_out: Union[ndarray, None] = None,
     ) -> None:
         """
         Parameters
@@ -194,13 +207,13 @@ class SimilarityFromFile(Similarity):
         chunk_size:
             Number of rows to read from similarity matrix at a time.
         """
+        super().__init__(similarities_out)
         self.path = Path(similarity_file_path)
         self.chunk_size = chunk_size
 
     def weighted_abundances(
         self,
         relative_abundance: Union[ndarray, spmatrix],
-        similarities_out: Union[ndarray, None] = None,
     ) -> ndarray:
         weighted_abundances = empty(relative_abundance.shape, dtype=float64)
         with read_csv(
@@ -216,8 +229,8 @@ class SimilarityFromFile(Similarity):
                 weighted_abundances[i : i + self.chunk_size, :] = (
                     chunk_as_numpy @ relative_abundance
                 )
-                if similarities_out is not None:
-                    similarities_out[i : i + self.chunk_size, :] = chunk_as_numpy
+                if self.similarities_out is not None:
+                    self.similarities_out[i : i + self.chunk_size, :] = chunk_as_numpy
                 i += self.chunk_size
         return weighted_abundances
 
@@ -229,7 +242,6 @@ class IntersetSimilarityFromFile(SimilarityFromFile):
     def weighted_abundances(
         self,
         relative_abundance: Union[ndarray, spmatrix],
-        similarities_out: Union[ndarray, None] = None,
     ) -> ndarray:
         with read_csv(
             self.path,
@@ -241,8 +253,8 @@ class IntersetSimilarityFromFile(SimilarityFromFile):
             weighted_abundance_chunks = []
             for j, chunk in enumerate(similarity_matrix_chunks):
                 chunk_as_numpy = chunk.to_numpy()
-                if similarities_out is not None:
-                    similarities_out[
+                if self.similarities_out is not None:
+                    self.similarities_out[
                         j * self.chunk_size : (j + 1) * self.chunk_size, :
                     ] = chunk_as_numpy
                 weighted_abundance_chunks.append(chunk_as_numpy @ relative_abundance)
@@ -289,7 +301,7 @@ def weighted_similarity_chunk_nonsymmetric(
     chunk_size: How many rows to calculate.
     chunk_index: The starting row index of the chunk to be calculated.
     return_Z: Whether to return the calculated rows of Z.
-    
+
     Returns
     ------
     A tuple of 3 items.
@@ -342,7 +354,11 @@ class SimilarityFromSymmetricFunction(Similarity):
     """
 
     def __init__(
-        self, func: Callable, X: Union[ndarray, DataFrame], chunk_size: int = 100
+        self,
+        func: Callable,
+        X: Union[ndarray, DataFrame],
+        chunk_size: int = 100,
+        similarities_out: Union[ndarray, None] = None,
     ):
         """
         Parameters
@@ -356,6 +372,7 @@ class SimilarityFromSymmetricFunction(Similarity):
         chunk_size:
             Number of rows in similarity matrix to calculate at a time.
         """
+        super().__init__(similarities_out)
         self.func = func
         self.X = X
         self.chunk_size = chunk_size
@@ -366,11 +383,10 @@ class SimilarityFromSymmetricFunction(Similarity):
     def weighted_abundances(
         self,
         abundance: Union[ndarray, spmatrix],
-        similarities_out: Union[ndarray, None] = None,
     ) -> ndarray:
         result = abundance.copy()
-        if similarities_out is not None:
-            similarities_out.fill(0.0)
+        if self.similarities_out is not None:
+            self.similarities_out.fill(0.0)
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
             _, chunk, similarities = weighted_similarity_chunk_symmetric(
                 similarity=self.func,
@@ -378,25 +394,25 @@ class SimilarityFromSymmetricFunction(Similarity):
                 relative_abundance=abundance,
                 chunk_size=self.chunk_size,
                 chunk_index=chunk_index,
-                return_Z=(similarities_out is not None),
+                return_Z=(self.similarities_out is not None),
             )
             result = result + chunk
-            if similarities_out is not None:
-                similarities_out[chunk_index : chunk_index + self.chunk_size, :] = (
-                    similarities
-                )
-        if similarities_out is not None:
-            similarities_out += similarities_out.T
+            if self.similarities_out is not None:
+                self.similarities_out[
+                    chunk_index : chunk_index + self.chunk_size, :
+                ] = similarities
+        if self.similarities_out is not None:
+            self.similarities_out += self.similarities_out.T
             identity_chunk = identity(self.chunk_size)
             for chunk_index in range(0, self.X.shape[0], self.chunk_size):
-                if chunk_index + self.chunk_size <= similarities_out.shape[0]:
-                    similarities_out[
+                if chunk_index + self.chunk_size <= self.similarities_out.shape[0]:
+                    self.similarities_out[
                         chunk_index : chunk_index + self.chunk_size,
                         chunk_index : chunk_index + self.chunk_size,
                     ] += identity_chunk
                 else:
-                    for i in range(chunk_index, similarities_out.shape[0]):
-                        similarities_out[i, i] = 1.0
+                    for i in range(chunk_index, self.similarities_out.shape[0]):
+                        self.similarities_out[i, i] = 1.0
         return result
 
 
@@ -426,7 +442,7 @@ def weighted_similarity_chunk_symmetric(
     chunk_index: The starting row index of the chunk of Z to be calculated
       and used.
     return_Z: Whether to return the calculated rows of Z.
-    
+
     Returns
     ------
     A tuple of 3 items.
@@ -479,7 +495,6 @@ class SimilarityFromFunction(SimilarityFromSymmetricFunction):
     def weighted_abundances(
         self,
         relative_abundance: Union[ndarray, spmatrix],
-        similarities_out: Union[ndarray, None] = None,
     ):
         weighted_similarity_chunks = []
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
@@ -490,13 +505,13 @@ class SimilarityFromFunction(SimilarityFromSymmetricFunction):
                 relative_abundance,
                 self.chunk_size,
                 chunk_index,
-                (similarities_out is not None),
+                (self.similarities_out is not None),
             )
             weighted_similarity_chunks.append(result)
-            if similarities_out is not None:
-                similarities_out[chunk_index : chunk_index + result.shape[0], :] = (
-                    similarities
-                )
+            if self.similarities_out is not None:
+                self.similarities_out[
+                    chunk_index : chunk_index + result.shape[0], :
+                ] = similarities
         return concatenate(weighted_similarity_chunks)
 
     def get_Y(self):
@@ -510,6 +525,7 @@ class IntersetSimilarityFromFunction(SimilarityFromFunction):
         X: Union[ndarray, DataFrame],
         Y: Union[ndarray, DataFrame],
         chunk_size: int = 100,
+        similarities_out: Union[ndarray, None] = None,
     ):
         """
         Parameters
@@ -525,7 +541,7 @@ class IntersetSimilarityFromFunction(SimilarityFromFunction):
         chunk_size:
             Number of rows in similarity matrix to calculate at a time.
         """
-        super().__init__(func, X, chunk_size)
+        super().__init__(func, X, chunk_size, similarities_out)
         self.Y = Y
 
     def get_Y(self):

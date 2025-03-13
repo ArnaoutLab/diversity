@@ -237,12 +237,15 @@ def test_weighted_abundances_from_function(relative_abundance, X, chunk_size):
             sim_matrix[i, j] = similarity_function(X[i], X[j])
     similarity1 = SimilarityFromArray(sim_matrix)
     expected = similarity1.weighted_abundances(relative_abundance=relative_abundance)
-    similarity = SimilarityFromRayFunction(
-        func=similarity_function, X=X, chunk_size=chunk_size
-    )
     similarities_out = empty(shape=(X.shape[0], X.shape[0]))
+    similarity = SimilarityFromRayFunction(
+        func=similarity_function,
+        X=X,
+        chunk_size=chunk_size,
+        similarities_out=similarities_out,
+    )
     weighted_abundances = similarity.weighted_abundances(
-        relative_abundance=relative_abundance, similarities_out=similarities_out
+        relative_abundance=relative_abundance
     )
     assert allclose(weighted_abundances, expected)
     assert allclose(similarities_out, sim_matrix)
@@ -271,6 +274,7 @@ def test_comparisons():
 
 def test_similarities_out():
     computed_similarity_matrices = []
+    similarities_out = empty((X_large.shape[0], X_large.shape[0]))
     for simclass in [
         SimilarityFromFunction,
         SimilarityFromRayFunction,
@@ -279,14 +283,20 @@ def test_similarities_out():
     ]:
         if "Ray" in simclass.__name__:
             similarity = simclass(
-                func=similarity_function, X=X_large, chunk_size=7, max_inflight_tasks=5
+                func=similarity_function,
+                X=X_large,
+                chunk_size=7,
+                max_inflight_tasks=5,
+                similarities_out=similarities_out,
             )
         else:
-            similarity = simclass(func=similarity_function, X=X_large, chunk_size=7)
-        similarities_out = empty((X_large.shape[0], X_large.shape[0]))
-        similarity.weighted_abundances(
-            abundances_large, similarities_out=similarities_out
-        )
+            similarity = simclass(
+                func=similarity_function,
+                X=X_large,
+                chunk_size=7,
+                similarities_out=similarities_out,
+            )
+        similarity.weighted_abundances(abundances_large)
         computed_similarity_matrices.append(similarities_out)
     for matrix in computed_similarity_matrices[1:]:
         assert allclose(computed_similarity_matrices[0], matrix)
