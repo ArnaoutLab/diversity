@@ -1,7 +1,7 @@
 """Module for calculating weighted subcommunity and metacommunity
 similarities.
 
-At the heart of calculating diversity is the matrix multiplication
+At the heart of calculating diversity with similarity is the matrix multiplication
     Z @ p
 where Z is the similarity matrix and p is a vector (for a single unified
 community) or matrix (for subcommunities of a metacommunity) representing
@@ -9,7 +9,7 @@ abundances.
 ( See the Leinster and Cobbold paper, equation (1).)
 The Similarity class is responsible for premultiplying abundances by a
 similarity matrix. If compute resources were infinite, this would just
-be a matrix mutliplication. However, the similarity matrix may be extremely
+be a matrix multiplication. However, the similarity matrix may be extremely
 large and/or expensive to calculate. Various subclasses of Similarity use
 various strategies for dealing with the generation and use of this
 similarity matrix in various ways. For example:
@@ -272,7 +272,8 @@ def weighted_similarity_chunk_nonsymmetric(
     relative_abundance: ndarray,
     chunk_size: int,
     chunk_index: int,
-) -> Tuple[int, ndarray]:
+    return_Z: bool = True,
+) -> Tuple[int, ndarray, Union[ndarray, None]]:
     def enum_helper(X):
         if type(X) == DataFrame:
             return X.itertuples()
@@ -285,10 +286,13 @@ def weighted_similarity_chunk_nonsymmetric(
     for i, row_i in enumerate(enum_helper(chunk)):
         for j, row_j in enumerate(enum_helper(Y)):
             similarities_chunk[i, j] = similarity(row_i, row_j)
+    result = similarities_chunk @ relative_abundance
+    if not return_Z:
+        similarities_chunk = None
     # When this is a remote task, the chunks may be returned out of
     # order. Indicate what chunk this was for, so we can sort the
     # resulting chunks correctly:
-    return chunk_index, similarities_chunk @ relative_abundance, similarities_chunk
+    return chunk_index, result, similarities_chunk
 
 
 class SimilarityFromSymmetricFunction(Similarity):
@@ -346,6 +350,7 @@ class SimilarityFromSymmetricFunction(Similarity):
                 relative_abundance=abundance,
                 chunk_size=self.chunk_size,
                 chunk_index=chunk_index,
+                return_Z=(similarities_out is not None),
             )
             result = result + chunk
             if similarities_out is not None:
@@ -373,7 +378,8 @@ def weighted_similarity_chunk_symmetric(
     relative_abundance: ndarray,
     chunk_size: int,
     chunk_index: int,
-) -> Tuple[ndarray, ndarray]:
+    return_Z: bool = True,
+) -> Tuple[ndarray, ndarray, int]:
     def enum_helper(X, start_index=0):
         if type(X) == DataFrame:
             return X.iloc[start_index:].itertuples()
@@ -400,6 +406,8 @@ def weighted_similarity_chunk_symmetric(
     )
     relative_abundance = relative_abundance[chunk_index : chunk_index + chunk_size]
     cols_result = similarities_chunk.T @ relative_abundance
+    if not return_Z:
+        similarities_chunk = None
     return similarities_chunk, rows_result + cols_result, chunk_index
 
 
@@ -418,6 +426,7 @@ class SimilarityFromFunction(SimilarityFromSymmetricFunction):
                 relative_abundance,
                 self.chunk_size,
                 chunk_index,
+                (similarities_out is not None)
             )
             weighted_similarity_chunks.append(result)
             if similarities_out is not None:

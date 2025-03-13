@@ -78,6 +78,7 @@ class SimilarityFromRayFunction(SimilarityFromFunction):
                 relative_abundance=abundance_ref,
                 chunk_size=self.chunk_size,
                 chunk_index=chunk_index,
+                return_Z=(similarities_out is not None),
             )
             futures.append(chunk_future)
         process_refs(futures)
@@ -159,6 +160,7 @@ class SimilarityFromSymmetricRayFunction(SimilarityFromSymmetricFunction):
                 relative_abundance=abundance_ref,
                 chunk_size=self.chunk_size,
                 chunk_index=chunk_index,
+                return_Z=(similarities_out is not None),
             )
             futures.append(chunk_future)
         process_refs(futures)
