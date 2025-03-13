@@ -372,7 +372,7 @@ class SimilarityFromSymmetricFunction(Similarity):
         if similarities_out is not None:
             similarities_out.fill(0.0)
         for chunk_index in range(0, self.X.shape[0], self.chunk_size):
-            similarities, chunk, _ = weighted_similarity_chunk_symmetric(
+            _, chunk, similarities = weighted_similarity_chunk_symmetric(
                 similarity=self.func,
                 X=self.X,
                 relative_abundance=abundance,
@@ -407,7 +407,7 @@ def weighted_similarity_chunk_symmetric(
     chunk_size: int,
     chunk_index: int,
     return_Z: bool = True,
-) -> Tuple[Union[ndarray, None], ndarray, int]:
+) -> Tuple[int, ndarray, Union[ndarray, None]]:
     """
     Calculates partial results of the matrix product of Z @ p,
     where Z is not given explicitly but rather each entry
@@ -470,9 +470,9 @@ def weighted_similarity_chunk_symmetric(
     cols_result = similarities_chunk.T @ relative_abundance
     result = rows_result + cols_result
     if return_Z:
-        return similarities_chunk, result, chunk_index
+        return chunk_index, result, similarities_chunk
     else:
-        return None, result, chunk_index
+        return chunk_index, result, None
 
 
 class SimilarityFromFunction(SimilarityFromSymmetricFunction):

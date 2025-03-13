@@ -144,7 +144,7 @@ class SimilarityFromSymmetricRayFunction(SimilarityFromSymmetricFunction):
         def process_refs(refs):
             nonlocal result
             nonlocal similarities_out
-            for similarities, addend, chunk_index in ray.get(refs):
+            for chunk_index, addend, similarities in ray.get(refs):
                 result = result + addend
                 if similarities_out is not None:
                     similarities_out[
