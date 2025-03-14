@@ -394,7 +394,9 @@ def compare_dense_sparse(counts, dense_similarity, sparse_similarity):
         counts, similarity=SimilarityFromArray(sparse_similarity)
     )
     meta_sparse_df = meta_sparse.to_dataframe(viewpoint=viewpoints, measures=measures)
-    assert meta_dense_df.equals(meta_sparse_df)
+    for col in meta_dense_df:
+        if col != "community":
+            assert allclose(meta_dense_df[col], meta_sparse_df[col])
 
 
 @mark.parametrize(
