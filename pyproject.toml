@@ -10,10 +10,10 @@ authors = [
     { name = "Phuc Nguyen", email = "pnguye10@bidmc.harvard.edu" },
     { name = "Jasper Braun", email = "jasperbraun90@gmail.com" },
 ]
-version = "1.0.0"
+version = "1.1.0"
 description = "A Python package for measuring the composition of complex datasets"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
