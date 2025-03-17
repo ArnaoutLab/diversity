@@ -10,6 +10,9 @@ authors = [
     { name = "Phuc Nguyen", email = "pnguye10@bidmc.harvard.edu" },
     { name = "Jasper Braun", email = "jasperbraun90@gmail.com" },
 ]
+maintainers = [
+    { name = "Alex Morgan", email = "amorgan2@bidmc.harvard.edu" },
+]
 version = "1.1.0"
 description = "A Python package for measuring the composition of complex datasets"
 readme = "README.md"
@@ -24,7 +27,7 @@ dependencies = ["numpy>=1.24.0", "pandas>=1.5.2", "scipy>=1.10.0"]
 [project.optional-dependencies]
 tests = ["pytest>=7.2.1", "pytest-cov>=3.0.0"]
 lint = ["black>=24.3.0"]
-ray = ["ray>=2.2.0"]
+ray = ["ray>=2.42.1"]
 
 [project.urls]
 "Homepage" = "https://github.com/ArnaoutLab/diversity"
