@@ -33,7 +33,7 @@ jobs:
         pip install .[tests]
     - name: Run tests
       run: |
-        pytest tests/base_tests
+        pytest src/greylock/tests/base_tests
 
       
   test-ray:
