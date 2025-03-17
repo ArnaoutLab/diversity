@@ -27,7 +27,7 @@ dependencies = ["numpy>=1.24.0", "pandas>=1.5.2", "scipy>=1.10.0"]
 [project.optional-dependencies]
 tests = ["pytest>=7.2.1", "pytest-cov>=3.0.0"]
 lint = ["black>=24.3.0"]
-ray = ["ray>=2.8.1"]
+ray = ["ray>=2.42.1"]
 
 [project.urls]
 "Homepage" = "https://github.com/ArnaoutLab/diversity"
