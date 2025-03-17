@@ -4,8 +4,8 @@ from pytest import mark
 from greylock.metacommunity import Metacommunity
 from greylock.components import Components
 from greylock.abundance import make_abundance
-from greylock.tests.metacommunity_test import metacommunity_data
-from greylock.tests.similarity_test import similarity_array_3by3_1
+from greylock.tests.base_tests.metacommunity_test import metacommunity_data
+from greylock.tests.base_tests.similarity_test import similarity_array_3by3_1
 
 
 @mark.parametrize(
