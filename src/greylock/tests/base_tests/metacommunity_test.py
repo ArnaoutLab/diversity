@@ -18,8 +18,8 @@ from greylock.similarity import (
     SimilarityFromFunction,
 )
 from greylock import Metacommunity
-from greylock.tests.similarity_test import similarity_dataframe_3by3
-from greylock.tests.similarity_test import similarity_array_3by3_1
+from greylock.tests.base_tests.similarity_test import similarity_dataframe_3by3
+from greylock.tests.base_tests.similarity_test import similarity_array_3by3_1
 
 MEASURES = (
     "alpha",

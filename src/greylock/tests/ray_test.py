@@ -25,9 +25,9 @@ from greylock.ray import (
     IntersetSimilarityFromRayFunction,
 )
 import greylock.tests.mockray as mockray
-from greylock.tests.similarity_test import similarity_from_distance
+from greylock.tests.base_tests.similarity_test import similarity_from_distance
 from pytest import fixture, raises, mark
-from greylock.tests.similarity_test import (
+from greylock.tests.base_tests.similarity_test import (
     relative_abundance_3by2,
     relative_abundance_3by1,
     X_3by1,
