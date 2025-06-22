@@ -13,7 +13,7 @@ from pandas import DataFrame, Index, Series, concat
 from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray
 from greylock.exceptions import InvalidArgumentError
 
-from greylock.abundance import make_abundance
+from greylock.abundance import make_abundance, Abundance
 from greylock.similarity import Similarity, SimilarityFromArray, SimilarityIdentity
 from greylock.components import Components
 from greylock.powermean import power_mean
@@ -46,6 +46,7 @@ class Metacommunity:
         self,
         counts: Union[DataFrame, ndarray],
         similarity: Union[ndarray, Similarity, None] = None,
+        backend = None
     ) -> None:
         """
         Parameters
@@ -63,8 +64,11 @@ class Metacommunity:
             If None is given here, the diversity measures calculated will
             be frequency-sensitive only, not similarity-sensitive.
         """
-        self.counts = counts
-        self.abundance = make_abundance(counts=counts)
+        self.backend = backend
+        if isinstance(counts, Abundance):
+            self.abundance = counts
+        else:
+            self.abundance = make_abundance(counts=counts)
         if similarity is None:
             self.similarity = SimilarityIdentity()
         elif isinstance(similarity, ndarray):
@@ -102,32 +106,42 @@ class Metacommunity:
         numerator = self.components.numerators[measure]
         denominator = self.components.denominators[measure]
         if measure == "gamma":
-            denominator = broadcast_to(
+            if self.backend is None:
+                denominator = broadcast_to(
+                    denominator,
+                    self.abundance.normalized_subcommunity_abundance.shape,
+                )
+            else:
+                denominator = self.backend.broadcast_to(
+                    denominator,
+                    self.abundance.normalized_subcommunity_abundance.shape,
+                )                    
+        if self.backend is None:
+            community_ratio = divide(
+                numerator,
                 denominator,
-                self.abundance.normalized_subcommunity_abundance.shape,
+                out=zeros(denominator.shape),
+                where=denominator != 0,
             )
-        community_ratio = divide(
-            numerator,
-            denominator,
-            out=zeros(denominator.shape),
-            where=denominator != 0,
-        )
+        else:
+            community_ratio = self.backend.get_community_ratio(numerator, denominator)
         diversity_measure = power_mean(
             order=1 - viewpoint,
             weights=self.abundance.normalized_subcommunity_abundance,
             items=community_ratio,
             atol=self.abundance.min_count,
+            backend=self.backend,
         )
         if measure in {"beta", "normalized_beta"}:
-            return 1 / diversity_measure
+            diversity_measure = 1 / diversity_measure
 
-        if measure in {"rho_hat"} and self.counts.shape[1] > 1:
-            N = self.counts.shape[1]
-            return (diversity_measure - 1) / (N - 1)
+        elif measure in {"rho_hat"} and self.abundance.num_subcommunities > 1:
+            N = self.abundance.num_subcommunities
+            diversity_measure = (diversity_measure - 1) / (N - 1)
 
-        if measure in {"beta_hat"} and self.counts.shape[1] > 1:
-            N = self.counts.shape[1]
-            return ((N / diversity_measure) - 1) / (N - 1)
+        if measure in {"beta_hat"} and self.abundance.num_subcommunities > 1:
+            N = self.abundance.num_subcommunities
+            diversity_measure = ((N / diversity_measure) - 1) / (N - 1)
 
         return diversity_measure
 
@@ -152,6 +166,7 @@ class Metacommunity:
             1 - viewpoint,
             self.abundance.subcommunity_normalizing_constants,
             subcommunity_diversity,
+            backend=self.backend,
         )
 
     def subcommunities_to_dataframe(self, viewpoint: float, measures=MEASURES):
@@ -170,9 +185,14 @@ class Metacommunity:
         A pandas.DataFrame containing all subcommunity diversity
         measures for a given viewpoint
         """
+        if self.backend is None:
+            fn = lambda x : x
+        else:
+            fn = self.backend.to_numpy
+            
         df = DataFrame(
             {
-                measure: self.subcommunity_diversity(viewpoint, measure)
+                measure: fn(self.subcommunity_diversity(viewpoint, measure))
                 for measure in measures
             }
         )
@@ -196,9 +216,14 @@ class Metacommunity:
         A pandas.DataFrame containing all metacommunity diversity
         measures for a given viewpoint
         """
+        if self.backend is None:
+            fn = lambda x : x
+        else:
+            fn = self.backend.to_numpy
+            
         df = DataFrame(
             {
-                measure: self.metacommunity_diversity(viewpoint, measure)
+                measure: fn(self.metacommunity_diversity(viewpoint, measure))
                 for measure in measures
             },
             index=Index(["metacommunity"], name="community"),

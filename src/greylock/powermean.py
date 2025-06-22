@@ -20,13 +20,14 @@ from numpy import (
     all,
     any,
     ndarray,
+    allclose,
 )
 
 from greylock.exceptions import InvalidArgumentError
 
 
 def __validate_power_mean_args(
-    weights: ndarray, items: ndarray, atol: float, weight_is_nonzero: ndarray
+        weights: ndarray, items: ndarray, atol: float, weight_is_nonzero: ndarray, backend = None
 ) -> None:
     """Validates arguments for power_mean.
 
@@ -55,17 +56,40 @@ def __validate_power_mean_args(
             f"Shape of 'weights' ({weights.shape}) must be the same as"
             f" shape of 'items' ({items.shape})."
         )
-    all_0_column = all(~weight_is_nonzero, axis=0)
-    if any(all_0_column):
+    if backend is None:
+        all_0_column = any(all(~weight_is_nonzero, axis=0))
+    else:
+        all_0_column = backend.any_all_false_columns(weight_is_nonzero)
+    if all_0_column:
         raise InvalidArgumentError(
             "Argument 'weights' must have at least one nonzero weight in each column. A weight is"
             " considered 0 if its absolute value is greater than or equal to"
             f" configurable minimum threshold: {atol:.2e}."
         )
 
-
+### DOUBLE-DOING JUST FOR DEVELOPMENT
 def power_mean(
-    order: float, weights: ndarray, items: ndarray, atol: float = 1e-9
+        order: float, weights: ndarray, items: ndarray, atol: float = 1e-9, backend = None
+) -> ndarray:
+    numpy_result = _power_mean(order,
+                               weights.to('cpu').numpy(),
+                               items.to('cpu').numpy(),
+                               atol,
+                               None)
+    torch_result = _power_mean(order, weights, items, atol, backend)
+    if numpy_result.shape != tuple() or tuple(torch_result.shape) != tuple():
+        if not allclose(torch_result.to('cpu').numpy(), numpy_result):
+            print("Old result:")
+            print(numpy_result.shape)
+            print(numpy_result)
+            print("New result:")
+            print(torch_result.shape)
+            print(torch_result)
+            breakpoint()
+    return torch_result
+    
+def _power_mean(
+        order: float, weights: ndarray, items: ndarray, atol: float = 1e-9, backend = None
 ) -> ndarray:
     """Calculates weighted power means.
 
@@ -94,21 +118,55 @@ def power_mean(
     or infinity are used respectively. An exception is raised if all weights
     in a column are close to 0.
     """
-    weight_is_nonzero = abs(weights) >= atol
-    __validate_power_mean_args(weights, items, atol, weight_is_nonzero)
+    if backend is None:
+        weight_is_nonzero = abs(weights) >= atol
+    else:
+        weight_is_nonzero = backend.find_nonzero_entries(weights, atol)
+    __validate_power_mean_args(weights, items, atol, weight_is_nonzero, backend=backend)
     if isclose(order, 0):
-        return prod(
-            power(items, weights, where=weight_is_nonzero),
-            axis=0,
-            where=weight_is_nonzero,
-        )
+        if backend is None:
+            power_result = power(items, weights, where=weight_is_nonzero)
+            return prod(
+                power_result,
+                axis=0,
+                where=weight_is_nonzero,
+            )
+        else:
+            power_result = backend.pow(items, weights)
+
+            if False:
+                # EXTRANEOUS FOR TROUBLESHOOTING WILL REMOVE
+                print(items.dtype)
+                print(weights.dtype)
+                items = items.to('cpu').numpy()
+                weights = weights.to('cpu').numpy()
+                print(items.dtype)
+                print(weights.dtype)
+                weight_is_nonzero = abs(weights) >= atol
+                power_result_numpy = power(items, weights, where=weight_is_nonzero)
+                diff = power_result.to('cpu').numpy() - power_result_numpy
+                weirdness_mask = weight_is_nonzero & (abs(diff) > 0.0000001)
+                print(items[weirdness_mask])
+                print(items[weight_is_nonzero].mean())
+                print(weights[weirdness_mask])
+                print(weights[weight_is_nonzero].mean())
+
+            # This shouldn't be neccessary:
+            #power_result[backend.logical_not(weight_is_nonzero)] = 1.0
+            return backend.prod0(power_result)
     elif order < -100:
         return amin(items, axis=0, where=weight_is_nonzero, initial=inf)
     elif order > 100:
         return amax(items, axis=0, where=weight_is_nonzero, initial=-inf)
     else:
-        result = zeros(shape=items.shape, dtype=float64)
-        power(items, order, where=weight_is_nonzero, out=result)
-        multiply(result, weights, where=weight_is_nonzero, out=result)
-        items_sum = numpy_sum(result, axis=0, where=weight_is_nonzero)
-        return power(items_sum, 1 / order)
+        if abs(order) > 25:
+            pass #breakpoint()
+        if backend is None:
+            result = zeros(shape=items.shape, dtype=float64)
+            power(items, order, where=weight_is_nonzero, out=result)
+            multiply(result, weights, where=weight_is_nonzero, out=result)
+            items_sum = numpy_sum(result, axis=0, where=weight_is_nonzero)
+            return power(items_sum, 1 / order)
+        else:
+            return backend.powermean(items, weights, order, weight_is_nonzero)
+            
