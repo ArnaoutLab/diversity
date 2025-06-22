@@ -77,6 +77,8 @@ def power_mean(
                                atol,
                                None)
     torch_result = _power_mean(order, weights, items, atol, backend)
+    if torch_result is None:
+        breakpoint()
     if numpy_result.shape != tuple() or tuple(torch_result.shape) != tuple():
         if not allclose(torch_result.to('cpu').numpy(), numpy_result):
             print("Old result:")
@@ -155,9 +157,15 @@ def _power_mean(
             #power_result[backend.logical_not(weight_is_nonzero)] = 1.0
             return backend.prod0(power_result)
     elif order < -100:
-        return amin(items, axis=0, where=weight_is_nonzero, initial=inf)
+        if backend is None:
+            return amin(items, axis=0, where=weight_is_nonzero, initial=inf)
+        else:
+            return backend.find_amin(items, where=weight_is_nonzero, axis=0)
     elif order > 100:
-        return amax(items, axis=0, where=weight_is_nonzero, initial=-inf)
+        if backend is None:
+            return amax(items, axis=0, where=weight_is_nonzero, initial=-inf)
+        else:
+            return backend.find_amax(items, where=weight_is_nonzero, axis=0)
     else:
         if abs(order) > 25:
             pass #breakpoint()

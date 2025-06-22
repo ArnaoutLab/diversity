@@ -1,6 +1,6 @@
 from typing import Iterable, Union
 from greylock.similarity import Similarity
-from torch import tensor, zeros_like, div, abs, any, all, logical_not, pow, prod, mul, sum, float64, broadcast_to
+from torch import tensor, zeros_like, div, abs, any, all, logical_not, pow, prod, mul, sum, float64, broadcast_to, amin, amax
 from numpy import ndarray
 from greylock.abundance import AbundanceForDiversity
 import numpy as np
@@ -95,3 +95,13 @@ def powermean(items, weights, order, weight_is_nonzero):
 
 def to_numpy(t):
     return t.to('cpu').numpy()
+
+def find_amin(items, where, axis=0):
+    items[~where] = np.inf
+    return amin(items, axis)
+
+def find_amax(items, where, axis=0):
+    items[~where] = -np.inf
+    return amax(items, axis)
+
+    
