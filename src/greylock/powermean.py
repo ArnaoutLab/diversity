@@ -113,25 +113,8 @@ def power_mean(
         else:
             power_result = backend.pow(items, weights)
 
-            if False:
-                # EXTRANEOUS FOR TROUBLESHOOTING WILL REMOVE
-                print(items.dtype)
-                print(weights.dtype)
-                items = items.to('cpu').numpy()
-                weights = weights.to('cpu').numpy()
-                print(items.dtype)
-                print(weights.dtype)
-                weight_is_nonzero = abs(weights) >= atol
-                power_result_numpy = power(items, weights, where=weight_is_nonzero)
-                diff = power_result.to('cpu').numpy() - power_result_numpy
-                weirdness_mask = weight_is_nonzero & (abs(diff) > 0.0000001)
-                print(items[weirdness_mask])
-                print(items[weight_is_nonzero].mean())
-                print(weights[weirdness_mask])
-                print(weights[weight_is_nonzero].mean())
-
             # This shouldn't be neccessary:
-            #power_result[backend.logical_not(weight_is_nonzero)] = 1.0
+            power_result[backend.logical_not(weight_is_nonzero)] = 1.0
             return backend.prod0(power_result)
     elif order < -100:
         if backend is None:

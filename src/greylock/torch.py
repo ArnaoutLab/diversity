@@ -43,7 +43,7 @@ class AbundanceFromTensor(AbundanceForDiversity):
         )
         self.metacommunity_abundance = self.make_metacommunity_abundance()
 
-def _get_community_ratio(numerator, denominator):
+def get_community_ratio(numerator, denominator):
     community_ratio = zeros_like(denominator)
     mask = denominator != 0
     if isinstance(numerator, int):
@@ -58,20 +58,6 @@ def _get_community_ratio(numerator, denominator):
     community_ratio[mask] = div_results[mask]
     return community_ratio
 
-### FOR DEVELOPMENT WILL REMOVE
-def get_community_ratio(numerator, denominator):
-    torch_result = _get_community_ratio(numerator, denominator)
-    if not isinstance(numerator, int):
-        numerator = numerator.to('cpu').numpy()
-    numpy_result = np.divide(
-                numerator,
-                denominator.to('cpu'),
-                out=np.zeros(denominator.shape),
-                where=denominator.to('cpu').numpy() != 0,
-            )
-    assert np.allclose(torch_result.to('cpu'), numpy_result)
-    return torch_result
-    
 def find_nonzero_entries(t, atol):
     return abs(t) >= atol
 
