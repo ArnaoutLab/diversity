@@ -23,10 +23,6 @@ class SimilarityFromTensor(Similarity):
     ) -> ndarray:
         if self.similarities_out is not None:
             self.similarities_out[:, :] = self.similarity.numpy()
-        print("Z dtype:")
-        print(self.similarity.dtype)
-        print("counts dtype:")
-        print(relative_abundance.dtype)
         return self.similarity @ relative_abundance
 
 class AbundanceFromTensor(AbundanceForDiversity):
@@ -66,8 +62,10 @@ def any_all_false_columns(t):
     has_all_false_col = any(logical_not(has_true_in_col))
     return has_all_false_col
 
+"""
 def power(items, weights):
     return pow(items, weights)
+"""
 
 def prod0(t):
     return prod(t, dim=0)
