@@ -19,6 +19,7 @@ from greylock.components import Components
 from greylock.powermean import power_mean
 import greylock.numpy
 
+
 class Metacommunity:
     similarity: Similarity
     """Creates diversity components and calculates diversity measures.
@@ -46,7 +47,7 @@ class Metacommunity:
         self,
         counts: Union[DataFrame, ndarray],
         similarity: Union[ndarray, Similarity, None] = None,
-        backend = greylock.numpy
+        backend=greylock.numpy,
     ) -> None:
         """
         Parameters
@@ -109,7 +110,7 @@ class Metacommunity:
             denominator = self.backend.broadcast_to(
                 denominator,
                 self.abundance.normalized_subcommunity_abundance.shape,
-            )                    
+            )
         community_ratio = self.backend.get_community_ratio(numerator, denominator)
         diversity_measure = power_mean(
             order=1 - viewpoint,
@@ -171,10 +172,12 @@ class Metacommunity:
         A pandas.DataFrame containing all subcommunity diversity
         measures for a given viewpoint
         """
-            
+
         df = DataFrame(
             {
-                measure: self.backend.to_numpy(self.subcommunity_diversity(viewpoint, measure))
+                measure: self.backend.to_numpy(
+                    self.subcommunity_diversity(viewpoint, measure)
+                )
                 for measure in measures
             }
         )
@@ -200,7 +203,9 @@ class Metacommunity:
         """
         df = DataFrame(
             {
-                measure: self.backend.to_numpy(self.metacommunity_diversity(viewpoint, measure))
+                measure: self.backend.to_numpy(
+                    self.metacommunity_diversity(viewpoint, measure)
+                )
                 for measure in measures
             },
             index=Index(["metacommunity"], name="community"),

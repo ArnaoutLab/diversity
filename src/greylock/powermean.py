@@ -26,8 +26,13 @@ from numpy import (
 from greylock.exceptions import InvalidArgumentError
 import greylock.numpy
 
+
 def __validate_power_mean_args(
-        weights: ndarray, items: ndarray, atol: float, weight_is_nonzero: ndarray, backend = greylock.numpy
+    weights: ndarray,
+    items: ndarray,
+    atol: float,
+    weight_is_nonzero: ndarray,
+    backend=greylock.numpy,
 ) -> None:
     """Validates arguments for power_mean.
 
@@ -64,8 +69,13 @@ def __validate_power_mean_args(
             f" configurable minimum threshold: {atol:.2e}."
         )
 
+
 def power_mean(
-        order: float, weights: ndarray, items: ndarray, atol: float = 1e-9, backend = greylock.numpy
+    order: float,
+    weights: ndarray,
+    items: ndarray,
+    atol: float = 1e-9,
+    backend=greylock.numpy,
 ) -> ndarray:
     """Calculates weighted power means.
 
@@ -104,4 +114,3 @@ def power_mean(
         return backend.find_amax(items, where=weight_is_nonzero, axis=0)
     else:
         return backend.powermean(items, weights, order, weight_is_nonzero)
-            

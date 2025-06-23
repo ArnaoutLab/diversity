@@ -1,9 +1,26 @@
 from typing import Iterable, Union
 from greylock.similarity import Similarity
-from torch import tensor, zeros_like, div, abs, any, all, logical_not, pow, prod, mul, sum, float64, broadcast_to, amin, amax
+from torch import (
+    tensor,
+    zeros_like,
+    div,
+    abs,
+    any,
+    all,
+    logical_not,
+    pow,
+    prod,
+    mul,
+    sum,
+    float64,
+    broadcast_to,
+    amin,
+    amax,
+)
 from numpy import ndarray
 from greylock.abundance import AbundanceForDiversity
 import numpy as np
+
 
 class SimilarityFromTensor(Similarity):
     def __init__(
@@ -25,9 +42,12 @@ class SimilarityFromTensor(Similarity):
             self.similarities_out[:, :] = self.similarity.numpy()
         return self.similarity @ relative_abundance
 
+
 class AbundanceFromTensor(AbundanceForDiversity):
     def __init__(
-        self, counts: tensor, subcommunity_names: Union[None, Iterable[Union[str, int]]] = None
+        self,
+        counts: tensor,
+        subcommunity_names: Union[None, Iterable[Union[str, int]]] = None,
     ) -> None:
         self.num_subcommunities = counts.shape[1]
         if subcommunity_names is None:
@@ -42,6 +62,7 @@ class AbundanceFromTensor(AbundanceForDiversity):
         )
         self.metacommunity_abundance = self.make_metacommunity_abundance()
 
+
 def get_community_ratio(numerator, denominator):
     community_ratio = zeros_like(denominator)
     mask = denominator != 0
@@ -51,46 +72,53 @@ def get_community_ratio(numerator, denominator):
         num = numerator[mask]
     else:
         num = numerator
-    div_results = div(
-        num,
-        denominator)
+    div_results = div(num, denominator)
     community_ratio[mask] = div_results[mask]
     return community_ratio
 
+
 def find_nonzero_entries(t, atol):
     return abs(t) >= atol
+
 
 def any_all_false_columns(t):
     has_true_in_col = any(t, dim=0)
     has_all_false_col = any(logical_not(has_true_in_col))
     return has_all_false_col
 
+
 """
 def power(items, weights):
     return pow(items, weights)
 """
 
+
 def prod0(t):
     return prod(t, dim=0)
 
+
 def to_numpy(t):
-    return t.to('cpu').numpy()
+    return t.to("cpu").numpy()
+
 
 def find_amin(items, where, axis=0):
     items[~where] = np.inf
     return amin(items, axis)
 
+
 def find_amax(items, where, axis=0):
     items[~where] = -np.inf
     return amax(items, axis)
 
+
 def zero_order_powermean(items, weights, weight_is_nonzero):
     power_result = pow(items, weights)
-    
+
     # This shouldn't be neccessary:
     power_result[logical_not(weight_is_nonzero)] = 1.0
     return prod0(power_result)
-    
+
+
 def powermean(items, weights, order, weight_is_nonzero):
     result = zeros_like(items, dtype=float64)
     pow(items, order, out=result)
