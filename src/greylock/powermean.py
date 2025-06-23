@@ -24,10 +24,10 @@ from numpy import (
 )
 
 from greylock.exceptions import InvalidArgumentError
-
+import greylock.numpy
 
 def __validate_power_mean_args(
-        weights: ndarray, items: ndarray, atol: float, weight_is_nonzero: ndarray, backend = None
+        weights: ndarray, items: ndarray, atol: float, weight_is_nonzero: ndarray, backend = greylock.numpy
 ) -> None:
     """Validates arguments for power_mean.
 
@@ -56,10 +56,7 @@ def __validate_power_mean_args(
             f"Shape of 'weights' ({weights.shape}) must be the same as"
             f" shape of 'items' ({items.shape})."
         )
-    if backend is None:
-        all_0_column = any(all(~weight_is_nonzero, axis=0))
-    else:
-        all_0_column = backend.any_all_false_columns(weight_is_nonzero)
+    all_0_column = backend.any_all_false_columns(weight_is_nonzero)
     if all_0_column:
         raise InvalidArgumentError(
             "Argument 'weights' must have at least one nonzero weight in each column. A weight is"
@@ -68,7 +65,7 @@ def __validate_power_mean_args(
         )
 
 def power_mean(
-        order: float, weights: ndarray, items: ndarray, atol: float = 1e-9, backend = None
+        order: float, weights: ndarray, items: ndarray, atol: float = 1e-9, backend = greylock.numpy
 ) -> ndarray:
     """Calculates weighted power means.
 
@@ -97,44 +94,14 @@ def power_mean(
     or infinity are used respectively. An exception is raised if all weights
     in a column are close to 0.
     """
-    if backend is None:
-        weight_is_nonzero = abs(weights) >= atol
-    else:
-        weight_is_nonzero = backend.find_nonzero_entries(weights, atol)
+    weight_is_nonzero = backend.find_nonzero_entries(weights, atol)
     __validate_power_mean_args(weights, items, atol, weight_is_nonzero, backend=backend)
     if isclose(order, 0):
-        if backend is None:
-            power_result = power(items, weights, where=weight_is_nonzero)
-            return prod(
-                power_result,
-                axis=0,
-                where=weight_is_nonzero,
-            )
-        else:
-            power_result = backend.pow(items, weights)
-
-            # This shouldn't be neccessary:
-            power_result[backend.logical_not(weight_is_nonzero)] = 1.0
-            return backend.prod0(power_result)
+        return backend.zero_order_powermean(items, weights, weight_is_nonzero)
     elif order < -100:
-        if backend is None:
-            return amin(items, axis=0, where=weight_is_nonzero, initial=inf)
-        else:
-            return backend.find_amin(items, where=weight_is_nonzero, axis=0)
+        return backend.find_amin(items, where=weight_is_nonzero, axis=0)
     elif order > 100:
-        if backend is None:
-            return amax(items, axis=0, where=weight_is_nonzero, initial=-inf)
-        else:
-            return backend.find_amax(items, where=weight_is_nonzero, axis=0)
+        return backend.find_amax(items, where=weight_is_nonzero, axis=0)
     else:
-        if abs(order) > 25:
-            pass #breakpoint()
-        if backend is None:
-            result = zeros(shape=items.shape, dtype=float64)
-            power(items, order, where=weight_is_nonzero, out=result)
-            multiply(result, weights, where=weight_is_nonzero, out=result)
-            items_sum = numpy_sum(result, axis=0, where=weight_is_nonzero)
-            return power(items_sum, 1 / order)
-        else:
-            return backend.powermean(items, weights, order, weight_is_nonzero)
+        return backend.powermean(items, weights, order, weight_is_nonzero)
             

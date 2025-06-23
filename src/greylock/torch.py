@@ -27,10 +27,13 @@ class SimilarityFromTensor(Similarity):
 
 class AbundanceFromTensor(AbundanceForDiversity):
     def __init__(
-        self, counts: tensor, subcommunity_names: Iterable[Union[str, int]]
+        self, counts: tensor, subcommunity_names: Union[None, Iterable[Union[str, int]]] = None
     ) -> None:
-        self.subcommunities_names = subcommunity_names
         self.num_subcommunities = counts.shape[1]
+        if subcommunity_names is None:
+            self.subcommunities_names = [i for i in range(self.num_subcommunities)]
+        else:
+            self.subcommunities_names = subcommunity_names
         self.min_count = min(1 / counts.sum().item(), 1e-9)
 
         self.subcommunity_abundance = self.make_subcommunity_abundance(counts=counts)
@@ -70,13 +73,6 @@ def power(items, weights):
 def prod0(t):
     return prod(t, dim=0)
 
-def powermean(items, weights, order, weight_is_nonzero):
-    result = zeros_like(items, dtype=float64)
-    pow(items, order, out=result)
-    mul(result, weights, out=result)
-    items_sum = sum(result, dim=0)
-    return pow(items_sum, 1 / order)
-
 def to_numpy(t):
     return t.to('cpu').numpy()
 
@@ -88,4 +84,16 @@ def find_amax(items, where, axis=0):
     items[~where] = -np.inf
     return amax(items, axis)
 
+def zero_order_powermean(items, weights, weight_is_nonzero):
+    power_result = pow(items, weights)
     
+    # This shouldn't be neccessary:
+    power_result[logical_not(weight_is_nonzero)] = 1.0
+    return prod0(power_result)
+    
+def powermean(items, weights, order, weight_is_nonzero):
+    result = zeros_like(items, dtype=float64)
+    pow(items, order, out=result)
+    mul(result, weights, out=result)
+    items_sum = sum(result, dim=0)
+    return pow(items_sum, 1 / order)
