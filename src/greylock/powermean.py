@@ -67,30 +67,7 @@ def __validate_power_mean_args(
             f" configurable minimum threshold: {atol:.2e}."
         )
 
-### DOUBLE-DOING JUST FOR DEVELOPMENT
 def power_mean(
-        order: float, weights: ndarray, items: ndarray, atol: float = 1e-9, backend = None
-) -> ndarray:
-    numpy_result = _power_mean(order,
-                               weights.to('cpu').numpy(),
-                               items.to('cpu').numpy(),
-                               atol,
-                               None)
-    torch_result = _power_mean(order, weights, items, atol, backend)
-    if torch_result is None:
-        breakpoint()
-    if numpy_result.shape != tuple() or tuple(torch_result.shape) != tuple():
-        if not allclose(torch_result.to('cpu').numpy(), numpy_result):
-            print("Old result:")
-            print(numpy_result.shape)
-            print(numpy_result)
-            print("New result:")
-            print(torch_result.shape)
-            print(torch_result)
-            breakpoint()
-    return torch_result
-    
-def _power_mean(
         order: float, weights: ndarray, items: ndarray, atol: float = 1e-9, backend = None
 ) -> ndarray:
     """Calculates weighted power means.
