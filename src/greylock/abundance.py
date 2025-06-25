@@ -16,6 +16,7 @@ from typing import Iterable, Union
 from numpy import arange, ndarray, concatenate, minimum
 from pandas import DataFrame, RangeIndex
 from scipy.sparse import issparse  # type: ignore[import]
+from greylock.log import timing
 
 
 class Abundance:

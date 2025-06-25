@@ -15,6 +15,7 @@ from numpy import (
     zeros,
     float64,
 )
+import warnings
 
 
 def get_community_ratio(numerator, denominator):
@@ -39,7 +40,9 @@ def find_nonzero_entries(weights, atol):
 
 
 def zero_order_powermean(items, weights, weight_is_nonzero):
-    power_result = power(items, weights, where=weight_is_nonzero)
+    with warnings.catch_warnings(category=RuntimeWarning) as w:
+        warnings.simplefilter("ignore")
+        power_result = power(items, weights, where=weight_is_nonzero)
     return prod(
         power_result,
         axis=0,
@@ -57,7 +60,11 @@ def find_amax(items, where, axis=0):
 
 def powermean(items, weights, order, weight_is_nonzero):
     result = zeros(shape=items.shape, dtype=float64)
-    power(items, order, where=weight_is_nonzero, out=result)
+    with warnings.catch_warnings(category=RuntimeWarning) as w:
+        warnings.simplefilter("ignore")
+        power(items, order, where=weight_is_nonzero, out=result)
     multiply(result, weights, where=weight_is_nonzero, out=result)
     items_sum = numpy_sum(result, axis=0, where=weight_is_nonzero)
-    return power(items_sum, 1 / order)
+    with warnings.catch_warnings(category=RuntimeWarning) as w:
+        warnings.simplefilter("ignore")
+        return power(items_sum, 1 / order)

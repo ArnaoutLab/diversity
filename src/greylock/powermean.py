@@ -25,6 +25,7 @@ from numpy import (
 
 from greylock.exceptions import InvalidArgumentError
 import greylock.numpy
+from greylock.log import timing
 
 
 def __validate_power_mean_args(

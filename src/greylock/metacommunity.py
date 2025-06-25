@@ -8,6 +8,7 @@ Metacommunity
 """
 
 from typing import Callable, Iterable, Optional, Union
+from functools import cache
 
 from pandas import DataFrame, Index, Series, concat
 from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray
@@ -18,6 +19,7 @@ from greylock.similarity import Similarity, SimilarityFromArray, SimilarityIdent
 from greylock.components import Components
 from greylock.powermean import power_mean
 import greylock.numpy
+from greylock.log import timing
 
 
 class Metacommunity:
@@ -80,6 +82,7 @@ class Metacommunity:
             abundance=self.abundance, similarity=self.similarity
         )
 
+    @cache
     def subcommunity_diversity(self, viewpoint: float, measure: str) -> ndarray:
         """Calculates subcommunity diversity measures.
 

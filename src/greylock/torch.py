@@ -3,6 +3,7 @@ from greylock.similarity import Similarity
 from torch import (
     tensor,
     zeros_like,
+    empty,
     div,
     abs,
     any,
@@ -20,7 +21,7 @@ from torch import (
 from numpy import ndarray
 from greylock.abundance import AbundanceForDiversity
 import numpy as np
-
+from greylock.log import timing
 
 class SimilarityFromTensor(Similarity):
     def __init__(
@@ -64,17 +65,9 @@ class AbundanceFromTensor(AbundanceForDiversity):
 
 
 def get_community_ratio(numerator, denominator):
-    community_ratio = zeros_like(denominator)
-    mask = denominator != 0
-    if isinstance(numerator, int):
-        num = numerator
-    elif numerator.shape == denominator.shape:
-        num = numerator[mask]
-    else:
-        num = numerator
-    div_results = div(num, denominator)
-    community_ratio[mask] = div_results[mask]
-    return community_ratio
+    result = div(numerator, denominator)
+    result[denominator == 0] = 0
+    return result
 
 
 def find_nonzero_entries(t, atol):
@@ -120,8 +113,9 @@ def zero_order_powermean(items, weights, weight_is_nonzero):
 
 
 def powermean(items, weights, order, weight_is_nonzero):
-    result = zeros_like(items, dtype=float64)
+    result = empty(size=items.size(), dtype=float64, device=items.device)
     pow(items, order, out=result)
+    result[~weight_is_nonzero] = 0
     mul(result, weights, out=result)
     items_sum = sum(result, dim=0)
     return pow(items_sum, 1 / order)

@@ -4,6 +4,8 @@ from numpy import ndarray
 from greylock.abundance import Abundance
 from greylock.similarity import Similarity
 
+from greylock.log import timing
+
 
 class Components:
     """Dispatches diversity components based on specified measure.
