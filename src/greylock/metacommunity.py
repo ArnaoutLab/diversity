@@ -10,7 +10,7 @@ Metacommunity
 from typing import Callable, Iterable, Optional, Union
 
 from pandas import DataFrame, Index, Series, concat
-from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray
+from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray, power, prod, sum
 from greylock.exceptions import InvalidArgumentError
 
 from greylock.abundance import make_abundance
@@ -233,3 +233,25 @@ class Metacommunity:
                 self.subcommunities_to_dataframe(viewpoint=q, measures=measures)
             )
         return concat(dataframes).reset_index(drop=True)
+
+    def get_exp_renyi_div_with(self, Q_abundance, viewpoint):
+        P_meta_ab = self.abundance.metacommunity_abundance.reshape(-1)
+        Q_meta_ab = sum(Q_abundance.to_numpy(),axis=1).reshape(-1)
+        Q_meta_ab = Q_meta_ab/sum(Q_meta_ab, axis=0)
+        if hasattr(self.similarity, 'similarity'):
+            Q_ord = self.similarity.similarity @ Q_meta_ab
+        else:
+            Q_ord = Q_meta_ab
+        P_ord = self.components.metacommunity_ordinariness.reshape(-1)
+
+        ord_ratio = P_ord/Q_ord
+        if viewpoint != 1:
+            exp_renyi_div = power_mean(
+                order=viewpoint-1,
+                weights=P_meta_ab,
+                items=ord_ratio,
+                atol=self.abundance.min_count,
+            )
+        else:
+            exp_renyi_div = prod(power(ord_ratio, P_meta_ab))
+        return exp_renyi_div
