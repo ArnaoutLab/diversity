@@ -14,7 +14,7 @@ from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray, power
 from greylock.exceptions import InvalidArgumentError
 
 from greylock.abundance import make_abundance
-from greylock.similarity import Similarity, SimilarityFromArray, SimilarityIdentity
+from greylock.similarity import Similarity, SimilarityFromArray, SimilarityIdentity, SimilarityFromFunction
 from greylock.components import Components
 from greylock.powermean import power_mean
 
@@ -235,13 +235,13 @@ class Metacommunity:
         return concat(dataframes).reset_index(drop=True)
 
     def get_exp_renyi_div_with(self, Q_abundance, viewpoint):
+        if type(Q_abundance) == DataFrame:
+            Q_abundance = Q_abundance.to_numpy()
         P_meta_ab = self.abundance.metacommunity_abundance.reshape(-1)
-        Q_meta_ab = sum(Q_abundance.to_numpy(),axis=1).reshape(-1)
+        Q_meta_ab = sum(Q_abundance,axis=1).reshape(-1)
         Q_meta_ab = Q_meta_ab/sum(Q_meta_ab, axis=0)
-        if hasattr(self.similarity, 'similarity'):
-            Q_ord = self.similarity.similarity @ Q_meta_ab
-        else:
-            Q_ord = Q_meta_ab
+
+        Q_ord = self.similarity.weighted_abundances(Q_meta_ab)
         P_ord = self.components.metacommunity_ordinariness.reshape(-1)
 
         ord_ratio = P_ord/Q_ord
