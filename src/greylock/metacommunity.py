@@ -234,7 +234,22 @@ class Metacommunity:
             )
         return concat(dataframes).reset_index(drop=True)
 
-    def get_exp_renyi_div_with(self, Q_abundance, viewpoint):
+    def get_exp_renyi_div_with(self, Q_abundance: Union[DataFrame, ndarray], viewpoint: float) -> float:
+        """Calculate the exponentiated similarity-sensitive Renyi divergence, according to the formula
+        exp-Renyi-divergence^{Z}_{q}(P || Q) = [ sum_{i} P_{i} ((ZP)_{i} / (ZQ)_{i})^{q-1}]^{1/(q-1)}
+        for q not equal to 1, and
+        exp-KL-divergence^{Z}(P || Q) = prod_{i} [ (ZP)_{i} / (ZQ)_{i} ]^{P_i}
+        for q=1
+        
+        Parameters
+        ----------
+        Q_abundance: the abundance vector of the other metacommunity (called Q in the formula above)
+        viewpoint: the viewpoint parameter.
+
+        Returns
+        -------
+        A float.
+        """
         if type(Q_abundance) == DataFrame:
             Q_abundance = Q_abundance.to_numpy()
         P_meta_ab = self.abundance.metacommunity_abundance
