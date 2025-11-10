@@ -237,12 +237,12 @@ class Metacommunity:
     def get_exp_renyi_div_with(self, Q_abundance, viewpoint):
         if type(Q_abundance) == DataFrame:
             Q_abundance = Q_abundance.to_numpy()
-        P_meta_ab = self.abundance.metacommunity_abundance.reshape(-1)
-        Q_meta_ab = sum(Q_abundance,axis=1).reshape(-1)
+        P_meta_ab = self.abundance.metacommunity_abundance
+        Q_meta_ab = sum(Q_abundance,axis=1, keepdims=True)
         Q_meta_ab = Q_meta_ab/sum(Q_meta_ab, axis=0)
 
         Q_ord = self.similarity.weighted_abundances(Q_meta_ab)
-        P_ord = self.components.metacommunity_ordinariness.reshape(-1)
+        P_ord = self.components.metacommunity_ordinariness
 
         ord_ratio = P_ord/Q_ord
         if viewpoint != 1:
