@@ -10,7 +10,8 @@ Metacommunity
 from typing import Callable, Iterable, Optional, Union
 
 from pandas import DataFrame, Index, Series, concat
-from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray, power, prod, sum
+from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray, power, prod, sum as np_sum, \
+identity as np_identity
 from greylock.exceptions import InvalidArgumentError
 
 from greylock.abundance import make_abundance
@@ -234,6 +235,19 @@ class Metacommunity:
             )
         return concat(dataframes).reset_index(drop=True)
 
+    def get_exp_renyi_div_from_ords(self, P, P_ord, Q_ord, viewpoint):
+        ord_ratio = P_ord/Q_ord
+        if viewpoint != 1:
+            exp_renyi_div = power_mean(
+                order=viewpoint-1,
+                weights=P,
+                items=ord_ratio,
+                atol=self.abundance.min_count,
+            )
+        else:
+            exp_renyi_div = prod(power(ord_ratio, P))
+        return exp_renyi_div
+
     def get_exp_renyi_div_with(self, Q_abundance: Union[DataFrame, ndarray], viewpoint: float) -> float:
         """Calculate the exponentiated similarity-sensitive Renyi divergence, according to the formula
         exp-Renyi-divergence^{Z}_{q}(P || Q) = [ sum_{i} P_{i} ((ZP)_{i} / (ZQ)_{i})^{q-1}]^{1/(q-1)}
@@ -253,20 +267,28 @@ class Metacommunity:
         if type(Q_abundance) == DataFrame:
             Q_abundance = Q_abundance.to_numpy()
         P_meta_ab = self.abundance.metacommunity_abundance
-        Q_meta_ab = sum(Q_abundance,axis=1, keepdims=True)
-        Q_meta_ab = Q_meta_ab/sum(Q_meta_ab, axis=0)
+        P_norm_subcom_ab = self.abundance.normalized_subcommunity_abundance
+        Q_meta_ab = np_sum(Q_abundance,axis=1, keepdims=True)
+        Q_meta_ab = Q_meta_ab/np_sum(Q_meta_ab, axis=0)
+        Q_norm_subcom_ab = Q_abundance/np_sum(Q_abundance,axis=0)
 
-        Q_ord = self.similarity.weighted_abundances(Q_meta_ab)
-        P_ord = self.components.metacommunity_ordinariness
+        P_meta_ord = self.components.metacommunity_ordinariness
+        P_norm_subcom_ord = self.components.normalized_subcommunity_ordinariness
+        Q_meta_ord = self.similarity.weighted_abundances(Q_meta_ab)
+        Q_norm_subcom_ord = self.similarity.weighted_abundances(Q_norm_subcom_ab)
 
-        ord_ratio = P_ord/Q_ord
-        if viewpoint != 1:
-            exp_renyi_div = power_mean(
-                order=viewpoint-1,
-                weights=P_meta_ab,
-                items=ord_ratio,
-                atol=self.abundance.min_count,
-            )
-        else:
-            exp_renyi_div = prod(power(ord_ratio, P_meta_ab))
-        return exp_renyi_div
+        exp_renyi_div_meta = self.get_exp_renyi_div_from_ords(P_meta_ab, P_meta_ord, Q_meta_ord, viewpoint)
+        
+        exp_renyi_divs_subcom = np_identity(self.abundance.num_subcommunities)
+        for i in range(self.abundance.num_subcommunities):
+            for j in range(self.abundance.num_subcommunities):
+                P = P_norm_subcom_ab[:,i]
+                P_ord = P_norm_subcom_ord[:,i]
+                Q_ord = Q_norm_subcom_ord[:,j]
+                exp_renyi_div = self.get_exp_renyi_div_from_ords(P, P_ord, Q_ord, viewpoint)
+                exp_renyi_divs_subcom[i,j] = exp_renyi_div
+
+        exp_renyi_divs_subcom = DataFrame(exp_renyi_divs_subcom, columns=self.abundance.subcommunities_names, \
+            index=self.abundance.subcommunities_names)
+
+        return exp_renyi_div_meta, exp_renyi_divs_subcom
