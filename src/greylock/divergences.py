@@ -13,7 +13,7 @@ def make_metacommunity_abundance(abundance):
     if type(abundance) == DataFrame:
         abundance = abundance.to_numpy()
     abundance = abundance.astype(float)
-    metacommunity_abundance = abundance.sum(axis=1)
+    metacommunity_abundance = abundance.sum(axis=1, keepdims=True)
     metacommunity_abundance /= metacommunity_abundance.sum()
     return metacommunity_abundance
 
