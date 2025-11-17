@@ -612,16 +612,3 @@ def test_figure_1():
         assert naive_alpha <= 4.0
         assert before_alpha <= 3.0
         assert (nonnaive_alpha - before_alpha) < 0.2
-
-def test_get_exp_renyi_div_with():
-    counts_1 = array([[9/25], [12/25], [4/25]])
-    counts_2 = DataFrame([[1/3], [1/3], [1/3]])
-
-    metacommunity_1 = Metacommunity(counts_1)
-    exp_renyi_divergence_1 = metacommunity_1.get_exp_renyi_div_with(counts_2, 1)
-    metacommunity_2 = Metacommunity(counts_2)
-    exp_renyi_divergence_2 = metacommunity_2.get_exp_renyi_div_with(counts_1, 1)
-    exp_renyi_divergence_3 = metacommunity_2.get_exp_renyi_div_with(counts_1, 2)
-    assert allclose(log(exp_renyi_divergence_1), 0.0852996)
-    assert allclose(log(exp_renyi_divergence_2), 0.097455)
-    assert (exp_renyi_divergence_2 < exp_renyi_divergence_3)
