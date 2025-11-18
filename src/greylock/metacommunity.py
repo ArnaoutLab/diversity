@@ -10,11 +10,12 @@ Metacommunity
 from typing import Callable, Iterable, Optional, Union
 
 from pandas import DataFrame, Index, Series, concat
-from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray
+from numpy import array, atleast_1d, broadcast_to, divide, zeros, ndarray, power, prod, sum as np_sum, \
+identity as np_identity
 from greylock.exceptions import InvalidArgumentError
 
 from greylock.abundance import make_abundance
-from greylock.similarity import Similarity, SimilarityFromArray, SimilarityIdentity
+from greylock.similarity import Similarity, SimilarityFromArray, SimilarityIdentity, SimilarityFromFunction
 from greylock.components import Components
 from greylock.powermean import power_mean
 

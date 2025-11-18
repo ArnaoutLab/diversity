@@ -1,7 +1,7 @@
 """Tests for diversity.metacommunity."""
 
 from dataclasses import dataclass, field
-from numpy import allclose, array, ndarray, identity, zeros, inf, maximum
+from numpy import allclose, array, ndarray, identity, zeros, inf, maximum, log
 from numpy.linalg import norm
 from pandas import DataFrame, concat
 from pandas.testing import assert_frame_equal
