@@ -527,9 +527,13 @@ paralellized using Ray. For diversity calculations, we did this using the `Simil
 we need to use the `IntersetSimilarityFromRayFunction` class instead, like so:
 
 ```
-from greylock.abundance import make_abundance
+from greylock.abundance import Abundance
 from greylock.ray import IntersetSimilarityFromRayFunction
-abundance = make_abundance(df)
+
+counts = np.array([[1,0],[0,1],[1,1]])
+abundance = Abundance(counts, subcommunity_names=['1', '2'])
+community_species = np.array([[1, 2], [3, 4], [5, 6]])
+query_species = np.array([[1, -1], [3, 6]])
 similarity = IntersetSimilarityFromRayFunction(
   similarity_function,
   query_species,
