@@ -538,7 +538,7 @@ similarity = IntersetSimilarityFromRayFunction(
   similarity_function,
   query_species,
   community_species)
-relative_abundances = similarity @ abundance
+ordinariness = similarity @ abundance
 ```
 
 
