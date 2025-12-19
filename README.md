@@ -481,7 +481,7 @@ the installation of `ray` into your environment may entail some conflicting depe
 pip install 'greylock[ray]'
 ```
 
-To actually use Ray, replace the use of `SimilarityFromFunction` and `SimilarityFromSymmetricFunction` with `SimilarityFromRayFunction` and `SimilarityFromSymmetricRayFunction` respectively.
+To actually use Ray, replace the use of `SimilarityFromFunction` and `SimilarityFromSymmetricFunction` with `SimilarityFromRayFunction` and `SimilarityFromSymmetricRayFunction` respectively. `SimilarityFromRayFunction` and `SimilarityFromSymmetricRayFunction` have to be imported from `greylock.ray`.
 Each `chunk_size` rows of the similarity matrix are processed as a separate job. Thanks to this parallelization, up to an N-fold speedup is possible 
 (where N is the number of cores or nodes).
 
