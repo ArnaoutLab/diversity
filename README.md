@@ -1,3 +1,15 @@
+# ⚠️ Package Renamed
+
+> **Note**
+>
+> The **`diversity`** package has been **renamed to `sentropy`**.
+>
+> 🚫 **This repository is no longer maintained.**
+>
+> 👉 Please use the new package instead:
+> - https://github.com/ArnaoutLab/sentropy
+> - https://pypi.org/project/sentropy/
+
 ![alt text](images/diversity_logo.png)
 
 # <h1> <i>greylock</i>: A Python package for measuring the composition of complex datasets</h1>
