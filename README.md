@@ -2,7 +2,7 @@
 
 > **Note**
 >
-> The **`diversity`** package has been **renamed to `sentropy`**.
+> The **`greylock`** package has been **renamed to `sentropy`**.
 >
 > 🚫 **This repository is no longer maintained.**
 >
